@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus } from 'lucide-react';
 import Reviews from '../components/layout/review';
 import ProductGrid from '../components/layout/ProductGrid';
 import OfferBanner from '../components/layout/OfferBanner';

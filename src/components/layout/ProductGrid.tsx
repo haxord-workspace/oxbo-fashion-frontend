@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { toggleWishlist, selectIsWishlisted } from '../../features/wishlist/wishlistSlice';
+import { selectIsAuthenticated } from '../../features/auth/authSlice';
 
 // Expanded mock data to span multiple rows (4 columns wide)
 const mockProducts = Array.from({ length: 16 }).map((_, i) => ({
@@ -17,6 +20,26 @@ const mockProducts = Array.from({ length: 16 }).map((_, i) => ({
 
 const ProductCard: React.FC<{ product: typeof mockProducts[0] }> = ({ product }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const isWishlisted = useAppSelector(state => selectIsWishlisted(state, product.id));
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+
+  const handleToggleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      navigate('/register');
+      return;
+    }
+    dispatch(toggleWishlist({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      imageUrl: product.images[0],
+      category: 'clothing',
+      description: 'Premium quality product.'
+    }));
+  };
 
   const nextImage = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent link click
@@ -63,6 +86,14 @@ const ProductCard: React.FC<{ product: typeof mockProducts[0] }> = ({ product })
             />
           ))}
         </div>
+
+        {/* Wishlist Button */}
+        <button 
+          onClick={handleToggleWishlist}
+          className="absolute top-3 right-3 p-2 bg-white/80 hover:bg-white rounded-full flex items-center justify-center text-black shadow-sm transition-transform hover:scale-110 z-10"
+        >
+          <Heart size={16} strokeWidth={2} className={isWishlisted ? 'fill-red-500 text-red-500' : ''} />
+        </button>
       </div>
 
       {/* Product Details */}

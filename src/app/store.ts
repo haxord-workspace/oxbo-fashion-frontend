@@ -18,6 +18,7 @@ import cartReducer from '../features/cart/cartSlice';
 import productsReducer from '../features/products/productsSlice';
 import ordersReducer from '../features/orders/ordersSlice';
 import uiReducer from '../features/ui/uiSlice';
+import wishlistReducer from '../features/wishlist/wishlistSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -25,12 +26,13 @@ const rootReducer = combineReducers({
   products: productsReducer,
   orders: ordersReducer,
   ui: uiReducer,
+  wishlist: wishlistReducer,
 });
 
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['cart', 'auth'], // Only persist these slices
+  whitelist: ['cart', 'auth', 'wishlist'], // Only persist these slices
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

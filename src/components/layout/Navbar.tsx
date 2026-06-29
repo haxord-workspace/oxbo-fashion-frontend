@@ -1,13 +1,25 @@
 import React from 'react';
-import { Search, User, ShoppingBag } from 'lucide-react';
+import { Search, User, ShoppingBag, Heart } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { toggleCart, toggleMobileMenu } from '../../features/ui/uiSlice';
 import { selectCartCount } from '../../features/cart/cartSlice';
-import { Link } from 'react-router-dom';
+import { selectWishlistCount } from '../../features/wishlist/wishlistSlice';
+import { selectIsAuthenticated } from '../../features/auth/authSlice';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Navbar: React.FC = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const cartCount = useAppSelector(selectCartCount);
+  const wishlistCount = useAppSelector(selectWishlistCount);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+
+  const handleWishlistClick = (e: React.MouseEvent) => {
+    if (!isAuthenticated) {
+      e.preventDefault();
+      navigate('/register');
+    }
+  };
 
   return (
     <header className="bg-white sticky top-0 z-40">
@@ -43,11 +55,25 @@ const Navbar: React.FC = () => {
           </button>
           
           <Link 
-            to="/login" 
+            to={isAuthenticated ? "/profile" : "/login"} 
             className="p-2 text-black hover:opacity-70 transition-opacity hidden sm:block"
             title="Account"
           >
             <User className="w-6 h-6" strokeWidth={1.5} />
+          </Link>
+
+          <Link 
+            to="/wishlist" 
+            onClick={handleWishlistClick}
+            className="p-2 text-black hover:opacity-70 transition-opacity relative hidden sm:block"
+            title="Wishlist"
+          >
+            <Heart className="w-6 h-6" strokeWidth={1.5} />
+            {wishlistCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 bg-black text-white text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
+                {wishlistCount}
+              </span>
+            )}
           </Link>
 
           <button 
