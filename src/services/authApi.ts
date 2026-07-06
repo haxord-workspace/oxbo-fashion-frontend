@@ -1,41 +1,43 @@
+import api from './api';
 import type { User } from '../types';
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export interface AuthResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+}
 
 export const authApi = {
-  login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
-    await delay(1500); // Simulate network delay
-    
-    // Simulate validation error
-    if (password !== 'password') {
-      throw new Error('Invalid email or password. Use password "password" to test.');
-    }
-
+  login: async (email: string, password: string): Promise<AuthResponse> => {
+    const response = await api.post('/auth/login', { email, password });
     return {
-      user: {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-      },
-      token: 'fake-jwt-token-123',
+      user: response.data.data.user,
+      accessToken: response.data.data.tokens.accessToken,
+      refreshToken: response.data.data.tokens.refreshToken,
     };
   },
 
-  register: async (name: string, email: string, password: string, mobileNumber?: string): Promise<{ user: User; token: string }> => {
-    await delay(1500);
-
-    if (password.length < 6) {
-      throw new Error('Password must be at least 6 characters long.');
-    }
-
+  register: async (data: { firstName: string; lastName: string; email: string; password: string; phone: string }): Promise<AuthResponse> => {
+    const response = await api.post('/auth/register', data);
     return {
-      user: {
-        id: '2',
-        email,
-        name,
-        mobileNumber,
-      },
-      token: 'fake-jwt-token-456',
+      user: response.data.data.user,
+      accessToken: response.data.data.tokens.accessToken,
+      refreshToken: response.data.data.tokens.refreshToken,
     };
+  },
+
+  updateProfile: async (_userId: string, data: Partial<User>): Promise<{ user: User }> => {
+    const response = await api.patch(`/auth/profile`, data);
+    return response.data.data ? { user: response.data.data.user } : response.data;
+  },
+
+  getProfile: async (): Promise<{ user: User }> => {
+    const response = await api.get('/auth/profile');
+    return response.data.data ? { user: response.data.data.user || response.data.data } : response.data;
+  },
+
+  refreshToken: async (token: string): Promise<{ accessToken: string }> => {
+    const response = await api.post('/auth/refresh', { refreshToken: token });
+    return response.data.data ? { accessToken: response.data.data.tokens?.accessToken || response.data.data.accessToken } : response.data;
   }
 };

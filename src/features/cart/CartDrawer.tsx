@@ -33,13 +33,14 @@ const CartDrawer: React.FC = () => {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity"
+        className="fixed inset-0 bg-black bg-opacity-50 z-[60] transition-opacity"
         onClick={() => dispatch(toggleCart())}
         aria-hidden="true"
       />
 
       {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-0">
+      <div className="fixed inset-y-0 right-0 z-[60] w-full max-w-md bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-0">
+
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
@@ -83,21 +84,47 @@ const CartDrawer: React.FC = () => {
 
         {/* Footer */}
         {cartItems.length > 0 && (
-          <div className="border-t border-gray-200 px-6 py-6 bg-gray-50">
-            <div className="flex justify-between text-base font-medium text-gray-900 mb-4">
-              <p>Subtotal</p>
-              <p>${cartTotal.toFixed(2)}</p>
+          <div className="border-t border-gray-200 px-6 pt-6 pb-8 bg-gray-50 flex flex-col gap-4 shrink-0">
+            
+            {/* Coupon Code Input */}
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                placeholder="Enter Coupon Code" 
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black uppercase text-sm"
+              />
+              <button className="px-4 py-2 bg-gray-200 text-gray-800 font-medium rounded-md hover:bg-gray-300 transition-colors text-sm">
+                Apply
+              </button>
             </div>
-            <p className="mt-0.5 text-sm text-gray-500 mb-6">
+
+            {/* Price Breakdown */}
+            <div className="space-y-2 text-sm text-gray-600 border-t border-gray-200 pt-4">
+              <div className="flex justify-between">
+                <p>Original Price (MRP)</p>
+                <p>Rs. {cartItems.reduce((total, item) => total + (item.product.mrp || item.product.price) * item.quantity, 0).toLocaleString('en-IN')}</p>
+              </div>
+              <div className="flex justify-between text-green-600 font-medium">
+                <p>Total Savings</p>
+                <p>- Rs. {cartItems.reduce((total, item) => total + ((item.product.mrp || item.product.price) - item.product.price) * item.quantity, 0).toLocaleString('en-IN')}</p>
+              </div>
+              <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
+                <p>Final Payable Amount</p>
+                <p>Rs. {cartTotal.toLocaleString('en-IN')}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-2">
               Shipping and taxes calculated at checkout.
             </p>
+            
             <button
               onClick={() => {
                 dispatch(toggleCart());
                 if (isAuthenticated) {
                   navigate('/checkout'); // Placeholder route
                 } else {
-                  navigate('/register');
+                  navigate('/login');
                 }
               }}
               className="w-full flex items-center justify-center rounded-md border border-transparent bg-black px-6 py-4 text-base font-medium text-white shadow-sm hover:bg-gray-800 transition-colors uppercase tracking-widest"

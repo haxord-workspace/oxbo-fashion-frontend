@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
@@ -110,13 +110,43 @@ const ProductCard: React.FC<{ product: typeof mockProducts[0] }> = ({ product })
   );
 };
 
+const ProductSkeleton: React.FC = () => {
+  return (
+    <div className="flex flex-col w-full animate-pulse">
+      {/* Image Skeleton */}
+      <div className="w-full aspect-[3/4] bg-gray-200" />
+      
+      {/* Product Details Skeleton */}
+      <div className="mt-3 flex flex-col items-start gap-2">
+        <div className="h-3.5 w-3/4 bg-gray-200 rounded" />
+        <div className="h-3 w-1/2 bg-gray-200 rounded" />
+      </div>
+    </div>
+  );
+};
+
 const ProductGrid: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate network delay to demonstrate the shimmer effect
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <section className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-12 md:gap-x-4 md:gap-y-16">
-        {mockProducts.map(product => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+        {isLoading 
+          ? Array.from({ length: 8 }).map((_, idx) => (
+              <ProductSkeleton key={idx} />
+            ))
+          : mockProducts.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))
+        }
       </div>
     </section>
   );

@@ -27,7 +27,35 @@ const mockProducts = Array.from({ length: 16 }).map((_, i) => ({
     thighs: 22,
     length: 41,
     legOpening: 20
-  }
+  },
+  variants: [
+    {
+      color: 'Black',
+      images: [
+        `/images/model${(i % 3) + 1}.png`,
+        `/images/model${((i + 1) % 3) + 1}.png`
+      ],
+      sizes: [
+        { size: '28', stock: 5 },
+        { size: '30', stock: 0 },
+        { size: '32', stock: 12 },
+        { size: '34', stock: 3 }
+      ]
+    },
+    {
+      color: 'Blue',
+      images: [
+        `/images/model${((i + 2) % 3) + 1}.png`,
+        `/images/model${(i % 3) + 1}.png`
+      ],
+      sizes: [
+        { size: '28', stock: 0 },
+        { size: '30', stock: 2 },
+        { size: '32', stock: 0 },
+        { size: '34', stock: 8 }
+      ]
+    }
+  ]
 }));
 
 const SIZES = ['28', '30', '32', '34'];
@@ -42,42 +70,68 @@ const ProductDetail: React.FC = () => {
   const isWishlisted = useAppSelector(state => selectIsWishlisted(state, product.id));
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
+  const [selectedColor, setSelectedColor] = useState<string>(product.variants?.[0]?.color || '');
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>('28');
   const [quantity, setQuantity] = useState(1);
+
+  // Derived state based on variants
+  const activeVariant = product.variants?.find(v => v.color === selectedColor) || product.variants?.[0];
+  const displayImages = activeVariant?.images || product.images;
+  const availableSizes = activeVariant?.sizes || [];
+  
+  // Update size if current size is out of stock in new color
+  useEffect(() => {
+    if (activeVariant) {
+      const currentSizeStock = activeVariant.sizes.find(s => s.size === selectedSize)?.stock || 0;
+      if (currentSizeStock === 0) {
+        const firstAvailable = activeVariant.sizes.find(s => s.stock > 0);
+        if (firstAvailable) setSelectedSize(firstAvailable.size);
+      }
+    }
+  }, [selectedColor]);
 
   // Reset state when product changes
   useEffect(() => {
     window.scrollTo(0, 0);
     setSelectedImage(0);
     setQuantity(1);
-  }, [id]);
+    setSelectedColor(product.variants?.[0]?.color || '');
+  }, [id, product]);
 
   const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
     dispatch(addItem({
       product: {
         id: product.id,
         name: product.name,
         price: product.price,
-        imageUrl: product.images[0],
+        mrp: product.originalPrice,
+        imageUrl: displayImages[0],
         category: 'clothing',
         description: 'Premium quality product.'
       },
-      quantity
+      quantity,
+      selectedColor,
+      selectedSize
     }));
     dispatch(toggleCart());
   };
 
   const handleToggleWishlist = () => {
     if (!isAuthenticated) {
-      navigate('/register');
+      navigate('/login');
       return;
     }
     dispatch(toggleWishlist({
       id: product.id,
       name: product.name,
       price: product.price,
-      imageUrl: product.images[0],
+      imageUrl: displayImages[0],
       category: 'clothing',
       description: 'Premium quality product.'
     }));
@@ -98,7 +152,7 @@ const ProductDetail: React.FC = () => {
         <div className="w-full lg:w-2/5 flex flex-col gap-4">
           <div className="w-full aspect-[4/4] bg-gray-100 overflow-hidden relative">
             <img 
-              src={product.images[selectedImage]} 
+              src={displayImages[selectedImage] || displayImages[0]} 
               alt={product.name} 
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -106,7 +160,7 @@ const ProductDetail: React.FC = () => {
           
           {/* Thumbnails */}
           <div className="grid grid-cols-4 gap-2 sm:gap-4">
-            {product.images.map((img, idx) => (
+            {displayImages.map((img, idx) => (
               <button 
                 key={idx}
                 onClick={() => setSelectedImage(idx)}
@@ -148,6 +202,28 @@ const ProductDetail: React.FC = () => {
             <span>Leg Opening: <span className="font-semibold">{product.details.legOpening}</span></span>
           </div>
 
+          {/* Color Selection */}
+          {product.variants && (
+            <div className="mb-6">
+              <span className="text-sm block mb-3">Color: <span className="font-semibold">{selectedColor}</span></span>
+              <div className="flex flex-wrap gap-3">
+                {product.variants.map(variant => (
+                  <button
+                    key={variant.color}
+                    onClick={() => setSelectedColor(variant.color)}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      selectedColor === variant.color 
+                        ? 'border-black scale-110' 
+                        : 'border-transparent hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: variant.color.toLowerCase() === 'black' ? '#000' : variant.color.toLowerCase() === 'blue' ? '#3b82f6' : '#ccc' }}
+                    title={variant.color}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm">Size: <span className="font-semibold">{selectedSize}</span></span>
@@ -156,26 +232,48 @@ const ProductDetail: React.FC = () => {
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {SIZES.map(size => (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={`w-12 h-10 border text-sm transition-colors ${
-                    selectedSize === size 
-                      ? 'bg-black text-white border-black' 
-                      : 'bg-white text-black border-gray-300 hover:border-black'
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+              {SIZES.map(size => {
+                const sizeData = availableSizes.find(s => s.size === size);
+                const isOutOfStock = sizeData ? sizeData.stock === 0 : true;
+
+                return (
+                  <button
+                    key={size}
+                    onClick={() => !isOutOfStock && setSelectedSize(size)}
+                    disabled={isOutOfStock}
+                    className={`relative w-12 h-10 border text-sm transition-colors overflow-hidden ${
+                      selectedSize === size 
+                        ? 'bg-black text-white border-black' 
+                        : isOutOfStock
+                          ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                          : 'bg-white text-black border-gray-300 hover:border-black'
+                    }`}
+                  >
+                    {size}
+                    {isOutOfStock && (
+                      <div className="absolute inset-0 w-full h-full pointer-events-none">
+                        <div className="absolute top-1/2 left-[-10%] w-[120%] h-px bg-gray-300 transform -translate-y-1/2 -rotate-45" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+            {availableSizes.find(s => s.size === selectedSize)?.stock === 0 && (
+              <p className="text-red-500 text-xs mt-2 font-medium">Out of stock in this size/color combination.</p>
+            )}
+            {(() => {
+              const stock = availableSizes.find(s => s.size === selectedSize)?.stock || 0;
+              return stock > 0 && stock <= 5 ? (
+                <p className="text-[#e35a39] text-xs mt-2 font-medium">Only {stock} left in stock - order soon.</p>
+              ) : null;
+            })()}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
             <div className="flex border border-gray-300 w-32 shrink-0">
               <button 
-                className="w-10 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                className="w-10  flex items-center justify-center hover:bg-gray-100 transition-colors"
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
               >
                 <Minus size={16} />
@@ -194,15 +292,15 @@ const ProductDetail: React.FC = () => {
               </button>
             </div>
             
-            <button 
-              onClick={handleAddToCart}
-              className="flex-1 bg-black text-white font-medium hover:bg-gray-800 transition-colors"
-            >
-              Add to Cart - Rs. {product.price.toLocaleString('en-IN')}.00
-            </button>
+          <button 
+  onClick={handleAddToCart}
+  className="flex-1 rounded-xl bg-black text-white font-medium text-base py-4 px-6 hover:bg-gray-800 transition-colors"
+>
+  Add to Cart - Rs. {product.price.toLocaleString('en-IN')}.00
+</button>
           </div>
 
-          <button className="w-full border border-black py-4 font-medium mb-10 hover:bg-gray-50 transition-colors">
+          <button className="w-full border border-black rounded-xl py-4 font-medium mb-10 hover:bg-gray-50 transition-colors">
             Buy it now
           </button>
 

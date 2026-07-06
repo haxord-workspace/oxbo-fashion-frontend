@@ -40,9 +40,21 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
         <div>
           <div className="flex justify-between text-base font-medium text-gray-900">
             <h3 className="line-clamp-2 pr-4">{product.name}</h3>
-            <p className="ml-4">${product.price.toFixed(2)}</p>
+            <div className="text-right ml-4">
+              <p>Rs. {product.price.toLocaleString('en-IN')}</p>
+              {product.mrp && product.mrp > product.price && (
+                <p className="text-xs text-gray-400 line-through">Rs. {product.mrp.toLocaleString('en-IN')}</p>
+              )}
+            </div>
           </div>
           <p className="mt-1 text-sm text-gray-500 capitalize">{product.category}</p>
+          {(item.selectedColor || item.selectedSize) && (
+            <p className="mt-1 text-xs text-gray-500">
+              {item.selectedColor && <span>Color: {item.selectedColor}</span>}
+              {item.selectedColor && item.selectedSize && <span className="mx-2">|</span>}
+              {item.selectedSize && <span>Size: {item.selectedSize}</span>}
+            </p>
+          )}
         </div>
         
         <div className="flex flex-1 items-end justify-between text-sm">

@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { login, setAuthLoading, setAuthError } from '../features/auth/authSlice';
-import { showToast } from '../features/ui/uiSlice';
 import { authApi } from '../services/authApi';
+import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
 const Login: React.FC = () => {
@@ -12,7 +12,7 @@ const Login: React.FC = () => {
   
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isLoading, error } = useAppSelector(state => state.auth);
+  const { isLoading } = useAppSelector(state => state.auth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,25 +20,21 @@ const Login: React.FC = () => {
     dispatch(setAuthError(''));
 
     try {
-      // Dummy login bypass
-      const dummyData = {
-        user: { 
-          id: 'dummy-' + Math.random().toString(36).substring(7), 
-          name: email.split('@')[0], 
-          email: email 
-        },
-        token: 'dummy-jwt-token-12345'
-      };
+      const response = await authApi.login(email, password);
       
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (response.user.role === 'admin') {
+        dispatch(setAuthLoading(false));
+        toast.error('Admins must use the admin login page.');
+        navigate('/admin/login');
+        return;
+      }
       
-      dispatch(login(dummyData));
-      dispatch(showToast({ message: 'Welcome back!', type: 'success' }));
+      dispatch(login(response));
+      toast.success('Welcome back!');
       navigate('/');
     } catch (err: any) {
       dispatch(setAuthError(err.message || 'Failed to login'));
-      dispatch(showToast({ message: 'Login failed', type: 'error' }));
+      toast.error(err.message || 'Login failed');
     }
   };
 
@@ -57,11 +53,6 @@ const Login: React.FC = () => {
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 text-red-500 p-3 text-sm text-center border border-red-200">
-              {error}
-            </div>
-          )}
           <div className="space-y-4">
             <div>
               <label htmlFor="email-address" className="sr-only">Email address</label>

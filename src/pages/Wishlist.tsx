@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Trash2, ShoppingBag } from 'lucide-react';
+import {Heart,Trash2, ShoppingBag } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../app/hooks';
 import { selectWishlistItems, removeFromWishlist, clearWishlist } from '../features/wishlist/wishlistSlice';
 import { addItem } from '../features/cart/cartSlice';
@@ -36,10 +36,7 @@ const Wishlist: React.FC = () => {
 
       <div className="px-4 sm:px-8 py-8 lg:py-12">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-          <h1 className="text-3xl sm:text-4xl font-bold uppercase tracking-wide flex items-center gap-3">
-            <Heart className="w-8 h-8 fill-red-500 text-red-500" />
-            My Wishlist
-          </h1>
+       
           {wishlistItems.length > 0 && (
             <button 
               onClick={() => dispatch(clearWishlist())}
@@ -55,11 +52,11 @@ const Wishlist: React.FC = () => {
             <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
               <Heart className="w-10 h-10 text-gray-300" />
             </div>
-            <h2 className="text-2xl font-bold mb-4">Your wishlist is empty</h2>
+            <h2 className="text-2xl font-bold text-gray-500 mb-4">Your wishlist is empty</h2>
             <p className="text-gray-500 mb-8">Save items you love and buy them later.</p>
             <Link 
               to="/" 
-              className="bg-black text-white px-8 py-4 font-medium hover:bg-gray-800 transition-colors uppercase tracking-widest text-sm"
+              className="bg-black text-white rounded-xl px-8 py-4 font-medium hover:bg-gray-800 transition-colors uppercase tracking-widest text-sm"
             >
               Continue Shopping
             </Link>

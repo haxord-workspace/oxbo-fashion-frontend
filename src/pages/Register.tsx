@@ -2,26 +2,83 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { register as registerAction, setAuthLoading, setAuthError } from '../features/auth/authSlice';
-import { showToast } from '../features/ui/uiSlice';
 import { authApi } from '../services/authApi';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+interface FormErrors {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  phone?: string;
+}
 
 const Register: React.FC = () => {
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone, setPhone] = useState('');
   
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const [errors, setErrors] = useState<FormErrors>({});
+
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isLoading, error } = useAppSelector(state => state.auth);
+  const { isLoading } = useAppSelector(state => state.auth);
+
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+
+    if (!firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+
+    if (!lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
+    
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else {
+      // Must contain at least 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character
+      const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/-]).{8,}$/;
+      if (!strongRegex.test(password)) {
+        newErrors.password = 'Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character (e.g., Password123!)';
+      }
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'Confirm Password is required';
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!/^\d{10,15}$/.test(phone)) {
+      newErrors.phone = 'Please enter a valid phone number (10-15 digits)';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password !== confirmPassword) {
-      dispatch(setAuthError('Passwords do not match'));
+    if (!validateForm()) {
       return;
     }
 
@@ -29,26 +86,22 @@ const Register: React.FC = () => {
     dispatch(setAuthError(''));
 
     try {
-      // Dummy register bypass
-      const dummyData = {
-        user: { 
-          id: 'dummy-' + Math.random().toString(36).substring(7), 
-          name: name || email.split('@')[0], 
-          email: email,
-          mobileNumber: mobileNumber 
-        },
-        token: 'dummy-jwt-token-12345'
+      const data = {
+        firstName,
+        lastName,
+        email,
+        password,
+        phone
       };
       
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await authApi.register(data);
       
-      dispatch(registerAction(dummyData));
-      dispatch(showToast({ message: 'Account created successfully!', type: 'success' }));
+      dispatch(registerAction(response));
+      toast.success('Account created successfully!');
       navigate('/');
     } catch (err: any) {
       dispatch(setAuthError(err.message || 'Failed to register'));
-      dispatch(showToast({ message: 'Registration failed', type: 'error' }));
+      toast.error(err.message || 'Registration failed');
     }
   };
 
@@ -66,27 +119,48 @@ const Register: React.FC = () => {
             </Link>
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 text-red-500 p-3 text-sm text-center border border-red-200">
-              {error}
-            </div>
-          )}
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
           <div className="space-y-4">
             <div>
-              <label htmlFor="name" className="sr-only">Full Name</label>
+              <label htmlFor="firstName" className="sr-only">First Name</label>
               <input
-                id="name"
-                name="name"
+                id="firstName"
+                name="firstName"
                 type="text"
-                autoComplete="name"
-                required
-                className="relative block w-full appearance-none rounded-none border border-gray-300 px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:border-black focus:outline-none focus:ring-black sm:text-sm"
-                placeholder="FULL NAME"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                autoComplete="given-name"
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                  errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                }`}
+                placeholder="FIRST NAME"
+                value={firstName}
+                onChange={(e) => {
+                  setFirstName(e.target.value);
+                  if (errors.firstName) setErrors({ ...errors, firstName: undefined });
+                }}
               />
+              {errors.firstName && <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>}
             </div>
+
+            <div>
+              <label htmlFor="lastName" className="sr-only">Last Name</label>
+              <input
+                id="lastName"
+                name="lastName"
+                type="text"
+                autoComplete="family-name"
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                  errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                }`}
+                placeholder="LAST NAME"
+                value={lastName}
+                onChange={(e) => {
+                  setLastName(e.target.value);
+                  if (errors.lastName) setErrors({ ...errors, lastName: undefined });
+                }}
+              />
+              {errors.lastName && <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>}
+            </div>
+
             <div>
               <label htmlFor="email-address" className="sr-only">Email address</label>
               <input
@@ -94,53 +168,91 @@ const Register: React.FC = () => {
                 name="email"
                 type="email"
                 autoComplete="email"
-                required
-                className="relative block w-full appearance-none rounded-none border border-gray-300 px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:border-black focus:outline-none focus:ring-black sm:text-sm"
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                  errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                }`}
                 placeholder="EMAIL ADDRESS"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) setErrors({ ...errors, email: undefined });
+                }}
               />
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
             </div>
+
             <div>
-              <label htmlFor="mobile-number" className="sr-only">Mobile Number</label>
+              <label htmlFor="phone" className="sr-only">Phone</label>
               <input
-                id="mobile-number"
-                name="mobileNumber"
+                id="phone"
+                name="phone"
                 type="tel"
                 autoComplete="tel"
-                className="relative block w-full appearance-none rounded-none border border-gray-300 px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:border-black focus:outline-none focus:ring-black sm:text-sm"
-                placeholder="MOBILE NUMBER"
-                value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                  errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                }`}
+                placeholder="PHONE NUMBER"
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  if (errors.phone) setErrors({ ...errors, phone: undefined });
+                }}
               />
+              {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
             </div>
-            <div>
+
+            <div className="relative">
               <label htmlFor="password" className="sr-only">Password</label>
               <input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
-                required
-                className="relative block w-full appearance-none rounded-none border border-gray-300 px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:border-black focus:outline-none focus:ring-black sm:text-sm"
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 pr-10 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                  errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                }`}
                 placeholder="PASSWORD"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errors.password) setErrors({ ...errors, password: undefined });
+                }}
               />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-black"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+              {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
             </div>
-            <div>
-              <label htmlFor="confirm-password" className="sr-only">Confirm Password</label>
+
+            <div className="relative">
+              <label htmlFor="confirmPassword" className="sr-only">Confirm Password</label>
               <input
-                id="confirm-password"
+                id="confirmPassword"
                 name="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 autoComplete="new-password"
-                required
-                className="relative block w-full appearance-none rounded-none border border-gray-300 px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:border-black focus:outline-none focus:ring-black sm:text-sm"
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 pr-10 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                  errors.confirmPassword ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                }`}
                 placeholder="CONFIRM PASSWORD"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined });
+                }}
               />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-black"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+              {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword}</p>}
             </div>
           </div>
 

@@ -6,10 +6,11 @@ import CategoryNav from './CategoryNav';
 import Footer from './Footer';
 import CartDrawer from '../../features/cart/CartDrawer';
 import MobileMenuDrawer from './MobileMenuDrawer';
+import MobileBottomNav from './MobileBottomNav';
 
 const MainLayout: React.FC = () => {
   return (
-    <div className="flex flex-col min-h-screen bg-white overflow-x-hidden">
+    <div className="flex flex-col min-h-screen bg-white overflow-x-hidden pb-[60px] sm:pb-0">
       <AnnouncementBar />
       <Navbar />
       <CategoryNav />
@@ -21,6 +22,7 @@ const MainLayout: React.FC = () => {
       <Footer />
       <CartDrawer />
       <MobileMenuDrawer />
+      <MobileBottomNav />
     </div>
   );
 };
