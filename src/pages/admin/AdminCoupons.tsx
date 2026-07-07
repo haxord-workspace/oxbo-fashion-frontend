@@ -1,12 +1,31 @@
-import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Eye, Filter } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Edit2, Trash2 } from 'lucide-react';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
+import { AdminPagination } from '../../components/admin/AdminPagination';
+
+const mockCoupons = Array.from({ length: 18 }, (_, i) => ({
+  id: `${i + 1}`,
+  code: `SAVE${(i + 1) * 10}`,
+  discount: `${(i % 5 + 1) * 10}% OFF`,
+  expiry: `Dec ${31 - (i % 30)}, 2026`,
+  status: i % 4 === 0 ? 'Expired' : 'Active'
+}));
 
 export const AdminCoupons = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+  const totalPages = Math.ceil(mockCoupons.length / itemsPerPage);
+  
+  const currentCoupons = mockCoupons.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const openModal = (mode: 'add' | 'edit', coupon: any = null) => {
     setModalMode(mode);
@@ -40,18 +59,35 @@ export const AdminCoupons = () => {
               </tr>
             </thead>
             <tbody className="text-sm">
-              <tr className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-4 px-4 font-mono font-medium text-black">WELCOME20</td>
-                <td className="py-4 px-4 text-green-600 font-medium">20% OFF</td>
-                <td className="py-4 px-4 text-gray-600">Dec 31, 2026</td>
-                <td className="py-4 px-4"><span className="px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Active</span></td>
-                <td className="py-4 px-4 text-right">
-                  <button onClick={() => openModal('edit', { code: 'WELCOME20', discount: 20 })} className="p-1.5 text-gray-400 hover:text-black"><Edit2 size={16} /></button>
-                </td>
-              </tr>
+              {currentCoupons.map((coupon) => (
+                <tr key={coupon.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <td className="py-4 px-4 font-mono font-medium text-black">{coupon.code}</td>
+                  <td className="py-4 px-4 text-green-600 font-medium">{coupon.discount}</td>
+                  <td className="py-4 px-4 text-gray-600">{coupon.expiry}</td>
+                  <td className="py-4 px-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${coupon.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {coupon.status}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => openModal('edit', coupon)} className="p-1.5 text-gray-400 hover:text-black transition-colors"><Edit2 size={16} /></button>
+                      <button className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
+        
+        <AdminPagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={mockCoupons.length}
+          itemsPerPage={itemsPerPage}
+        />
       </PageWrapper>
 
       <AdminModal

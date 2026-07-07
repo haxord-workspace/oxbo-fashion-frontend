@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Eye, Filter } from 'lucide-react';
-import AdminModal from '../../components/common/AdminModal';
+import { useState, useEffect } from 'react';
+import { Search, Eye, Filter } from 'lucide-react';
 import PageWrapper from '../../components/admin/PageWrapper';
+import { AdminPagination } from '../../components/admin/AdminPagination';
 
-const mockAdminOrders = [
-  { id: 'ORD-7829', customer: 'John Doe', email: 'john@example.com', date: '2026-07-06', total: 3498, status: 'Processing' },
-  { id: 'ORD-7828', customer: 'Jane Smith', email: 'jane.s@example.com', date: '2026-07-05', total: 1299, status: 'Shipped' },
-  { id: 'ORD-7827', customer: 'Michael Brown', email: 'mikeb@example.com', date: '2026-07-04', total: 5497, status: 'Delivered' },
-  { id: 'ORD-7826', customer: 'Emily Davis', email: 'emily.d@example.com', date: '2026-07-04', total: 999, status: 'Pending' },
-  { id: 'ORD-7825', customer: 'Chris Wilson', email: 'chrisw@example.com', date: '2026-07-03', total: 2499, status: 'Cancelled' },
-];
+const mockAdminOrders = Array.from({ length: 35 }, (_, i) => ({
+  id: `ORD-${7829 - i}`,
+  customer: ['John Doe', 'Jane Smith', 'Michael Brown', 'Emily Davis', 'Chris Wilson'][i % 5],
+  email: `user${i}@example.com`,
+  date: `2026-07-${String(Math.max(1, 6 - (i % 6))).padStart(2, '0')}`,
+  total: 500 + Math.floor(Math.random() * 5000),
+  status: ['Pending', 'Processing', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'][i % 9]
+}));
 
 const ORDER_STATUSES = ['All', 'Pending', 'Processing', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'];
 
@@ -17,12 +18,27 @@ export const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
   const filteredOrders = mockAdminOrders.filter(order => {
     const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
     const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           order.customer.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  
+  const currentOrders = filteredOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, searchQuery]);
 
   return (
     <PageWrapper title="Orders">
@@ -64,12 +80,12 @@ export const AdminOrders = () => {
             </tr>
           </thead>
           <tbody className="text-sm">
-            {filteredOrders.length === 0 ? (
+            {currentOrders.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-8 text-center text-gray-500">No orders found matching your filters.</td>
               </tr>
             ) : (
-              filteredOrders.map(order => (
+              currentOrders.map(order => (
                 <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="py-4 px-4 font-medium text-gray-900">{order.id}</td>
                   <td className="py-4 px-4">
@@ -103,6 +119,16 @@ export const AdminOrders = () => {
           </tbody>
         </table>
       </div>
+      
+      {filteredOrders.length > 0 && (
+        <AdminPagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredOrders.length}
+          itemsPerPage={itemsPerPage}
+        />
+      )}
     </PageWrapper>
   );
 };

@@ -41,6 +41,7 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
           <div className="flex justify-between text-base font-medium text-gray-900">
             <h3 className="line-clamp-2 pr-4">{product.name}</h3>
             <div className="text-right ml-4">
+              <span className="text-gray-500 line-through">Rs.{product.price+100}</span>
               <p>Rs. {product.price.toLocaleString('en-IN')}</p>
               {product.mrp && product.mrp > product.price && (
                 <p className="text-xs text-gray-400 line-through">Rs. {product.mrp.toLocaleString('en-IN')}</p>

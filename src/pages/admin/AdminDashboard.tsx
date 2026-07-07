@@ -1,6 +1,3 @@
-import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Eye, Filter } from 'lucide-react';
-import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
 
 export const AdminDashboard = () => (

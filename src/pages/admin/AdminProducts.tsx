@@ -1,26 +1,55 @@
-import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Eye, Filter } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
+import { AdminPagination } from '../../components/admin/AdminPagination';
 
-const mockAdminProducts = [
-  { id: '1', name: 'Classic White Tee', category: 'Clothing', price: 999, status: 'Active', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=150' },
-  { id: '2', name: 'Black Denim Jacket', category: 'Outerwear', price: 2499, status: 'Active', image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=150' },
-  { id: '3', name: 'Vintage Wash Jeans', category: 'Pants', price: 1899, status: 'Inactive', image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=150' },
-  { id: '4', name: 'Leather Crossbody Bag', category: 'Accessories', price: 1499, status: 'Active', image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=150' },
-  { id: '5', name: 'Oversized Hoodie', category: 'Clothing', price: 1299, status: 'Active', image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=150' },
-];
+const mockAdminProducts = Array.from({ length: 32 }, (_, i) => ({
+  id: `${i + 1}`,
+  name: ['Classic White Tee', 'Black Denim Jacket', 'Vintage Wash Jeans', 'Leather Crossbody Bag', 'Oversized Hoodie'][i % 5] + (i >= 5 ? ` ${i + 1}` : ''),
+  category: ['Clothing', 'Outerwear', 'Pants', 'Accessories', 'Clothing'][i % 5],
+  price: 999 + (i * 100),
+  status: i % 6 === 0 ? 'Inactive' : 'Active',
+  image: [
+    'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=150',
+    'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=150',
+    'https://images.unsplash.com/photo-1542272604-787c3835535d?w=150',
+    'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=150',
+    'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=150'
+  ][i % 5]
+}));
 
 export const AdminProducts = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const openModal = (mode: 'add' | 'edit', product: any = null) => {
     setModalMode(mode);
     setSelectedProduct(product);
     setIsModalOpen(true);
   };
+
+  const filteredProducts = mockAdminProducts.filter(prod => 
+    prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    prod.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  
+  const currentProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   return (
     <>
@@ -42,6 +71,8 @@ export const AdminProducts = () => {
             <input 
               type="text" 
               placeholder="Search products..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm"
             />
           </div>
@@ -63,38 +94,54 @@ export const AdminProducts = () => {
               </tr>
             </thead>
             <tbody className="text-sm">
-              {mockAdminProducts.map(product => (
-                <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                  <td className="py-4 px-4 flex items-center gap-4">
-                    <img src={product.image} alt={product.name} className="w-12 h-12 rounded object-cover border border-gray-200" />
-                    <span className="font-medium text-gray-900">{product.name}</span>
-                  </td>
-                  <td className="py-4 px-4 text-gray-600">{product.category}</td>
-                  <td className="py-4 px-4 font-medium">Rs. {product.price.toLocaleString('en-IN')}</td>
-                  <td className="py-4 px-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${product.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {product.status}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => openModal('edit', product)}
-                        className="p-1.5 text-gray-400 hover:text-black transition-colors" 
-                        title="Edit"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
+              {currentProducts.length > 0 ? (
+                currentProducts.map(product => (
+                  <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="py-4 px-4 flex items-center gap-4">
+                      <img src={product.image} alt={product.name} className="w-12 h-12 rounded object-cover border border-gray-200" />
+                      <span className="font-medium text-gray-900">{product.name}</span>
+                    </td>
+                    <td className="py-4 px-4 text-gray-600">{product.category}</td>
+                    <td className="py-4 px-4 font-medium">Rs. {product.price.toLocaleString('en-IN')}</td>
+                    <td className="py-4 px-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${product.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {product.status}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => openModal('edit', product)}
+                          className="p-1.5 text-gray-400 hover:text-black transition-colors" 
+                          title="Edit"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-gray-500">No products found.</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
+        
+        {filteredProducts.length > 0 && (
+          <AdminPagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredProducts.length}
+            itemsPerPage={itemsPerPage}
+          />
+        )}
       </PageWrapper>
 
       <AdminModal

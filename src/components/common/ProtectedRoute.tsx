@@ -1,16 +1,14 @@
 import React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { useAppSelector } from '../../app/hooks';
-import { selectIsAuthenticated, selectUserRole } from '../../features/auth/authSlice';
+import { selectIsAuthenticated } from '../../features/auth/authSlice';
 
 interface ProtectedRouteProps {
   allowedRoles?: ('user' | 'admin')[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = () => {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const userRole = useAppSelector(selectUserRole);
-  const location = useLocation();
 
   if (!isAuthenticated) {
   //   // If trying to access admin route, redirect to admin login

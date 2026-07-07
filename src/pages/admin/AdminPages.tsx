@@ -1,6 +1,7 @@
 export * from './AdminDashboard';
 export * from './AdminProducts';
 export * from './AdminCategories';
+export * from './AdminCategoryDetails';
 export * from './AdminOrders';
 export * from './AdminUsers';
 export * from './AdminInventory';

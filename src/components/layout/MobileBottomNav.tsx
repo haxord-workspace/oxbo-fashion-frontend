@@ -1,6 +1,6 @@
 import React from 'react';
 import { Home, LayoutGrid, ShoppingBag, User } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { toggleCart } from '../../features/ui/uiSlice';
 import { selectCartCount } from '../../features/cart/cartSlice';
@@ -9,7 +9,6 @@ import { selectIsAuthenticated } from '../../features/auth/authSlice';
 const MobileBottomNav: React.FC = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const navigate = useNavigate();
   const cartCount = useAppSelector(selectCartCount);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 

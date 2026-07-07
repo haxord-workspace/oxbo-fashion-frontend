@@ -26,6 +26,7 @@ import {
   AdminDashboard,
   AdminProducts,
   AdminCategories,
+  AdminCategoryDetails,
   AdminOrders,
   AdminUsers,
   AdminInventory,
@@ -83,6 +84,7 @@ const AppContent: React.FC = () => {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="products" element={<AdminProducts />} />
             <Route path="categories" element={<AdminCategories />} />
+            <Route path="categories/:categoryId" element={<AdminCategoryDetails />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="inventory" element={<AdminInventory />} />

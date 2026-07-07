@@ -4,11 +4,10 @@ import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { toggleCart, toggleMobileMenu } from '../../features/ui/uiSlice';
 import { selectCartCount } from '../../features/cart/cartSlice';
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const Navbar: React.FC = () => {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const cartCount = useAppSelector(selectCartCount);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 

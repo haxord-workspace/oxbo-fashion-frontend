@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { login, setAuthLoading, setAuthError } from '../../features/auth/authSlice';
-import { authApi } from '../../services/authApi';
+import { setAuthLoading, setAuthError } from '../../features/auth/authSlice';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
