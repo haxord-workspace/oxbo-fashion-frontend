@@ -21,7 +21,7 @@ export const adminUserApi = {
   },
 
   updateUser: async (userId: string, data: Partial<User>) => {
-    const response = await api.patch(`/users/${userId}`, data);
+    const response = await api.put(`/users/${userId}`, data);
     return { user: response.data.data?.user || response.data.data || response.data, message: response.data.message };
   }
 };

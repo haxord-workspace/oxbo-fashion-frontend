@@ -8,7 +8,11 @@ export interface User {
   address?: string;
   pincode?: string;
   profileImage?: string;
-  role?: 'user' | 'admin';
+  role?: string;
+  roleId?: {
+    _id: string;
+    name: string;
+  };
   isActive?: boolean;
   isVerified?: boolean;
   createdAt?: string;

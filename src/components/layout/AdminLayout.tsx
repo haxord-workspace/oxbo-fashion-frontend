@@ -18,13 +18,15 @@ import {
   LogOut,
   Menu,
   X,
-  Store
+  Store,
+  Award
 } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Products', path: '/admin/products', icon: Package },
   { name: 'Categories', path: '/admin/categories', icon: Tags },
+  { name: 'Brands', path: '/admin/brands', icon: Award },
   { name: 'Orders', path: '/admin/orders', icon: ShoppingCart },
   { name: 'Users', path: '/admin/users', icon: Users },
   { name: 'Inventory', path: '/admin/inventory', icon: Archive },

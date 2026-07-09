@@ -4,11 +4,12 @@ import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { setAuthLoading, setAuthError, login } from '../../features/auth/authSlice';
 import { authApi } from '../../services/authApi';
 import toast from 'react-hot-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -37,8 +38,9 @@ const AdminLogin: React.FC = () => {
       toast.success(response.message || 'Admin login successful!');
       navigate('/admin/dashboard');
     } catch (err: any) {
-      dispatch(setAuthError(err.message || 'Failed to login'));
-      toast.error(err.message || 'Login failed');
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Login failed';
+      dispatch(setAuthError(errorMsg));
+      toast.error(errorMsg);
     }
   };
 
@@ -69,19 +71,26 @@ const AdminLogin: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <div>
+            <div className="relative">
               <label htmlFor="password" className="sr-only">Password</label>
               <input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 required
-                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
+                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm pr-10"
                 placeholder="PASSWORD"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
           </div>
 

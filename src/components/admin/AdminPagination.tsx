@@ -16,8 +16,6 @@ export const AdminPagination: React.FC<AdminPaginationProps> = ({
   totalItems,
   itemsPerPage
 }) => {
-  if (totalPages <= 1) return null;
-
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 

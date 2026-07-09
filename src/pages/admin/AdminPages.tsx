@@ -10,3 +10,4 @@ export * from './AdminCoupons';
 export * from './AdminReports';
 export * from './AdminSettings';
 export * from './AdminStores';
+export * from './AdminBrands';

@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Search, ArrowLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, ArrowLeft, Loader2 } from 'lucide-react';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
+import { adminCategoriesApi } from '../../services/admin/admincategories.Api';
+import type { Category } from '../../types';
+import toast from 'react-hot-toast';
 
 // Mock data specific to a category
 const mockCategoryProducts = Array.from({ length: 24 }, (_, i) => ({
@@ -33,7 +36,26 @@ export const AdminCategoryDetails = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  const categoryName = categoryId === '3' ? 'Pants' : `Category ${categoryId}`;
+  const [category, setCategory] = useState<Category | null>(null);
+  const [isLoadingCategory, setIsLoadingCategory] = useState(true);
+
+  useEffect(() => {
+    const fetchCategory = async () => {
+      if (!categoryId) return;
+      setIsLoadingCategory(true);
+      try {
+        const response = await adminCategoriesApi.getCategoryById(categoryId);
+        setCategory(response.category);
+      } catch (err: any) {
+        toast.error('Failed to load category details');
+      } finally {
+        setIsLoadingCategory(false);
+      }
+    };
+    fetchCategory();
+  }, [categoryId]);
+
+  const categoryName = category?.name || `Category ${categoryId}`;
 
   const openModal = (mode: 'add' | 'edit', product: any = null) => {
     setModalMode(mode);
@@ -60,7 +82,14 @@ export const AdminCategoryDetails = () => {
   return (
     <>
       <PageWrapper 
-        title={`${categoryName} Products`}
+        title={isLoadingCategory ? (
+          <div className="flex items-center text-gray-500">
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            Loading Category...
+          </div>
+        ) : (
+          `${categoryName} Products`
+        )}
         headerAction={
           <div className="flex items-center gap-3">
             <button 

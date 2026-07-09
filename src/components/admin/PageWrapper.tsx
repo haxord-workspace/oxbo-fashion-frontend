@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PageWrapper: React.FC<{ title: string; children?: React.ReactNode; headerAction?: React.ReactNode }> = ({ title, children, headerAction }) => (
+const PageWrapper: React.FC<{ title: React.ReactNode; children?: React.ReactNode; headerAction?: React.ReactNode }> = ({ title, children, headerAction }) => (
   <div className="space-y-6">
     <div className="flex items-center justify-between">
       <h2 className="text-2xl font-bold text-gray-900">{title}</h2>

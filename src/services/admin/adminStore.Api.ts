@@ -20,7 +20,7 @@ export const adminStoreApi = {
       total = response.data.total || response.data.data.length;
     } else if (response.data.data?.stores || response.data.data?.docs) {
       stores = response.data.data.stores || response.data.data.docs;
-      total = response.data.data.total || response.data.data.totalDocs || stores.length;
+      total = response.data.data.meta?.total || response.data.data.total || response.data.data.totalDocs || stores.length;
     } else if (Array.isArray(response.data)) {
       stores = response.data;
       total = stores.length;

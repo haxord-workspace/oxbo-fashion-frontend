@@ -23,7 +23,7 @@ const initialState: AuthState = {
 
 export const initializeAuth = createAsyncThunk(
   'auth/initialize',
-  async (_, { rejectWithValue }) => {
+  async (_) => {
     try {
       // Just try to fetch the profile. If the HttpOnly cookies are present, this will succeed.
       const response = await authApi.getProfile();

@@ -24,7 +24,7 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 api.interceptors.request.use(async (config) => {
-  let token = Cookies.get('accessToken');
+  let token: string | undefined | null = Cookies.get('accessToken');
   const refreshToken = Cookies.get('refreshToken');
 
   // If no access token but we have a refresh token, try to refresh before sending the request
@@ -75,19 +75,19 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // If 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
       originalRequest._retry = true;
-      const refreshToken = Cookies.get('refreshToken');
 
-      const isAuthEndpoint = originalRequest.url?.includes('/auth/profile') || originalRequest.url?.includes('/auth/login');
       const isLoginPage = window.location.pathname.includes('/login');
 
-      if (refreshToken) {
+      if (!isLoginPage) {
         try {
-          // IMPORTANT: use a new axios instance to avoid interceptor loops if the refresh fails
+          // IMPORTANT: use a new axios instance to avoid interceptor loops if the refresh fails.
+          // Since cookies are HttpOnly, we don't pass refreshToken in the body, but rely on the browser sending it.
           const refreshResponse = await axios.post(
             `${api.defaults.baseURL}/auth/refresh`,
-            { refreshToken }
+            {},
+            { withCredentials: true }
           );
 
           const newAccessToken = refreshResponse.data.data?.tokens?.accessToken ||
@@ -95,29 +95,24 @@ api.interceptors.response.use(
             refreshResponse.data.data?.accessToken ||
             refreshResponse.data.token ||
             refreshResponse.data.accessToken || '';
+            
           if (newAccessToken) {
+            // Some backends return the token in body even if using cookies
             Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           }
 
           // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return api(originalRequest);
         } catch (refreshError) {
-          // If refresh fails, clear cookies and force logout
+          // If refresh fails, force logout
           Cookies.remove('accessToken');
           Cookies.remove('refreshToken');
-          if (!isLoginPage && !isAuthEndpoint) {
-            const isAdminRoute = window.location.pathname.startsWith('/admin');
-            window.location.href = isAdminRoute ? '/admin/login' : '/login';
-          }
-          return Promise.reject(refreshError);
-        }
-      } else {
-        // No refresh token available
-        Cookies.remove('accessToken');
-        if (!isLoginPage && !isAuthEndpoint) {
+          
           const isAdminRoute = window.location.pathname.startsWith('/admin');
           window.location.href = isAdminRoute ? '/admin/login' : '/login';
+          
+          return Promise.reject(refreshError);
         }
       }
     }
