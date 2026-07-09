@@ -22,15 +22,20 @@ const Login: React.FC = () => {
     try {
       const response = await authApi.login(email, password);
       
-      if (response.user.role === 'admin') {
+      const isAdmin = response.user.role === 'admin' || !!(response.user as any).roleId;
+      
+      if (isAdmin) {
         dispatch(setAuthLoading(false));
         toast.error('Admins must use the admin login page.');
         navigate('/admin/login');
         return;
       }
       
+      // Ensure the role is set for the frontend Redux state
+      response.user.role = 'user';
+      
       dispatch(login(response));
-      toast.success('Welcome back!');
+      toast.success(response.message || 'Welcome back!');
       navigate('/');
     } catch (err: any) {
       dispatch(setAuthError(err.message || 'Failed to login'));

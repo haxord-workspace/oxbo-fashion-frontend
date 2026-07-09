@@ -97,7 +97,7 @@ const Register: React.FC = () => {
       const response = await authApi.register(data);
       
       dispatch(registerAction(response));
-      toast.success('Account created successfully!');
+      toast.success(response.message || 'Account created successfully!');
       navigate('/');
     } catch (err: any) {
       dispatch(setAuthError(err.message || 'Failed to register'));

@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { User } from '../../types';
 import type { RootState } from '../../app/store';
-import Cookies from 'js-cookie';
+// import Cookies from 'js-cookie';
 import { authApi, type AuthResponse } from '../../services/authApi';
 
 interface AuthState {
@@ -15,7 +15,7 @@ interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  token: Cookies.get('accessToken') || null,
+  token: localStorage.getItem('accessToken') || null,
   isLoading: false,
   error: null,
   isInitialized: false,
@@ -25,14 +25,13 @@ export const initializeAuth = createAsyncThunk(
   'auth/initialize',
   async (_, { rejectWithValue }) => {
     try {
-      const token = Cookies.get('accessToken');
-      const refreshToken = Cookies.get('refreshToken');
-      if (!token && !refreshToken) return null;
-      
+      // Just try to fetch the profile. If the HttpOnly cookies are present, this will succeed.
       const response = await authApi.getProfile();
+      console.log(response)
       return response.user;
     } catch (err: any) {
-      return rejectWithValue(err.message || 'Failed to initialize auth');
+      // If it fails, they are not authenticated (e.g., cookies expired or missing)
+      return null;
     }
   }
 );
@@ -43,25 +42,33 @@ const authSlice = createSlice({
   reducers: {
     login(state, action: PayloadAction<AuthResponse>) {
       state.user = action.payload.user;
-      state.token = action.payload.accessToken;
+      state.token = action.payload.accessToken || null;
       state.isLoading = false;
       state.error = null;
-      Cookies.set('accessToken', action.payload.accessToken, { secure: true, sameSite: 'strict' });
-      Cookies.set('refreshToken', action.payload.refreshToken, { secure: true, sameSite: 'strict' });
+      if (action.payload.accessToken) {
+        localStorage.setItem('accessToken', action.payload.accessToken);
+      }
+      if (action.payload.refreshToken) {
+        localStorage.setItem('refreshToken', action.payload.refreshToken);
+      }
     },
     register(state, action: PayloadAction<AuthResponse>) {
       state.user = action.payload.user;
-      state.token = action.payload.accessToken;
+      state.token = action.payload.accessToken || null;
       state.isLoading = false;
       state.error = null;
-      Cookies.set('accessToken', action.payload.accessToken, { secure: true, sameSite: 'strict' });
-      Cookies.set('refreshToken', action.payload.refreshToken, { secure: true, sameSite: 'strict' });
+      if (action.payload.accessToken) {
+        localStorage.setItem('accessToken', action.payload.accessToken);
+      }
+      if (action.payload.refreshToken) {
+        localStorage.setItem('refreshToken', action.payload.refreshToken);
+      }
     },
     logout(state) {
       state.user = null;
       state.token = null;
-      Cookies.remove('accessToken');
-      Cookies.remove('refreshToken');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
     },
     fetchCurrentUser(state, action: PayloadAction<User>) {
       state.user = action.payload;
@@ -89,7 +96,7 @@ const authSlice = createSlice({
         state.isInitialized = true;
         if (action.payload) {
           state.user = action.payload;
-          state.token = Cookies.get('accessToken') || null;
+          state.token = localStorage.getItem('accessToken') || null;
         } else {
           state.user = null;
           state.token = null;
@@ -108,9 +115,15 @@ const authSlice = createSlice({
 export const { login, register, logout, fetchCurrentUser, updateUser, setAuthLoading, setAuthError } = authSlice.actions;
 
 export const selectCurrentUser = (state: RootState) => state.auth?.user;
-export const selectIsAuthenticated = (state: RootState) => !!state.auth?.token;
+export const selectIsAuthenticated = (state: RootState) => !!state.auth?.user;
 export const selectAuthInitialized = (state: RootState) => state.auth?.isInitialized;
-export const selectUserRole = (state: RootState) => state.auth?.user?.role || 'user';
-export const selectIsAdmin = (state: RootState) => state.auth?.user?.role === 'admin';
+export const selectUserRole = (state: RootState) => {
+  const user = state.auth?.user as any;
+  if (!user) return 'user';
+  if (user.role) return user.role;
+  if (user.roleId) return 'admin';
+  return 'user';
+};
+export const selectIsAdmin = (state: RootState) => selectUserRole(state) === 'admin';
 
 export default authSlice.reducer;

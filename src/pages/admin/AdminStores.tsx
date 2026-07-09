@@ -1,17 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search, Store } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Edit2, Trash2, Search, Store as StoreIcon, Loader2 } from 'lucide-react';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
-
-const mockAdminStores = Array.from({ length: 15 }, (_, i) => ({
-  id: `ST-00${i + 1}`,
-  name: ['Downtown Main Hub', 'Uptown Boutique', 'Westside Outlet', 'Northside Center', 'South Mall'][i % 5] + (i >= 5 ? ` ${i + 1}` : ''),
-  location: ['New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Houston, TX', 'Miami, FL'][i % 5],
-  status: i % 4 === 0 ? 'Inactive' : 'Active',
-  manager: ['Alice Smith', 'Bob Johnson', 'Charlie Davis', 'Diana Evans', 'Frank White'][i % 5],
-  inventoryCount: Math.floor(Math.random() * 2000)
-}));
+import { adminStoreApi } from '../../services/admin/adminStore.Api';
+import type { Store } from '../../types';
+import toast from 'react-hot-toast';
 
 export const AdminStores = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,9 +13,34 @@ export const AdminStores = () => {
   const [selectedStore, setSelectedStore] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [stores, setStores] = useState<Store[]>([]);
+  const [totalStores, setTotalStores] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const itemsPerPage = 10;
+
+  const fetchStores = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await adminStoreApi.getStores({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchQuery
+      });
+      setStores(data.stores);
+      setTotalStores(data.total);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to fetch stores');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, itemsPerPage, searchQuery]);
+
+  useEffect(() => {
+    fetchStores();
+  }, [fetchStores]);
 
   const openModal = (mode: 'add' | 'edit', store: any = null) => {
     setModalMode(mode);
@@ -29,17 +48,20 @@ export const AdminStores = () => {
     setIsModalOpen(true);
   };
 
-  const filteredStores = mockAdminStores.filter(store => 
-    store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    store.location.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleDeleteStore = async (storeId: string) => {
+    if (!window.confirm('Are you sure you want to delete this store?')) return;
+    
+    try {
+      const response = await adminStoreApi.deleteStore(storeId);
+      toast.success(response.message || 'Store deleted successfully');
+      setStores(stores.filter(s => (s._id || s.id) !== storeId));
+      setTotalStores(prev => prev - 1);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete store');
+    }
+  };
 
-  const totalPages = Math.ceil(filteredStores.length / itemsPerPage);
-  
-  const currentStores = filteredStores.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const totalPages = Math.ceil(totalStores / itemsPerPage);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -73,18 +95,23 @@ export const AdminStores = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentStores.length > 0 ? (
-            currentStores.map(store => (
-              <div key={store.id} className="border border-gray-200 rounded-lg p-5 flex flex-col hover:shadow-md transition-shadow bg-white">
+          {isLoading ? (
+            <div className="col-span-1 md:col-span-2 lg:col-span-3 py-12 flex justify-center text-gray-500 border border-dashed border-gray-300 rounded-lg">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" />
+              <span>Loading stores...</span>
+            </div>
+          ) : stores.length > 0 ? (
+            stores.map(store => (
+              <div key={store._id || store.id} className="border border-gray-200 rounded-lg p-5 flex flex-col hover:shadow-md transition-shadow bg-white">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-700">
-                      <Store size={20} />
+                      <StoreIcon size={20} />
                     </div>
                     <div>
                       <h4 className="font-bold text-gray-900">{store.name}</h4>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${store.status === 'Active' ? 'text-green-600' : 'text-gray-500'}`}>
-                        {store.status}
+                      <span className={`text-[10px] font-bold uppercase tracking-wider text-gray-500`}>
+                        {store.type || 'Store'}
                       </span>
                     </div>
                   </div>
@@ -92,7 +119,11 @@ export const AdminStores = () => {
                     <button onClick={() => openModal('edit', store)} className="p-1.5 text-gray-400 hover:text-black transition-colors" title="Edit">
                       <Edit2 size={16} />
                     </button>
-                    <button className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                    <button 
+                      onClick={() => handleDeleteStore(store._id || store.id || '')}
+                      className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" 
+                      title="Delete"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -100,20 +131,20 @@ export const AdminStores = () => {
                 
                 <div className="space-y-2 text-sm text-gray-600 mt-2">
                   <div className="flex justify-between">
-                    <span>Store ID:</span>
-                    <span className="font-medium text-gray-900">{store.id}</span>
+                    <span>Store Code:</span>
+                    <span className="font-medium text-gray-900">{store.code}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Location:</span>
-                    <span className="font-medium text-gray-900">{store.location}</span>
+                    <span className="font-medium text-gray-900">{store.address?.city || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Manager:</span>
-                    <span className="font-medium text-gray-900">{store.manager}</span>
+                    <span>Email:</span>
+                    <span className="font-medium text-gray-900">{store.email}</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-gray-100 mt-2">
-                    <span>Inventory Items:</span>
-                    <span className="font-medium text-black">{store.inventoryCount.toLocaleString()}</span>
+                    <span>Phone:</span>
+                    <span className="font-medium text-black">{store.phone}</span>
                   </div>
                 </div>
               </div>
@@ -125,13 +156,13 @@ export const AdminStores = () => {
           )}
         </div>
         
-        {filteredStores.length > 0 && (
+        {totalStores > 0 && (
           <div className="mt-6">
             <AdminPagination 
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              totalItems={filteredStores.length}
+              totalItems={totalStores}
               itemsPerPage={itemsPerPage}
             />
           </div>

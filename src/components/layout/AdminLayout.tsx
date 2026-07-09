@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { logout, selectCurrentUser } from '../../features/auth/authSlice';
+import { authApi } from '../../services/authApi';
+import toast from 'react-hot-toast';
 import {
   LayoutDashboard,
   Package,
@@ -40,9 +42,15 @@ const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const user = useAppSelector(selectCurrentUser);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/admin/login');
+  const handleLogout = async () => {
+    try {
+      const response = await authApi.logout();
+      dispatch(logout());
+      toast.success(response.message || 'Admin logged out');
+      navigate('/admin/login');
+    } catch (err: any) {
+      toast.error(err.message || 'Logout failed');
+    }
   };
 
   const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);

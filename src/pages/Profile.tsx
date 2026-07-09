@@ -32,9 +32,15 @@ const Profile: React.FC = () => {
   const [isCropping, setIsCropping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      const response = await authApi.logout();
+      dispatch(logout());
+      toast.success(response.message || 'Logged out successfully');
+      navigate('/');
+    } catch (err: any) {
+      toast.error(err.message || 'Logout failed');
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {

@@ -3,13 +3,66 @@ import Cookies from 'js-cookie';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-api.interceptors.request.use((config) => {
-  const token = Cookies.get('accessToken');
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+api.interceptors.request.use(async (config) => {
+  let token = Cookies.get('accessToken');
+  const refreshToken = Cookies.get('refreshToken');
+
+  // If no access token but we have a refresh token, try to refresh before sending the request
+  if (!token && refreshToken && !config.url?.includes('/auth/refresh')) {
+    if (isRefreshing) {
+      try {
+        token = await new Promise<string | null>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        });
+      } catch (err) {
+        return config;
+      }
+    } else {
+      isRefreshing = true;
+      try {
+        const refreshResponse = await axios.post(
+          `${api.defaults.baseURL}/auth/refresh`,
+          { refreshToken },
+          { withCredentials: true }
+        );
+        const newAccessToken = refreshResponse.data.data?.tokens?.accessToken ||
+          refreshResponse.data.data?.token ||
+          refreshResponse.data.data?.accessToken ||
+          refreshResponse.data.token ||
+          refreshResponse.data.accessToken || '';
+        if (newAccessToken) {
+          Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
+          token = newAccessToken;
+        }
+        processQueue(null, token);
+      } catch (error) {
+        processQueue(error, null);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -26,6 +79,9 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       const refreshToken = Cookies.get('refreshToken');
 
+      const isAuthEndpoint = originalRequest.url?.includes('/auth/profile') || originalRequest.url?.includes('/auth/login');
+      const isLoginPage = window.location.pathname.includes('/login');
+
       if (refreshToken) {
         try {
           // IMPORTANT: use a new axios instance to avoid interceptor loops if the refresh fails
@@ -33,10 +89,16 @@ api.interceptors.response.use(
             `${api.defaults.baseURL}/auth/refresh`,
             { refreshToken }
           );
-          
-          const newAccessToken = refreshResponse.data.accessToken;
-          Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
-          
+
+          const newAccessToken = refreshResponse.data.data?.tokens?.accessToken ||
+            refreshResponse.data.data?.token ||
+            refreshResponse.data.data?.accessToken ||
+            refreshResponse.data.token ||
+            refreshResponse.data.accessToken || '';
+          if (newAccessToken) {
+            Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
+          }
+
           // Retry original request with new token
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return api(originalRequest);
@@ -44,13 +106,19 @@ api.interceptors.response.use(
           // If refresh fails, clear cookies and force logout
           Cookies.remove('accessToken');
           Cookies.remove('refreshToken');
-          window.location.href = '/login'; // Or dispatch logout event
+          if (!isLoginPage && !isAuthEndpoint) {
+            const isAdminRoute = window.location.pathname.startsWith('/admin');
+            window.location.href = isAdminRoute ? '/admin/login' : '/login';
+          }
           return Promise.reject(refreshError);
         }
       } else {
         // No refresh token available
         Cookies.remove('accessToken');
-        window.location.href = '/login';
+        if (!isLoginPage && !isAuthEndpoint) {
+          const isAdminRoute = window.location.pathname.startsWith('/admin');
+          window.location.href = isAdminRoute ? '/admin/login' : '/login';
+        }
       }
     }
 

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { setAuthLoading, setAuthError } from '../../features/auth/authSlice';
+import { setAuthLoading, setAuthError, login } from '../../features/auth/authSlice';
+import { authApi } from '../../services/authApi';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -19,16 +20,21 @@ const AdminLogin: React.FC = () => {
     dispatch(setAuthError(''));
 
     try {
-      // const response = await authApi.login(email, password);
+      const response = await authApi.login(email, password);
       
-      // if (response.user.role !== 'admin') {
-      //   dispatch(setAuthLoading(false));
-      //   toast.error('Access denied. Admin privileges required.');
-      //   return;
-      // }
+      const isAdmin = response.user.role === 'admin' || !!(response.user as any).roleId;
       
-      // dispatch(login(response));
-      toast.success('Admin login successful!');
+      if (!isAdmin) {
+        dispatch(setAuthLoading(false));
+        toast.error('Access denied. Admin privileges required.');
+        return;
+      }
+      
+      // Ensure the role is set for the frontend Redux state
+      response.user.role = 'admin';
+      
+      dispatch(login(response));
+      toast.success(response.message || 'Admin login successful!');
       navigate('/admin/dashboard');
     } catch (err: any) {
       dispatch(setAuthError(err.message || 'Failed to login'));
