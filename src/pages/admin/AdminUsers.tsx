@@ -1,10 +1,18 @@
-import { useState, useEffect } from 'react';
-import { Edit2, Trash2, Search, Loader2, X, AlertTriangle, Plus } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Edit2, Trash2, Search, Loader2, X, AlertTriangle, Plus, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
+import { ImageCropper } from '../../components/common/ImageCropper';
 import type { User } from '../../types';
 import toast from 'react-hot-toast';
 import { adminUserApi } from '../../services/admin/adminUser.Api';
+
+interface FormErrors {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+}
 
 export const AdminUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -16,6 +24,7 @@ export const AdminUsers = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [editErrors, setEditErrors] = useState<FormErrors>({});
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -26,37 +35,51 @@ export const AdminUsers = () => {
     role: 'CUSTOMER',
     password: ''
   });
+  const [createErrors, setCreateErrors] = useState<FormErrors>({});
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCropImageSrc(URL.createObjectURL(file));
+    }
+    e.target.value = '';
+  };
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 10;
+  const [totalUsers, setTotalUsers] = useState(0);
+
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+      if (searchQuery) {
+        params.search = searchQuery;
+      }
+      const data = await adminUserApi.getAllUsers(params);
+      setUsers(data.users);
+      setTotalUsers(data.total);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to fetch users');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, itemsPerPage, searchQuery]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const data = await adminUserApi.getAllUsers();
-        setUsers(data);
-      } catch (err: any) {
-        toast.error(err.message || 'Failed to fetch users');
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
-  const filteredUsers = users.filter(user => {
-    const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-    return fullName.includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase());
-  });
-
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-
-  const currentUsers = filteredUsers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const totalPages = Math.ceil(totalUsers / itemsPerPage);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -98,9 +121,24 @@ export const AdminUsers = () => {
     }
   };
 
+  const validateEditForm = () => {
+    if (!userToEdit) return false;
+    const newErrors: FormErrors = {};
+    if (!userToEdit.firstName?.trim()) newErrors.firstName = 'First Name is required';
+    if (!userToEdit.lastName?.trim()) newErrors.lastName = 'Last Name is required';
+    if (!userToEdit.email?.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(userToEdit.email)) {
+      newErrors.email = 'Valid email is required';
+    }
+    setEditErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userToEdit) return;
+    if (!validateEditForm()) return;
     setIsEditing(true);
 
     try {
@@ -117,8 +155,27 @@ export const AdminUsers = () => {
     }
   };
 
+  const validateCreateForm = () => {
+    const newErrors: FormErrors = {};
+    if (!newUser.firstName?.trim()) newErrors.firstName = 'First Name is required';
+    if (!newUser.lastName?.trim()) newErrors.lastName = 'Last Name is required';
+    if (!newUser.email?.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(newUser.email)) {
+      newErrors.email = 'Valid email is required';
+    }
+    if (!newUser.password?.trim()) {
+      newErrors.password = 'Password is required';
+    } else if (newUser.password.length < 6) {
+      newErrors.password = 'Min 6 characters';
+    }
+    setCreateErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateCreateForm()) return;
     setIsCreating(true);
 
     try {
@@ -136,16 +193,22 @@ export const AdminUsers = () => {
         payload.roleName = 'CUSTOMER';
       }
 
+      if (profileImagePreview) {
+        payload.profileImage = profileImagePreview;
+      }
+
       const response = await adminUserApi.createUser(payload);
       toast.success(response.message || 'User created successfully');
       if (response.user) {
-        setUsers([response.user, ...users]);
+        fetchUsers();
       } else {
-        const data = await adminUserApi.getAllUsers();
-        setUsers(data);
+        fetchUsers();
       }
       setIsCreateModalOpen(false);
       setNewUser({ firstName: '', lastName: '', email: '', role: 'CUSTOMER', password: '' });
+      setProfileImageFile(null);
+      setProfileImagePreview(null);
+      setCreateErrors({});
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to create user');
     } finally {
@@ -196,13 +259,17 @@ export const AdminUsers = () => {
                   </div>
                 </td>
               </tr>
-            ) : currentUsers.length > 0 ? (
-              currentUsers.map(user => (
+            ) : users.length > 0 ? (
+              users.map(user => (
                 <tr key={user._id || user.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="py-4 px-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">
-                      {user.firstName?.charAt(0) || 'U'}
-                    </div>
+                    {user.profileImage ? (
+                      <img src={user.profileImage} alt={user.firstName} className="w-10 h-10 rounded-full object-cover bg-gray-100" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">
+                        {user.firstName?.charAt(0) || 'U'}
+                      </div>
+                    )}
                     <div>
                       <p className="font-medium text-gray-900">{user.firstName} {user.lastName}</p>
                       <p className="text-xs text-gray-500">{user.email}</p>
@@ -250,12 +317,12 @@ export const AdminUsers = () => {
         </table>
       </div>
 
-      {filteredUsers.length > 0 && (
+      {totalUsers > 0 && (
         <AdminPagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-          totalItems={filteredUsers.length}
+          totalItems={totalUsers}
           itemsPerPage={itemsPerPage}
         />
       )}
@@ -298,33 +365,46 @@ export const AdminUsers = () => {
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">Edit User</h3>
               <button 
-                onClick={() => setUserToEdit(null)}
+                onClick={() => {
+                  setUserToEdit(null);
+                  setEditErrors({});
+                }}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleEditUser} className="p-6 space-y-4">
+            <form onSubmit={handleEditUser} className="p-6 space-y-4" noValidate>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                   <input
                     type="text"
                     value={userToEdit.firstName}
-                    onChange={e => setUserToEdit({...userToEdit, firstName: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors"
-                    required
+                    onChange={e => {
+                      setUserToEdit({...userToEdit, firstName: e.target.value});
+                      if (editErrors.firstName) setEditErrors({...editErrors, firstName: undefined});
+                    }}
+                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${
+                      editErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                    }`}
                   />
+                  {editErrors.firstName && <p className="mt-1 text-xs text-red-500">{editErrors.firstName}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
                   <input
                     type="text"
                     value={userToEdit.lastName}
-                    onChange={e => setUserToEdit({...userToEdit, lastName: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors"
-                    required
+                    onChange={e => {
+                      setUserToEdit({...userToEdit, lastName: e.target.value});
+                      if (editErrors.lastName) setEditErrors({...editErrors, lastName: undefined});
+                    }}
+                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${
+                      editErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                    }`}
                   />
+                  {editErrors.lastName && <p className="mt-1 text-xs text-red-500">{editErrors.lastName}</p>}
                 </div>
               </div>
 
@@ -333,10 +413,15 @@ export const AdminUsers = () => {
                 <input
                   type="email"
                   value={userToEdit.email}
-                  onChange={e => setUserToEdit({...userToEdit, email: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors"
-                  required
+                  onChange={e => {
+                    setUserToEdit({...userToEdit, email: e.target.value});
+                    if (editErrors.email) setEditErrors({...editErrors, email: undefined});
+                  }}
+                  className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${
+                    editErrors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                  }`}
                 />
+                {editErrors.email && <p className="mt-1 text-xs text-red-500">{editErrors.email}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -377,7 +462,10 @@ export const AdminUsers = () => {
               <div className="pt-4 flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setUserToEdit(null)}
+                  onClick={() => {
+                    setUserToEdit(null);
+                    setEditErrors({});
+                  }}
                   className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors"
                   disabled={isEditing}
                 >
@@ -403,33 +491,75 @@ export const AdminUsers = () => {
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">Add New User</h3>
               <button 
-                onClick={() => setIsCreateModalOpen(false)}
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  setProfileImageFile(null);
+                  setProfileImagePreview(null);
+                  setNewUser({ firstName: '', lastName: '', email: '', role: 'CUSTOMER', password: '' });
+                  setCreateErrors({});
+                }}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleCreateUser} className="p-6 space-y-4">
+            <form onSubmit={handleCreateUser} className="p-6 space-y-4" noValidate>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Profile Image</label>
+                <div className="flex items-center gap-4">
+                  {profileImagePreview ? (
+                    <img
+                      src={profileImagePreview}
+                      alt="Preview"
+                      className="w-16 h-16 object-cover rounded-full bg-gray-100 border border-gray-200"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-gray-50 border border-dashed border-gray-300 rounded-full flex items-center justify-center text-gray-400">
+                      <ImageIcon size={22} />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 file:transition-colors cursor-pointer"
+                    />
+                    <p className="text-xs text-gray-400 mt-1.5">Recommended size: 400x400px · Max 2MB</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                   <input
                     type="text"
                     value={newUser.firstName}
-                    onChange={e => setNewUser({...newUser, firstName: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors"
-                    required
+                    onChange={e => {
+                      setNewUser({...newUser, firstName: e.target.value});
+                      if (createErrors.firstName) setCreateErrors({...createErrors, firstName: undefined});
+                    }}
+                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${
+                      createErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                    }`}
                   />
+                  {createErrors.firstName && <p className="mt-1 text-xs text-red-500">{createErrors.firstName}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
                   <input
                     type="text"
                     value={newUser.lastName}
-                    onChange={e => setNewUser({...newUser, lastName: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors"
-                    required
+                    onChange={e => {
+                      setNewUser({...newUser, lastName: e.target.value});
+                      if (createErrors.lastName) setCreateErrors({...createErrors, lastName: undefined});
+                    }}
+                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${
+                      createErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                    }`}
                   />
+                  {createErrors.lastName && <p className="mt-1 text-xs text-red-500">{createErrors.lastName}</p>}
                 </div>
               </div>
 
@@ -438,22 +568,40 @@ export const AdminUsers = () => {
                 <input
                   type="email"
                   value={newUser.email}
-                  onChange={e => setNewUser({...newUser, email: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors"
-                  required
+                  onChange={e => {
+                    setNewUser({...newUser, email: e.target.value});
+                    if (createErrors.email) setCreateErrors({...createErrors, email: undefined});
+                  }}
+                  className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${
+                    createErrors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                  }`}
                 />
+                {createErrors.email && <p className="mt-1 text-xs text-red-500">{createErrors.email}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input
-                  type="password"
-                  value={newUser.password || ''}
-                  onChange={e => setNewUser({...newUser, password: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors"
-                  required
-                  minLength={6}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newUser.password || ''}
+                    onChange={e => {
+                      setNewUser({...newUser, password: e.target.value});
+                      if (createErrors.password) setCreateErrors({...createErrors, password: undefined});
+                    }}
+                    className={`w-full px-4 py-2 pr-10 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${
+                      createErrors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {createErrors.password && <p className="mt-1 text-xs text-red-500">{createErrors.password}</p>}
               </div>
 
               <div>
@@ -472,7 +620,13 @@ export const AdminUsers = () => {
               <div className="pt-4 flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                    setProfileImageFile(null);
+                    setProfileImagePreview(null);
+                    setNewUser({ firstName: '', lastName: '', email: '', role: 'CUSTOMER', password: '' });
+                    setCreateErrors({});
+                  }}
                   className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors"
                   disabled={isCreating}
                 >
@@ -489,6 +643,19 @@ export const AdminUsers = () => {
             </form>
           </div>
         </div>
+      )}
+      
+      {cropImageSrc && (
+        <ImageCropper
+          imageSrc={cropImageSrc}
+          onCropComplete={(croppedFile) => {
+            setProfileImageFile(croppedFile);
+            setProfileImagePreview(URL.createObjectURL(croppedFile));
+            setCropImageSrc(null);
+          }}
+          onCancel={() => setCropImageSrc(null)}
+          aspectRatio={1}
+        />
       )}
     </PageWrapper>
   );

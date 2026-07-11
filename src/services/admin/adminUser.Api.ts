@@ -2,13 +2,19 @@ import api from '../api';
 import type { User } from '../../types';
 
 export const adminUserApi = {
-  getAllUsers: async (): Promise<User[]> => {
-    const response = await api.get('/users');
-    return response.data.data?.users || response.data.data || response.data;
+  getAllUsers: async (params?: { page?: number; limit?: number; search?: string }): Promise<{ users: User[], total: number }> => {
+    const response = await api.get('/users', { params });
+    const data = response.data.data || response.data;
+    const users = data.users || data.docs || (Array.isArray(data) ? data : []);
+    const total = data.total || data.totalDocs || users.length || 0;
+    return { users, total };
   },
 
-  createUser: async (data: Partial<User> & { password?: string }): Promise<{ user: User, message?: string }> => {
-    const response = await api.post('/users', data);
+  createUser: async (data: Partial<User> & { password?: string } | FormData): Promise<{ user: User, message?: string }> => {
+    const isFormData = data instanceof FormData;
+    const response = await api.post('/users', data, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {}
+    });
     return {
       user: response.data.data?.user || response.data.data || response.data,
       message: response.data.message
@@ -20,8 +26,11 @@ export const adminUserApi = {
     return { message: response.data.message };
   },
 
-  updateUser: async (userId: string, data: Partial<User>) => {
-    const response = await api.put(`/users/${userId}`, data);
+  updateUser: async (userId: string, data: Partial<User> | FormData) => {
+    const isFormData = data instanceof FormData;
+    const response = await api.put(`/users/${userId}`, data, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {}
+    });
     return { user: response.data.data?.user || response.data.data || response.data, message: response.data.message };
   }
 };

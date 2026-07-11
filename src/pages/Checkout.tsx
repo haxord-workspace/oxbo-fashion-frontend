@@ -1,11 +1,41 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
+import { LoadingButton } from '../components/common/LoadingButton';
 import toast from 'react-hot-toast';
+
+interface CheckoutFormData {
+  firstName: string;
+  lastName: string;
+  address: string;
+  city: string;
+  pincode: string;
+  phone: string;
+  cardNumber: string;
+  expiry: string;
+  cvv: string;
+}
+
+interface FormErrors {
+  [key: string]: string | undefined;
+}
 
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cod'>('card');
+  const [formData, setFormData] = useState<CheckoutFormData>({
+    firstName: '', lastName: '', address: '', city: '', pincode: '', phone: '',
+    cardNumber: '', expiry: '', cvv: ''
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: undefined });
+    }
+  };
 
   // Mock order items for the summary
   const orderItems = [
@@ -29,11 +59,49 @@ const Checkout: React.FC = () => {
   const shipping = 99;
   const total = subtotal + shipping;
 
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+    if (!formData.firstName.trim()) newErrors.firstName = 'First Name is required';
+    if (!formData.lastName.trim()) newErrors.lastName = 'Last Name is required';
+    if (!formData.address.trim()) newErrors.address = 'Address is required';
+    if (!formData.city.trim()) newErrors.city = 'City is required';
+    if (!formData.pincode.trim()) {
+      newErrors.pincode = 'PIN Code is required';
+    } else if (!/^\d{4,8}$/.test(formData.pincode)) {
+      newErrors.pincode = 'Invalid PIN Code';
+    }
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone is required';
+    } else if (!/^\d{10,15}$/.test(formData.phone)) {
+      newErrors.phone = 'Invalid Phone Number';
+    }
+
+    if (paymentMethod === 'card') {
+      if (!formData.cardNumber.trim()) newErrors.cardNumber = 'Card Number is required';
+      else if (!/^\d{16}$/.test(formData.cardNumber.replace(/\s/g, ''))) newErrors.cardNumber = 'Invalid Card Number';
+      
+      if (!formData.expiry.trim()) newErrors.expiry = 'Expiry is required';
+      else if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(formData.expiry)) newErrors.expiry = 'Format MM/YY';
+      
+      if (!formData.cvv.trim()) newErrors.cvv = 'CVV is required';
+      else if (!/^\d{3,4}$/.test(formData.cvv)) newErrors.cvv = 'Invalid CVV';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
     // Normally handle order creation API call here
-    toast.success('Order placed successfully!');
-    navigate('/');
+    setTimeout(() => {
+      setIsSubmitting(false);
+      toast.success('Order placed successfully!');
+      navigate('/');
+    }, 1500);
   };
 
   return (
@@ -54,7 +122,7 @@ const Checkout: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-12 lg:gap-24">
+        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-12 lg:gap-24" noValidate>
           
           {/* Left Column - Shipping & Payment */}
           <div className="flex-1">
@@ -63,27 +131,33 @@ const Checkout: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 uppercase mb-2">First Name</label>
-                  <input type="text" required className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors" placeholder="John" />
+                  <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'}`} placeholder="John" />
+                  {errors.firstName && <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 uppercase mb-2">Last Name</label>
-                  <input type="text" required className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors" placeholder="Doe" />
+                  <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'}`} placeholder="Doe" />
+                  {errors.lastName && <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-medium text-gray-700 uppercase mb-2">Address</label>
-                  <input type="text" required className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors" placeholder="123 Luxury Ave" />
+                  <input type="text" name="address" value={formData.address} onChange={handleChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.address ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'}`} placeholder="123 Luxury Ave" />
+                  {errors.address && <p className="mt-1 text-xs text-red-500">{errors.address}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 uppercase mb-2">City</label>
-                  <input type="text" required className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors" placeholder="Mumbai" />
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.city ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'}`} placeholder="Mumbai" />
+                  {errors.city && <p className="mt-1 text-xs text-red-500">{errors.city}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 uppercase mb-2">PIN Code</label>
-                  <input type="text" required className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors" placeholder="400001" />
+                  <input type="text" name="pincode" value={formData.pincode} onChange={handleChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.pincode ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'}`} placeholder="400001" />
+                  {errors.pincode && <p className="mt-1 text-xs text-red-500">{errors.pincode}</p>}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-medium text-gray-700 uppercase mb-2">Phone</label>
-                  <input type="tel" required className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors" placeholder="+91 98765 43210" />
+                  <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'}`} placeholder="+91 98765 43210" />
+                  {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
                 </div>
               </div>
             </div>
@@ -105,10 +179,19 @@ const Checkout: React.FC = () => {
                   </div>
                   {paymentMethod === 'card' && (
                     <div className="mt-6 space-y-4 animate-fade-in">
-                      <input type="text" placeholder="Card Number" className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors" />
+                      <div>
+                        <input type="text" name="cardNumber" value={formData.cardNumber} onChange={handleChange} placeholder="Card Number" className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.cardNumber ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'}`} />
+                        {errors.cardNumber && <p className="mt-1 text-xs text-red-500">{errors.cardNumber}</p>}
+                      </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <input type="text" placeholder="MM/YY" className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors" />
-                        <input type="text" placeholder="CVV" className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors" />
+                        <div>
+                          <input type="text" name="expiry" value={formData.expiry} onChange={handleChange} placeholder="MM/YY" className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.expiry ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'}`} />
+                          {errors.expiry && <p className="mt-1 text-xs text-red-500">{errors.expiry}</p>}
+                        </div>
+                        <div>
+                          <input type="text" name="cvv" value={formData.cvv} onChange={handleChange} placeholder="CVV" className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.cvv ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'}`} />
+                          {errors.cvv && <p className="mt-1 text-xs text-red-500">{errors.cvv}</p>}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -168,12 +251,13 @@ const Checkout: React.FC = () => {
                 </div>
               </div>
 
-              <button 
+              <LoadingButton 
                 type="submit"
+                isLoading={isSubmitting}
                 className="w-full bg-black text-white py-4 mt-8 text-sm font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
               >
                 Place Order
-              </button>
+              </LoadingButton>
               
               <p className="text-center text-xs text-gray-500 mt-4">
                 Secure checkout powered by Stripe

@@ -6,7 +6,14 @@ import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import { adminCategoriesApi } from '../../services/admin/admincategories.Api';
 import type { Category } from '../../types';
+import { LoadingButton } from '../../components/common/LoadingButton';
 import toast from 'react-hot-toast';
+
+interface FormErrors {
+  name?: string;
+  price?: string;
+  stock?: string;
+}
 
 // Mock data specific to a category
 const mockCategoryProducts = Array.from({ length: 24 }, (_, i) => ({
@@ -31,6 +38,15 @@ export const AdminCategoryDetails = () => {
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [productForm, setProductForm] = useState({
+    name: '',
+    price: '',
+    stock: '',
+    status: 'In Stock'
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,7 +76,45 @@ export const AdminCategoryDetails = () => {
   const openModal = (mode: 'add' | 'edit', product: any = null) => {
     setModalMode(mode);
     setSelectedProduct(product);
+    if (mode === 'edit' && product) {
+      setProductForm({
+        name: product.name || '',
+        price: product.price ? String(product.price) : '',
+        stock: product.stock !== undefined ? String(product.stock) : '',
+        status: product.status || 'In Stock'
+      });
+    } else {
+      setProductForm({
+        name: '',
+        price: '',
+        stock: '',
+        status: 'In Stock'
+      });
+    }
+    setErrors({});
     setIsModalOpen(true);
+  };
+
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+    if (!productForm.name.trim()) newErrors.name = 'Product name is required';
+    if (!productForm.price) newErrors.price = 'Price is required';
+    if (!productForm.stock) newErrors.stock = 'Stock is required';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleProductSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setIsModalOpen(false);
+      setIsSubmitting(false);
+    }, 1000);
   };
 
   const filteredProducts = mockCategoryProducts.filter(prod => 
@@ -195,32 +249,44 @@ export const AdminCategoryDetails = () => {
         onClose={() => setIsModalOpen(false)}
         title={modalMode === 'add' ? 'Add New Product' : 'Edit Product'}
       >
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleProductSubmit} noValidate>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-            <input type="text" defaultValue={selectedProduct?.name || ''} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="E.g., Cargo Pant" />
+            <input type="text" value={productForm.name} onChange={e => {
+              setProductForm({...productForm, name: e.target.value});
+              if (errors.name) setErrors({...errors, name: undefined});
+            }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="E.g., Cargo Pant" />
+            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Price (Rs.)</label>
-              <input type="number" defaultValue={selectedProduct?.price || ''} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="1999" />
+              <input type="number" value={productForm.price} onChange={e => {
+                setProductForm({...productForm, price: e.target.value});
+                if (errors.price) setErrors({...errors, price: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.price ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="1999" />
+              {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
-              <input type="number" defaultValue={selectedProduct?.stock || ''} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="100" />
+              <input type="number" value={productForm.stock} onChange={e => {
+                setProductForm({...productForm, stock: e.target.value});
+                if (errors.stock) setErrors({...errors, stock: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.stock ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="100" />
+              {errors.stock && <p className="mt-1 text-xs text-red-500">{errors.stock}</p>}
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black">
-              <option>In Stock</option>
-              <option>Low Stock</option>
-              <option>Out of Stock</option>
+            <select value={productForm.status} onChange={e => setProductForm({...productForm, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white">
+              <option value="In Stock">In Stock</option>
+              <option value="Low Stock">Low Stock</option>
+              <option value="Out of Stock">Out of Stock</option>
             </select>
           </div>
           <div className="pt-4 flex justify-end gap-3">
             <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors">Save Product</button>
+            <LoadingButton type="submit" isLoading={isSubmitting} className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors">Save Product</LoadingButton>
           </div>
         </form>
       </AdminModal>

@@ -8,6 +8,15 @@ import { adminUserApi } from '../../services/admin/adminUser.Api';
 import type { Store, User } from '../../types';
 import toast from 'react-hot-toast';
 
+interface FormErrors {
+  name?: string;
+  code?: string;
+  email?: string;
+  phone?: string;
+  addressLine1?: string;
+  city?: string;
+}
+
 export const AdminStores = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete'>('add');
@@ -37,6 +46,7 @@ export const AdminStores = () => {
       city: ''
     }
   });
+  const [errors, setErrors] = useState<FormErrors>({});
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,11 +106,30 @@ export const AdminStores = () => {
         }
       });
     }
+    setErrors({});
     setIsModalOpen(true);
+  };
+
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+    if (!storeForm.name.trim()) newErrors.name = 'Store name is required';
+    if (!storeForm.code.trim()) newErrors.code = 'Store code is required';
+    if (!storeForm.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(storeForm.email)) {
+      newErrors.email = 'Valid email is required';
+    }
+    if (!storeForm.phone.trim()) newErrors.phone = 'Phone number is required';
+    if (!storeForm.address.addressLine1.trim()) newErrors.addressLine1 = 'Address is required';
+    if (!storeForm.address.city.trim()) newErrors.city = 'City is required';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleStoreSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     setIsSubmitting(true);
     
     try {
@@ -175,7 +204,7 @@ export const AdminStores = () => {
         adminUserApi.getAllUsers()
       ]);
       setStoreAdmins(adminsData.admins || []);
-      setAllUsers(usersData || []);
+      setAllUsers(usersData.users || []);
     } catch (err: any) {
       toast.error('Failed to load admins data');
     } finally {
@@ -350,37 +379,61 @@ export const AdminStores = () => {
             </div>
           </div>
         ) : (
-        <form onSubmit={handleStoreSubmit} className="space-y-4">
+        <form onSubmit={handleStoreSubmit} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
-              <input type="text" value={storeForm.name} onChange={e => setStoreForm({...storeForm, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="E.g., Kochi Main Hub" required />
+              <input type="text" value={storeForm.name} onChange={e => {
+                setStoreForm({...storeForm, name: e.target.value});
+                if (errors.name) setErrors({...errors, name: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="E.g., Kochi Main Hub" />
+              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Store Code</label>
-              <input type="text" value={storeForm.code} onChange={e => setStoreForm({...storeForm, code: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="E.g., kollam-01" required />
+              <input type="text" value={storeForm.code} onChange={e => {
+                setStoreForm({...storeForm, code: e.target.value});
+                if (errors.code) setErrors({...errors, code: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.code ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="E.g., kollam-01" />
+              {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code}</p>}
             </div>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" value={storeForm.email} onChange={e => setStoreForm({...storeForm, email: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="Store Email" required />
+              <input type="email" value={storeForm.email} onChange={e => {
+                setStoreForm({...storeForm, email: e.target.value});
+                if (errors.email) setErrors({...errors, email: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="Store Email" />
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input type="text" value={storeForm.phone} onChange={e => setStoreForm({...storeForm, phone: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="Phone Number" required />
+              <input type="text" value={storeForm.phone} onChange={e => {
+                setStoreForm({...storeForm, phone: e.target.value});
+                if (errors.phone) setErrors({...errors, phone: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="Phone Number" />
+              {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
-              <input type="text" value={storeForm.address.addressLine1} onChange={e => setStoreForm({...storeForm, address: {...storeForm.address, addressLine1: e.target.value}})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="Street Address" required />
+              <input type="text" value={storeForm.address.addressLine1} onChange={e => {
+                setStoreForm({...storeForm, address: {...storeForm.address, addressLine1: e.target.value}});
+                if (errors.addressLine1) setErrors({...errors, addressLine1: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.addressLine1 ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="Street Address" />
+              {errors.addressLine1 && <p className="mt-1 text-xs text-red-500">{errors.addressLine1}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <input type="text" value={storeForm.address.city} onChange={e => setStoreForm({...storeForm, address: {...storeForm.address, city: e.target.value}})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="City" required />
+              <input type="text" value={storeForm.address.city} onChange={e => {
+                setStoreForm({...storeForm, address: {...storeForm.address, city: e.target.value}});
+                if (errors.city) setErrors({...errors, city: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="City" />
+              {errors.city && <p className="mt-1 text-xs text-red-500">{errors.city}</p>}
             </div>
           </div>
 
@@ -415,8 +468,9 @@ export const AdminStores = () => {
         isOpen={isAdminsModalOpen}
         onClose={() => setIsAdminsModalOpen(false)}
         title={`Manage Admins - ${selectedStore?.name}`}
+        maxWidth="max-w-4xl"
       >
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Current Admins List */}
           <div>
             <h4 className="text-sm font-medium text-gray-700 mb-3">Current Admins</h4>
@@ -425,12 +479,12 @@ export const AdminStores = () => {
                 <Loader2 className="w-5 h-5 animate-spin" />
               </div>
             ) : storeAdmins.length > 0 ? (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="space-y-3">
                 {storeAdmins.map(admin => (
-                  <div key={admin._id || admin.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-md border border-gray-100">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-gray-900">{admin.firstName} {admin.lastName}</span>
-                      <span className="text-xs text-gray-500">{admin.email}</span>
+                  <div key={admin._id || admin.id} className="flex justify-between items-center bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-100 transition-colors hover:border-gray-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                      <span className="text-sm font-semibold text-gray-900">{admin.firstName} {admin.lastName}</span>
+                      <span className="text-xs sm:text-sm text-gray-500">{admin.email}</span>
                     </div>
                     <button 
                       onClick={() => handleRemoveAdmin(admin._id || admin.id || '')} 
@@ -448,16 +502,16 @@ export const AdminStores = () => {
           </div>
 
           {/* Assign New Admin */}
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-gray-200 pt-6">
             <h4 className="text-sm font-medium text-gray-700 mb-3">Assign New Admin</h4>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-3">
               <select 
                 value={selectedUserIdToAssign} 
                 onChange={e => setSelectedUserIdToAssign(e.target.value)}
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white"
+                className="flex-1 px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white transition-colors"
                 disabled={isAdminsLoading}
               >
-                <option value="">Select a user...</option>
+                <option value="">Select a user to assign...</option>
                 {allUsers
                   .filter(user => !storeAdmins.some(admin => (admin._id || admin.id) === (user._id || user.id)))
                   .map(user => (
@@ -470,9 +524,9 @@ export const AdminStores = () => {
               <button 
                 onClick={handleAssignAdmin}
                 disabled={!selectedUserIdToAssign || isAdminsLoading}
-                className="px-4 py-2 bg-black text-white text-sm rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[80px]"
+                className="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
               >
-                {isAdminsLoading && selectedUserIdToAssign ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign'}
+                {isAdminsLoading && selectedUserIdToAssign ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign Admin'}
               </button>
             </div>
           </div>

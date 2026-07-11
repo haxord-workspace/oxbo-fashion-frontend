@@ -3,6 +3,13 @@ import { Plus, Edit2, Trash2 } from 'lucide-react';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
+import { LoadingButton } from '../../components/common/LoadingButton';
+
+interface FormErrors {
+  code?: string;
+  discount?: string;
+  expiry?: string;
+}
 
 const mockCoupons = Array.from({ length: 18 }, (_, i) => ({
   id: `${i + 1}`,
@@ -17,6 +24,14 @@ export const AdminCoupons = () => {
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
   
+  const [couponForm, setCouponForm] = useState({
+    code: '',
+    discount: '',
+    expiry: ''
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
@@ -30,7 +45,43 @@ export const AdminCoupons = () => {
   const openModal = (mode: 'add' | 'edit', coupon: any = null) => {
     setModalMode(mode);
     setSelectedCoupon(coupon);
+    if (mode === 'edit' && coupon) {
+      setCouponForm({
+        code: coupon.code || '',
+        discount: coupon.discount || '',
+        expiry: coupon.expiry || ''
+      });
+    } else {
+      setCouponForm({
+        code: '',
+        discount: '',
+        expiry: ''
+      });
+    }
+    setErrors({});
     setIsModalOpen(true);
+  };
+
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+    if (!couponForm.code.trim()) newErrors.code = 'Coupon code is required';
+    if (!couponForm.discount) newErrors.discount = 'Discount is required';
+    if (!couponForm.expiry.trim()) newErrors.expiry = 'Expiry date is required';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleCouponSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setIsModalOpen(false);
+      setIsSubmitting(false);
+    }, 1000);
   };
 
   return (
@@ -95,11 +146,15 @@ export const AdminCoupons = () => {
         onClose={() => setIsModalOpen(false)}
         title={modalMode === 'add' ? 'Create Coupon' : 'Edit Coupon'}
       >
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleCouponSubmit} noValidate>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Coupon Code</label>
-              <input type="text" defaultValue={selectedCoupon?.code || ''} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black uppercase" placeholder="E.g., SUMMER50" />
+              <input type="text" value={couponForm.code} onChange={e => {
+                setCouponForm({...couponForm, code: e.target.value});
+                if (errors.code) setErrors({...errors, code: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 uppercase transition-colors ${errors.code ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="E.g., SUMMER50" />
+              {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
@@ -113,7 +168,11 @@ export const AdminCoupons = () => {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Discount Value</label>
-              <input type="number" defaultValue={selectedCoupon?.discount || ''} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="20" />
+              <input type="number" value={couponForm.discount} onChange={e => {
+                setCouponForm({...couponForm, discount: e.target.value});
+                if (errors.discount) setErrors({...errors, discount: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.discount ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="20" />
+              {errors.discount && <p className="mt-1 text-xs text-red-500">{errors.discount}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Min Order Value (Rs.)</label>
@@ -132,7 +191,11 @@ export const AdminCoupons = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-              <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" />
+              <input type="date" value={couponForm.expiry} onChange={e => {
+                setCouponForm({...couponForm, expiry: e.target.value});
+                if (errors.expiry) setErrors({...errors, expiry: undefined});
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.expiry ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} />
+              {errors.expiry && <p className="mt-1 text-xs text-red-500">{errors.expiry}</p>}
             </div>
           </div>
 
@@ -151,7 +214,7 @@ export const AdminCoupons = () => {
 
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
             <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors">Save Coupon</button>
+            <LoadingButton type="submit" isLoading={isSubmitting} className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors">Save Coupon</LoadingButton>
           </div>
         </form>
       </AdminModal>

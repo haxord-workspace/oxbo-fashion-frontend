@@ -5,7 +5,12 @@ import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import { adminBrandApi } from '../../services/admin/adminBrand.Api';
+import { ImageCropper } from '../../components/common/ImageCropper';
 import type { Brand } from '../../types';
+
+interface FormErrors {
+  name?: string;
+}
 
 export const AdminBrands = () => {
   // Data States
@@ -32,6 +37,8 @@ export const AdminBrands = () => {
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const fetchBrands = useCallback(async () => {
     setIsLoading(true);
@@ -84,23 +91,28 @@ export const AdminBrands = () => {
         isActive: true,
       });
     }
+    setErrors({});
     setIsModalOpen(true);
+  };
+
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+    if (!brandForm.name.trim()) newErrors.name = 'Brand name is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setCropImageSrc(URL.createObjectURL(file));
     }
+    e.target.value = '';
   };
 
   const handleBrandSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     setIsSubmitting(true);
     
     try {
@@ -340,7 +352,7 @@ export const AdminBrands = () => {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleBrandSubmit} className="space-y-5">
+          <form onSubmit={handleBrandSubmit} className="space-y-5" noValidate>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Brand Logo</label>
               <div className="flex items-center gap-4">
@@ -372,11 +384,14 @@ export const AdminBrands = () => {
               <input
                 type="text"
                 value={brandForm.name}
-                onChange={e => setBrandForm({ ...brandForm, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition-shadow"
+                onChange={e => {
+                  setBrandForm({ ...brandForm, name: e.target.value });
+                  if (errors.name) setErrors({...errors, name: undefined});
+                }}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 transition-shadow ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-black'}`}
                 placeholder="E.g., Nike"
-                required
               />
+              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
             </div>
 
             <div>
@@ -421,6 +436,19 @@ export const AdminBrands = () => {
           </form>
         )}
       </AdminModal>
+      
+      {cropImageSrc && (
+        <ImageCropper
+          imageSrc={cropImageSrc}
+          onCropComplete={(croppedFile) => {
+            setLogoFile(croppedFile);
+            setLogoPreview(URL.createObjectURL(croppedFile));
+            setCropImageSrc(null);
+          }}
+          onCancel={() => setCropImageSrc(null)}
+          aspectRatio={1}
+        />
+      )}
     </>
   );
 };

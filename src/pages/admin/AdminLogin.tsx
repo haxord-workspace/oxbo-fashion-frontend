@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { setAuthLoading, setAuthError, login } from '../../features/auth/authSlice';
@@ -6,17 +6,53 @@ import { authApi } from '../../services/authApi';
 import toast from 'react-hot-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
+interface FormErrors {
+  email?: string;
+  password?: string;
+}
+
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
   
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isLoading } = useAppSelector(state => state.auth);
+  const { isLoading, token, user } = useAppSelector(state => state.auth);
+
+  useEffect(() => {
+    if (token) {
+      const isAdmin = user?.role === 'admin' || (user as any)?.roleId;
+      if (isAdmin) {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/');
+      }
+    }
+  }, [token, user, navigate]);
+
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!password) {
+      newErrors.password = 'Password is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     dispatch(setAuthLoading(true));
     dispatch(setAuthError(''));
 
@@ -55,7 +91,7 @@ const AdminLogin: React.FC = () => {
             Sign in to manage your store
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
           <div className="space-y-4">
             <div>
               <label htmlFor="email-address" className="sr-only">Email address</label>
@@ -64,12 +100,17 @@ const AdminLogin: React.FC = () => {
                 name="email"
                 type="email"
                 autoComplete="email"
-                required
-                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm"
+                className={`relative block w-full appearance-none rounded-md border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                  errors.email ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'
+                }`}
                 placeholder="ADMIN EMAIL"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) setErrors({ ...errors, email: undefined });
+                }}
               />
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
             </div>
             <div className="relative">
               <label htmlFor="password" className="sr-only">Password</label>
@@ -78,11 +119,15 @@ const AdminLogin: React.FC = () => {
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                required
-                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:border-black focus:outline-none focus:ring-1 focus:ring-black sm:text-sm pr-10"
+                className={`relative block w-full appearance-none rounded-md border px-3 py-3 pr-10 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                  errors.password ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-1 focus:ring-black'
+                }`}
                 placeholder="PASSWORD"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errors.password) setErrors({ ...errors, password: undefined });
+                }}
               />
               <button
                 type="button"
@@ -91,6 +136,7 @@ const AdminLogin: React.FC = () => {
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
+              {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
             </div>
           </div>
 

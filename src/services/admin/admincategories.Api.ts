@@ -41,7 +41,7 @@ export const adminCategoriesApi = {
     };
   },
 
-  getCategories: async (params?: { page?: number; limit?: number; search?: string; sort?: string }): Promise<{ categories: Category[], total: number }> => {
+  getCategories: async (params?: { page?: number; limit?: number; search?: string; sort?: string; isActive?: boolean }): Promise<{ categories: Category[], total: number }> => {
     const response = await api.get('/categories', { params });
     let categories = [];
     let total = 0;

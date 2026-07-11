@@ -6,9 +6,10 @@ interface AdminModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-const AdminModal: React.FC<AdminModalProps> = ({ isOpen, onClose, title, children }) => {
+const AdminModal: React.FC<AdminModalProps> = ({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' }) => {
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -24,15 +25,15 @@ const AdminModal: React.FC<AdminModalProps> = ({ isOpen, onClose, title, childre
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
       
       {/* Modal Content */}
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-hidden z-10 animate-in fade-in zoom-in duration-200">
+      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${maxWidth} overflow-hidden z-10 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="text-lg font-bold text-gray-900">{title}</h3>
           <button 
@@ -42,7 +43,7 @@ const AdminModal: React.FC<AdminModalProps> = ({ isOpen, onClose, title, childre
             <X size={20} />
           </button>
         </div>
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 overflow-y-auto flex-1">
           {children}
         </div>
       </div>

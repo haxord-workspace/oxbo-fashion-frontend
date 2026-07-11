@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Search, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Loader2, Image as ImageIcon, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import { adminCategoriesApi } from '../../services/admin/admincategories.Api';
+import { ImageCropper } from '../../components/common/ImageCropper';
 import type { Category } from '../../types';
+
+interface FormErrors {
+  name?: string;
+}
 
 export const AdminCategories = () => {
   const navigate = useNavigate();
@@ -18,6 +23,7 @@ export const AdminCategories = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,6 +44,8 @@ export const AdminCategories = () => {
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
@@ -49,6 +57,9 @@ export const AdminCategories = () => {
       if (searchQuery) {
         params.search = searchQuery;
       }
+      if (statusFilter !== 'all') {
+        params.isActive = statusFilter === 'active';
+      }
       const data = await adminCategoriesApi.getCategories(params);
       setCategories(data.categories);
       setTotalCategories(data.total);
@@ -57,7 +68,7 @@ export const AdminCategories = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchQuery]);
+  }, [currentPage, itemsPerPage, searchQuery, statusFilter]);
 
   const fetchCategoryTree = useCallback(async () => {
     try {
@@ -73,10 +84,10 @@ export const AdminCategories = () => {
     fetchCategoryTree();
   }, [fetchCategories, fetchCategoryTree]);
 
-  // Reset to first page when searching
+  // Reset to first page when searching or filtering
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, statusFilter]);
 
   const openModal = (mode: 'add' | 'edit' | 'delete', category: any = null) => {
     setModalMode(mode);
@@ -104,23 +115,28 @@ export const AdminCategories = () => {
         parentCategory: ''
       });
     }
+    setErrors({});
     setIsModalOpen(true);
+  };
+
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+    if (!categoryForm.name.trim()) newErrors.name = 'Category name is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setCropImageSrc(URL.createObjectURL(file));
     }
+    e.target.value = '';
   };
 
   const handleCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     setIsSubmitting(true);
     
     try {
@@ -227,8 +243,8 @@ export const AdminCategories = () => {
           </button>
         }
       >
-        <div className="mb-6 flex items-center">
-          <div className="relative w-full max-w-md">
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input 
               type="text" 
@@ -237,6 +253,18 @@ export const AdminCategories = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-colors text-sm"
             />
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Filter size={18} className="text-gray-500" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-colors text-sm bg-white"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
           </div>
         </div>
 
@@ -343,148 +371,164 @@ export const AdminCategories = () => {
       </PageWrapper>
 
     <AdminModal
-  isOpen={isModalOpen}
-  onClose={() => setIsModalOpen(false)}
-  title={modalMode === 'add' ? 'Add New Category' : modalMode === 'edit' ? 'Edit Category' : 'Delete Category'}
->
-  {modalMode === 'delete' ? (
-    <div className="space-y-4">
-      <p className="text-gray-600 leading-relaxed">
-        Are you sure you want to delete <span className="font-semibold text-gray-900">{selectedCategory?.name}</span>?
-        This action cannot be undone.
-      </p>
-      <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(false)}
-          disabled={isSubmitting}
-          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleDeleteCategory}
-          disabled={isSubmitting}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50 min-w-[140px] justify-center"
-        >
-          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete Category'}
-        </button>
-      </div>
-    </div>
-  ) : (
-    <form onSubmit={handleCategorySubmit} className="space-y-5">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Category Image</label>
-        <div className="flex items-center gap-4">
-          {imagePreview ? (
-            <img
-              src={imagePreview}
-              alt="Preview"
-              className="w-16 h-16 object-cover rounded-md bg-gray-100 border border-gray-200"
-            />
-          ) : (
-            <div className="w-16 h-16 bg-gray-50 border border-dashed border-gray-300 rounded-md flex items-center justify-center text-gray-400">
-              <ImageIcon size={22} />
-            </div>
-          )}
-          <div className="flex-1">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 file:transition-colors cursor-pointer"
-            />
-            <p className="text-xs text-gray-400 mt-1.5">Recommended size: 800x800px · Max 2MB</p>
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      title={modalMode === 'add' ? 'Add New Category' : modalMode === 'edit' ? 'Edit Category' : 'Delete Category'}
+    >
+      {modalMode === 'delete' ? (
+        <div className="space-y-4">
+          <p className="text-gray-600 leading-relaxed">
+            Are you sure you want to delete <span className="font-semibold text-gray-900">{selectedCategory?.name}</span>?
+            This action cannot be undone.
+          </p>
+          <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              disabled={isSubmitting}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteCategory}
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50 min-w-[140px] justify-center"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete Category'}
+            </button>
           </div>
         </div>
-      </div>
+      ) : (
+        <form onSubmit={handleCategorySubmit} className="space-y-5" noValidate>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category Image</label>
+            <div className="flex items-center gap-4">
+              {imagePreview ? (
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-16 h-16 object-cover rounded-md bg-gray-100 border border-gray-200"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-gray-50 border border-dashed border-gray-300 rounded-md flex items-center justify-center text-gray-400">
+                  <ImageIcon size={22} />
+                </div>
+              )}
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 file:transition-colors cursor-pointer"
+                />
+                <p className="text-xs text-gray-400 mt-1.5">Recommended size: 800x800px · Max 2MB</p>
+              </div>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Category Name</label>
-          <input
-            type="text"
-            value={categoryForm.name}
-            onChange={e => setCategoryForm({ ...categoryForm, name: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition-shadow"
-            placeholder="E.g., Summer Collection"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Parent Category</label>
-          <select
-            value={categoryForm.parentCategory}
-            onChange={e => setCategoryForm({ ...categoryForm, parentCategory: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black bg-white transition-shadow"
-          >
-            <option value="">None (Root Category)</option>
-            {categoryTree.length > 0
-              ? renderCategoryOptions(categoryTree)
-              : categories
-                  .filter(c => (c._id || c.id) !== (selectedCategory?._id || selectedCategory?.id))
-                  .map(c => (
-                    <option key={c._id || c.id} value={c._id || c.id}>{c.name}</option>
-                  ))
-            }
-          </select>
-        </div>
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Category Name</label>
+              <input
+                type="text"
+                value={categoryForm.name}
+                onChange={e => {
+                  setCategoryForm({ ...categoryForm, name: e.target.value });
+                  if (errors.name) setErrors({...errors, name: undefined});
+                }}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 transition-shadow ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-black'}`}
+                placeholder="E.g., Summer Collection"
+              />
+              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Parent Category</label>
+              <select
+                value={categoryForm.parentCategory}
+                onChange={e => setCategoryForm({ ...categoryForm, parentCategory: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black bg-white transition-shadow"
+              >
+                <option value="">None (Root Category)</option>
+                {categoryTree.length > 0
+                  ? renderCategoryOptions(categoryTree)
+                  : categories
+                      .filter(c => (c._id || c.id) !== (selectedCategory?._id || selectedCategory?.id))
+                      .map(c => (
+                        <option key={c._id || c.id} value={c._id || c.id}>{c.name}</option>
+                      ))
+                }
+              </select>
+            </div>
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-        <textarea
-          value={categoryForm.description}
-          onChange={e => setCategoryForm({ ...categoryForm, description: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black min-h-[80px] resize-none transition-shadow"
-          placeholder="Brief description of this category..."
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+            <textarea
+              value={categoryForm.description}
+              onChange={e => setCategoryForm({ ...categoryForm, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black min-h-[80px] resize-none transition-shadow"
+              placeholder="Brief description of this category..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sort Order</label>
+              <input
+                type="number"
+                value={categoryForm.sortOrder}
+                onChange={e => setCategoryForm({ ...categoryForm, sortOrder: parseInt(e.target.value) || 0 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition-shadow"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+              <select
+                value={categoryForm.isActive ? 'active' : 'inactive'}
+                onChange={e => setCategoryForm({ ...categoryForm, isActive: e.target.value === 'active' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black bg-white transition-shadow"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              disabled={isSubmitting}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 min-w-[130px] justify-center"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Category'}
+            </button>
+          </div>
+        </form>
+      )}
+    </AdminModal>
+      
+      {cropImageSrc && (
+        <ImageCropper
+          imageSrc={cropImageSrc}
+          onCropComplete={(croppedFile) => {
+            setImageFile(croppedFile);
+            setImagePreview(URL.createObjectURL(croppedFile));
+            setCropImageSrc(null);
+          }}
+          onCancel={() => setCropImageSrc(null)}
+          aspectRatio={1}
         />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Sort Order</label>
-          <input
-            type="number"
-            value={categoryForm.sortOrder}
-            onChange={e => setCategoryForm({ ...categoryForm, sortOrder: parseInt(e.target.value) || 0 })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition-shadow"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
-          <select
-            value={categoryForm.isActive ? 'active' : 'inactive'}
-            onChange={e => setCategoryForm({ ...categoryForm, isActive: e.target.value === 'active' })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black bg-white transition-shadow"
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(false)}
-          disabled={isSubmitting}
-          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 min-w-[130px] justify-center"
-        >
-          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Category'}
-        </button>
-      </div>
-    </form>
-  )}
-</AdminModal>
+      )}
     </>
   );
 };

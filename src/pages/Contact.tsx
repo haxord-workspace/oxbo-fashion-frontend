@@ -1,21 +1,53 @@
 import React, { useState } from 'react';
+import { LoadingButton } from '../components/common/LoadingButton';
+
+interface FormErrors {
+  name?: string;
+  email?: string;
+  message?: string;
+}
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (errors[e.target.name as keyof FormErrors]) {
+      setErrors({ ...errors, [e.target.name]: undefined });
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    if (!formData.message.trim()) newErrors.message = 'Message is required';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
     // Simulate form submission
-    setIsSubmitted(true);
     setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({ name: '', email: '', message: '' });
-    }, 3000);
+      setIsSubmitting(false);
+      setIsSubmitted(true);
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setFormData({ name: '', email: '', message: '' });
+      }, 3000);
+    }, 1000);
   };
 
   return (
@@ -76,7 +108,7 @@ const Contact: React.FC = () => {
                 <p className="text-gray-500 text-sm font-medium tracking-wide">Thank you for reaching out. We'll get back to you shortly.</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                 <div>
                   <label htmlFor="name" className="block text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">Name</label>
                   <input
@@ -85,10 +117,12 @@ const Contact: React.FC = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 bg-white border border-gray-200 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors rounded-none"
+                    className={`w-full px-4 py-3 bg-white border focus:outline-none transition-colors rounded-none ${
+                      errors.name ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-1 focus:ring-black'
+                    }`}
                     placeholder="YOUR NAME"
                   />
+                  {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
                 </div>
                 <div>
                   <label htmlFor="email" className="block text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">Email</label>
@@ -98,10 +132,12 @@ const Contact: React.FC = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 bg-white border border-gray-200 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors rounded-none"
+                    className={`w-full px-4 py-3 bg-white border focus:outline-none transition-colors rounded-none ${
+                      errors.email ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-1 focus:ring-black'
+                    }`}
                     placeholder="YOUR EMAIL"
                   />
+                  {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
                 </div>
                 <div>
                   <label htmlFor="message" className="block text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">Message</label>
@@ -110,18 +146,21 @@ const Contact: React.FC = () => {
                     name="message"
                     value={formData.message}
                     onChange={handleChange}
-                    required
                     rows={6}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors resize-none rounded-none"
+                    className={`w-full px-4 py-3 bg-white border focus:outline-none transition-colors resize-none rounded-none ${
+                      errors.message ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-1 focus:ring-black'
+                    }`}
                     placeholder="HOW CAN WE HELP YOU?"
                   ></textarea>
+                  {errors.message && <p className="mt-1 text-xs text-red-500">{errors.message}</p>}
                 </div>
-                <button
+                <LoadingButton
                   type="submit"
+                  isLoading={isSubmitting}
                   className="w-full py-4 bg-black text-white font-black uppercase tracking-widest hover:bg-gray-800 transition-colors shadow-md mt-4"
                 >
                   SEND MESSAGE
-                </button>
+                </LoadingButton>
               </form>
             )}
           </div>

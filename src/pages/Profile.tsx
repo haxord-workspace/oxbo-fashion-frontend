@@ -8,6 +8,14 @@ import { Loader2, Camera, X } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropUtils';
 
+interface FormErrors {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  pincode?: string;
+  address?: string;
+}
+
 const Profile: React.FC = () => {
   const user = useAppSelector(selectCurrentUser);
   const dispatch = useAppDispatch();
@@ -23,6 +31,7 @@ const Profile: React.FC = () => {
     pincode: user?.pincode || '',
     profileImage: user?.profileImage || '',
   });
+  const [errors, setErrors] = useState<FormErrors>({});
 
   // Cropper State
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -43,10 +52,30 @@ const Profile: React.FC = () => {
     }
   };
 
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+    if (!formData.firstName?.trim()) newErrors.firstName = 'First Name is required';
+    if (!formData.lastName?.trim()) newErrors.lastName = 'Last Name is required';
+    if (formData.phone && !/^\d{10,15}$/.test(formData.phone)) {
+      newErrors.phone = 'Please enter a valid phone number';
+    }
+    if (formData.pincode && !/^\d{4,8}$/.test(formData.pincode)) {
+      newErrors.pincode = 'Please enter a valid pincode';
+    }
+    if (formData.address && formData.address.length < 5) {
+      newErrors.address = 'Address must be at least 5 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     
+    if (!validateForm()) return;
+
     setIsLoading(true);
     try {
       const response = await authApi.updateProfile(user._id || user.id || '', formData);
@@ -209,7 +238,7 @@ const Profile: React.FC = () => {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSave} className="space-y-8 text-left">
+            <form onSubmit={handleSave} className="space-y-8 text-left" noValidate>
               <div className="flex items-center justify-between border-b border-gray-200 pb-4">
                 <h3 className="text-lg font-bold uppercase tracking-wider text-black">Edit Profile</h3>
                 <button
@@ -225,6 +254,7 @@ const Profile: React.FC = () => {
                       pincode: user.pincode || '',
                       profileImage: user.profileImage || '',
                     });
+                    setErrors({});
                   }}
                   className="text-gray-400 hover:text-gray-500"
                 >
@@ -270,10 +300,15 @@ const Profile: React.FC = () => {
                     type="text"
                     id="firstName"
                     value={formData.firstName}
-                    onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                    required
-                    className="mt-1 block w-full rounded-none border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-black sm:text-sm"
+                    onChange={(e) => {
+                      setFormData({...formData, firstName: e.target.value});
+                      if (errors.firstName) setErrors({...errors, firstName: undefined});
+                    }}
+                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${
+                      errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                    }`}
                   />
+                  {errors.firstName && <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>}
                 </div>
                 
                 <div className="sm:col-span-1">
@@ -282,10 +317,15 @@ const Profile: React.FC = () => {
                     type="text"
                     id="lastName"
                     value={formData.lastName}
-                    onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                    required
-                    className="mt-1 block w-full rounded-none border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-black sm:text-sm"
+                    onChange={(e) => {
+                      setFormData({...formData, lastName: e.target.value});
+                      if (errors.lastName) setErrors({...errors, lastName: undefined});
+                    }}
+                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${
+                      errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                    }`}
                   />
+                  {errors.lastName && <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>}
                 </div>
 
                 <div>
@@ -294,9 +334,15 @@ const Profile: React.FC = () => {
                     type="tel"
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    className="mt-1 block w-full rounded-none border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-black sm:text-sm"
+                    onChange={(e) => {
+                      setFormData({...formData, phone: e.target.value});
+                      if (errors.phone) setErrors({...errors, phone: undefined});
+                    }}
+                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${
+                      errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                    }`}
                   />
+                  {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
                 </div>
 
                 <div>
@@ -305,9 +351,15 @@ const Profile: React.FC = () => {
                     type="text"
                     id="pincode"
                     value={formData.pincode}
-                    onChange={(e) => setFormData({...formData, pincode: e.target.value})}
-                    className="mt-1 block w-full rounded-none border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-black sm:text-sm"
+                    onChange={(e) => {
+                      setFormData({...formData, pincode: e.target.value});
+                      if (errors.pincode) setErrors({...errors, pincode: undefined});
+                    }}
+                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${
+                      errors.pincode ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                    }`}
                   />
+                  {errors.pincode && <p className="mt-1 text-xs text-red-500">{errors.pincode}</p>}
                 </div>
 
                 <div className="sm:col-span-2">
@@ -316,9 +368,15 @@ const Profile: React.FC = () => {
                     id="address"
                     rows={3}
                     value={formData.address}
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    className="mt-1 block w-full rounded-none border border-gray-300 px-3 py-2 focus:border-black focus:outline-none focus:ring-black sm:text-sm"
+                    onChange={(e) => {
+                      setFormData({...formData, address: e.target.value});
+                      if (errors.address) setErrors({...errors, address: undefined});
+                    }}
+                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${
+                      errors.address ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                    }`}
                   />
+                  {errors.address && <p className="mt-1 text-xs text-red-500">{errors.address}</p>}
                 </div>
               </div>
 
@@ -335,6 +393,7 @@ const Profile: React.FC = () => {
                       pincode: user.pincode || '',
                       profileImage: user.profileImage || '',
                     });
+                    setErrors({});
                   }}
                   className="bg-white py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black mr-4 uppercase tracking-wider"
                 >
