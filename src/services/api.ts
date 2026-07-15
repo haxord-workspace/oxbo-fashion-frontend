@@ -1,0 +1,124 @@
+import axios from 'axios';
+import Cookies from 'js-cookie';
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+api.interceptors.request.use(async (config) => {
+  let token: string | undefined | null = Cookies.get('accessToken');
+  const refreshToken = Cookies.get('refreshToken');
+
+  // If no access token but we have a refresh token, try to refresh before sending the request
+  if (!token && refreshToken && !config.url?.includes('/auth/refresh')) {
+    if (isRefreshing) {
+      try {
+        token = await new Promise<string | null>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        });
+      } catch (err) {
+        return config;
+      }
+    } else {
+      isRefreshing = true;
+      try {
+        const refreshResponse = await axios.post(
+          `${api.defaults.baseURL}/auth/refresh`,
+          { refreshToken },
+          { withCredentials: true }
+        );
+        const newAccessToken = refreshResponse.data.data?.tokens?.accessToken ||
+          refreshResponse.data.data?.token ||
+          refreshResponse.data.data?.accessToken ||
+          refreshResponse.data.token ||
+          refreshResponse.data.accessToken || '';
+        if (newAccessToken) {
+          Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
+          token = newAccessToken;
+        }
+        processQueue(null, token);
+      } catch (error) {
+        processQueue(error, null);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+  }
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If 401 and we haven't retried yet
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
+      originalRequest._retry = true;
+
+      const isLoginPage = window.location.pathname.includes('/login');
+
+      if (!isLoginPage) {
+        try {
+          // IMPORTANT: use a new axios instance to avoid interceptor loops if the refresh fails.
+          // Since cookies are HttpOnly, we don't pass refreshToken in the body, but rely on the browser sending it.
+          const refreshResponse = await axios.post(
+            `${api.defaults.baseURL}/auth/refresh`,
+            {},
+            { withCredentials: true }
+          );
+
+          const newAccessToken = refreshResponse.data.data?.tokens?.accessToken ||
+            refreshResponse.data.data?.token ||
+            refreshResponse.data.data?.accessToken ||
+            refreshResponse.data.token ||
+            refreshResponse.data.accessToken || '';
+            
+          if (newAccessToken) {
+            // Some backends return the token in body even if using cookies
+            Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          }
+
+          // Retry original request with new token
+          return api(originalRequest);
+        } catch (refreshError) {
+          // If refresh fails, force logout
+          Cookies.remove('accessToken');
+          Cookies.remove('refreshToken');
+          
+          const isAdminRoute = window.location.pathname.startsWith('/admin');
+          window.location.href = isAdminRoute ? '/admin/login' : '/login';
+          
+          return Promise.reject(refreshError);
+        }
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export default api;
