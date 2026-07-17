@@ -11,3 +11,4 @@ export * from './AdminReports';
 export * from './AdminSettings';
 export * from './AdminStores';
 export * from './AdminBrands';
+export * from './AdminNotifications';

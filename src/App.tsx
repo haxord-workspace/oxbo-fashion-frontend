@@ -36,6 +36,7 @@ import {
   AdminSettings,
   AdminStores,
   AdminBrands,
+  AdminNotifications,
 } from './pages/admin/AdminPages';
 
 const AppContent: React.FC = () => {
@@ -95,6 +96,7 @@ const AppContent: React.FC = () => {
             <Route path="reports" element={<AdminReports />} />
             <Route path="stores" element={<AdminStores />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path="notifications" element={<AdminNotifications />} />
           </Route>
         </Route>
       </Routes>

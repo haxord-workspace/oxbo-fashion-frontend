@@ -19,7 +19,8 @@ import {
   Menu,
   X,
   Store,
-  Award
+  Award,
+  Bell
 } from 'lucide-react';
 
 const navItems = [
@@ -34,6 +35,7 @@ const navItems = [
   { name: 'Coupons', path: '/admin/coupons', icon: Ticket },
   { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
   { name: 'Stores', path: '/admin/stores', icon: Store },
+  { name: 'Notifications', path: '/admin/notifications', icon: Bell },
   { name: 'Settings', path: '/admin/settings', icon: Settings },
 ];
 
