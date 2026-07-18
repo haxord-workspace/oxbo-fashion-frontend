@@ -64,7 +64,6 @@ export const AdminUsers = () => {
   const [createErrors, setCreateErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
 
-  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
 
@@ -247,7 +246,6 @@ export const AdminUsers = () => {
       }
       setIsCreateModalOpen(false);
       setNewUser({ firstName: '', lastName: '', email: '', role: 'CUSTOMER', password: '' });
-      setProfileImageFile(null);
       setProfileImagePreview(null);
       setCreateErrors({});
     } catch (err: any) {
@@ -833,7 +831,7 @@ export const AdminUsers = () => {
               <button
                 onClick={() => {
                   setIsCreateModalOpen(false);
-                  setProfileImageFile(null);
+                  
                   setProfileImagePreview(null);
                   setNewUser({ firstName: '', lastName: '', email: '', role: 'CUSTOMER', password: '' });
                   setCreateErrors({});
@@ -958,7 +956,7 @@ export const AdminUsers = () => {
                   type="button"
                   onClick={() => {
                     setIsCreateModalOpen(false);
-                    setProfileImageFile(null);
+                    
                     setProfileImagePreview(null);
                     setNewUser({ firstName: '', lastName: '', email: '', role: 'CUSTOMER', password: '' });
                     setCreateErrors({});
@@ -985,7 +983,6 @@ export const AdminUsers = () => {
         <ImageCropper
           imageSrc={cropImageSrc}
           onCropComplete={(croppedFile) => {
-            setProfileImageFile(croppedFile);
             setProfileImagePreview(URL.createObjectURL(croppedFile));
             setCropImageSrc(null);
           }}

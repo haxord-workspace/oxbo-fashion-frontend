@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Filter, Plus, Minus, Edit, Lock, Unlock } from 'lucide-react';
+import { Plus, Minus, Edit, Lock, Unlock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
@@ -17,11 +17,14 @@ export const AdminInventory = () => {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
 
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      const res = await adminInventoryApi.getTransactions({ page: currentPage, limit: itemsPerPage });
+      const res = await adminInventoryApi.getTransactions({ page: currentPage, limit: itemsPerPage, search: searchQuery });
       setTransactions(res.data?.data || []);
       setTotalItems(res.data?.total || 0);
     } catch (err: any) {
@@ -34,6 +37,14 @@ export const AdminInventory = () => {
   useEffect(() => {
     fetchTransactions();
   }, [currentPage]);
+
+  const handleSearch = () => {
+    if (currentPage === 1) {
+      fetchTransactions();
+    } else {
+      setCurrentPage(1);
+    }
+  };
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,17 +63,7 @@ export const AdminInventory = () => {
     action: 'add' as 'add' | 'reduce' | 'adjust' | 'reserve' | 'release'
   });
 
-  const openUpdateModal = async () => {
-    setStockForm({
-      storeId: '',
-      variantId: '',
-      quantity: 0,
-      remarks: '',
-      action: 'add'
-    });
-    setIsModalOpen(true);
-    
-    // Fetch options if they haven't been fetched yet
+  const loadOptions = async () => {
     if (stores.length === 0 || variants.length === 0) {
       setIsLoadingOptions(true);
       try {
@@ -99,6 +100,32 @@ export const AdminInventory = () => {
     }
   };
 
+  const openUpdateModal = async () => {
+    setEditingTransactionId(null);
+    setStockForm({
+      storeId: '',
+      variantId: '',
+      quantity: 0,
+      remarks: '',
+      action: 'add'
+    });
+    setIsModalOpen(true);
+    await loadOptions();
+  };
+
+  const openIndividualUpdateModal = async (transaction: any) => {
+    setEditingTransactionId(transaction._id || transaction.id);
+    setStockForm({
+      storeId: transaction.storeId?._id || transaction.storeId || '',
+      variantId: transaction.variantId?._id || transaction.variantId || '',
+      quantity: 0,
+      remarks: '',
+      action: 'adjust'
+    });
+    setIsModalOpen(true);
+    await loadOptions();
+  };
+
   const handleUpdateStock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stockForm.storeId || !stockForm.variantId || stockForm.quantity === 0) {
@@ -108,11 +135,14 @@ export const AdminInventory = () => {
     
     setIsUpdating(true);
     try {
-      const basePayload = {
+      const basePayload: any = {
         storeId: stockForm.storeId,
         variantId: stockForm.variantId,
         quantity: Number(stockForm.quantity),
       };
+      if (editingTransactionId) {
+        basePayload.id = editingTransactionId;
+      }
       const fullPayload = { ...basePayload, remarks: stockForm.remarks };
 
       if (stockForm.action === 'add') {
@@ -145,12 +175,25 @@ export const AdminInventory = () => {
       <PageWrapper 
         title="Inventory Transactions"
         headerAction={
-          <button 
-            onClick={openUpdateModal}
-            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            <span className="text-sm font-medium">Update Stock</span>
-          </button>
+          <div className="flex items-center gap-4 flex-wrap justify-end">
+            <div className="flex bg-white border border-gray-300 rounded-lg overflow-hidden shrink-0">
+              <input 
+                type="text" 
+                placeholder="Search SKU or Product..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="px-3 py-2 text-sm focus:outline-none w-40 sm:w-56"
+              />
+              <button onClick={handleSearch} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 border-l border-gray-300 text-sm font-medium">Search</button>
+            </div>
+            <button 
+              onClick={openUpdateModal}
+              className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors shrink-0"
+            >
+              <span className="text-sm font-medium">Update Stock</span>
+            </button>
+          </div>
         }
       >
         <div className="overflow-x-auto">
@@ -164,12 +207,13 @@ export const AdminInventory = () => {
                 <th className="pb-3 font-medium px-4">Change</th>
                 <th className="pb-3 font-medium px-4">Current Stock</th>
                 <th className="pb-3 font-medium px-4">Remarks</th>
+                <th className="pb-3 font-medium px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-gray-500">Loading transactions...</td>
+                  <td colSpan={8} className="py-12 text-center text-gray-500">Loading transactions...</td>
                 </tr>
               ) : transactions.length > 0 ? (
                 transactions.map(item => (
@@ -203,11 +247,20 @@ export const AdminInventory = () => {
                     </td>
                     <td className="py-4 px-4 font-medium">{item.currentQuantity}</td>
                     <td className="py-4 px-4 text-gray-500 text-xs max-w-xs truncate" title={item.remarks}>{item.remarks || '-'}</td>
+                    <td className="py-4 px-4 text-center">
+                      <button 
+                        onClick={() => openIndividualUpdateModal(item)}
+                        className="text-gray-500 hover:text-black transition-colors p-1"
+                        title="Edit / Adjust Stock"
+                      >
+                        <Edit size={16} />
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-gray-500">
+                  <td colSpan={8} className="py-12 text-center text-gray-500">
                     No transactions found
                   </td>
                 </tr>

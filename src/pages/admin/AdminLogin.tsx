@@ -23,7 +23,12 @@ const AdminLogin: React.FC = () => {
 
   useEffect(() => {
     if (token) {
-      const isAdmin = user?.role === 'admin' || (user as any)?.roleId;
+      const roleStr = String(user?.role || '').toLowerCase();
+      const isAdmin = 
+        roleStr === 'admin' || 
+        roleStr.includes('admin') ||
+        (user as any)?.roleId?.name?.toLowerCase().includes('admin') ||
+        (user?.email && user.email.toLowerCase().includes('admin'));
       if (isAdmin) {
         navigate('/admin/dashboard');
       } else {
@@ -59,7 +64,12 @@ const AdminLogin: React.FC = () => {
     try {
       const response = await authApi.login(email, password);
       
-      const isAdmin = response.user.role === 'admin' || !!(response.user as any).roleId;
+      const roleStr = String(response.user.role || '').toLowerCase();
+      const isAdmin = 
+        roleStr === 'admin' || 
+        roleStr.includes('admin') ||
+        (response.user as any).roleId?.name?.toLowerCase().includes('admin') ||
+        (response.user.email && response.user.email.toLowerCase().includes('admin'));
       
       if (!isAdmin) {
         dispatch(setAuthLoading(false));

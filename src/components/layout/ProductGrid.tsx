@@ -2,61 +2,65 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { toggleWishlist, selectIsWishlisted } from '../../features/wishlist/wishlistSlice';
+import { addToWishlistAsync, removeFromWishlistAsync, selectIsWishlisted } from '../../features/wishlist/wishlistSlice';
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
+import { productsApi } from '../../services/productsApi';
+import type { Product } from '../../types';
 
-// Expanded mock data to span multiple rows (4 columns wide)
-const mockProducts = Array.from({ length: 16 }).map((_, i) => ({
-  id: `prod-${i}`,
-  name: i % 4 === 0 ? 'RAW BLACK WIDE' : i % 4 === 1 ? 'KEEP BLUE WIDE' : i % 4 === 2 ? 'TIPS GREEN WIDE' : 'TIPS BLUE WIDE',
-  price: 1399 + (i % 3) * 100,
-  originalPrice: 1600 + (i % 3) * 200,
-  images: [
-    `/images/model${(i % 3) + 1}.png`,
-    `/images/model${((i + 1) % 3) + 1}.png`,
-    `/images/model${((i + 2) % 3) + 1}.png`,
-  ],
-}));
-
-const ProductCard: React.FC<{ product: typeof mockProducts[0] }> = ({ product }) => {
+const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const isWishlisted = useAppSelector(state => selectIsWishlisted(state, product.id));
+  const productId = product.id || (product as any)._id;
+  const isWishlisted = useAppSelector(state => selectIsWishlisted(state, productId));
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
+
+  // Extract images from backend structure (thumbnail/gallery), or variants, or imageUrl
+  let images: string[] = [];
+  const prod = product as any;
+  if (prod.thumbnail) {
+    images = [prod.thumbnail, ...(prod.gallery || [])];
+  } else if (product.variants && product.variants.length > 0 && product.variants[0].images?.length > 0) {
+    images = product.variants[0].images;
+  } else {
+    images = [product.imageUrl || '/placeholder.png'];
+  }
 
   const handleToggleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!isAuthenticated) {
       navigate('/register');
       return;
     }
-    dispatch(toggleWishlist({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      imageUrl: product.images[0],
-      category: 'clothing',
-      description: 'Premium quality product.'
-    }));
+    if (isWishlisted) {
+      dispatch(removeFromWishlistAsync(productId));
+    } else {
+      dispatch(addToWishlistAsync({
+        ...product,
+        id: productId // ensure id is set for the thunk
+      }));
+    }
   };
 
   const nextImage = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent link click
-    setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
+    e.preventDefault();
+    e.stopPropagation(); // Prevent link click
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
   };
 
   const prevImage = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent link click
-    setCurrentImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length);
+    e.preventDefault();
+    e.stopPropagation(); // Prevent link click
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 
   return (
-    <Link to={`/products/${product.id}`} className="flex flex-col group cursor-pointer w-full">
+    <Link to={`/products/${product.id || (product as any)._id}`} className="flex flex-col group cursor-pointer w-full">
       {/* Image Container */}
       <div className="relative w-full aspect-[3/4] bg-gray-100 overflow-hidden">
         <img 
-          src={product.images[currentImageIndex]} 
+          src={images[currentImageIndex] || images[0]} 
           alt={product.name} 
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -79,7 +83,7 @@ const ProductCard: React.FC<{ product: typeof mockProducts[0] }> = ({ product })
 
         {/* Carousel Dots */}
         <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {product.images.map((_, idx) => (
+          {images.map((_, idx) => (
             <div 
               key={idx} 
               className={`h-1.5 w-1.5 rounded-full ${idx === currentImageIndex ? 'bg-white' : 'bg-white/50'}`}
@@ -102,8 +106,10 @@ const ProductCard: React.FC<{ product: typeof mockProducts[0] }> = ({ product })
           {product.name}
         </h3>
         <div className="flex items-center gap-2 text-[11px] sm:text-xs">
-          <span className="text-[#e35a39]">Rs. {product.price.toLocaleString('en-IN')}.00</span>
-          <span className="text-gray-500 line-through">Rs. {product.originalPrice.toLocaleString('en-IN')}.00</span>
+          <span className="text-[#e35a39]">Rs. {(product.price || 1499).toLocaleString('en-IN')}.00</span>
+          {(product.mrp || 1999) > (product.price || 1499) && (
+            <span className="text-gray-500 line-through">Rs. {(product.mrp || 1999).toLocaleString('en-IN')}.00</span>
+          )}
         </div>
       </div>
     </Link>
@@ -127,13 +133,24 @@ const ProductSkeleton: React.FC = () => {
 
 const ProductGrid: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    // Simulate network delay to demonstrate the shimmer effect
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      try {
+        const response: any = await productsApi.getProducts();
+        // The backend returns { data: { products: [...] } } or { data: [...] }
+        const productsList = response.data?.products || (Array.isArray(response.data) ? response.data : []);
+        setProducts(productsList);
+      } catch (error) {
+        console.error('Failed to fetch products', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProducts();
   }, []);
 
   return (
@@ -143,8 +160,8 @@ const ProductGrid: React.FC = () => {
           ? Array.from({ length: 8 }).map((_, idx) => (
               <ProductSkeleton key={idx} />
             ))
-          : mockProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
+          : products.map(product => (
+              <ProductCard key={product.id || (product as any)._id} product={product} />
             ))
         }
       </div>

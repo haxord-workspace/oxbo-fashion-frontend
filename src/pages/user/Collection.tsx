@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Filter, X } from 'lucide-react';
-import ProductGrid from '../components/layout/ProductGrid';
+import ProductGrid from '../../components/layout/ProductGrid';
 
 const Collection: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -23,24 +23,24 @@ const Collection: React.FC = () => {
             {title}
           </h1>
           <p className="mt-4 text-sm md:text-base text-gray-500 uppercase tracking-widest font-semibold">
-            {categoryId === 'flash-sale' 
-              ? 'Limited time offers. Grab them before they are gone.' 
+            {categoryId === 'flash-sale'
+              ? 'Limited time offers. Grab them before they are gone.'
               : 'Explore our latest drops and premium collections.'}
           </p>
         </div>
-        
+
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar */}
           {/* Filters Modal Overlay */}
           {isFilterOpen && (
             <>
               {/* Backdrop */}
-              <div 
+              <div
                 className="fixed inset-0 bg-black bg-opacity-50 z-[60] transition-opacity"
                 onClick={() => setIsFilterOpen(false)}
                 aria-hidden="true"
               />
-              
+
               {/* Drawer */}
               <aside className="fixed inset-y-0 left-0 z-[70] w-full max-w-sm bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-fade-in overflow-y-auto">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
@@ -130,7 +130,7 @@ const Collection: React.FC = () => {
                 </div>
 
                 <div className="mt-auto border-t border-gray-200 p-6 bg-gray-50 sticky bottom-0">
-                  <button 
+                  <button
                     onClick={() => setIsFilterOpen(false)}
                     className="w-full bg-black text-white font-bold uppercase tracking-widest py-4 text-sm hover:bg-gray-900 transition-colors"
                   >
@@ -145,15 +145,15 @@ const Collection: React.FC = () => {
           <div className="flex-1 transition-all duration-300">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setIsFilterOpen(true)} 
+                <button
+                  onClick={() => setIsFilterOpen(true)}
                   className="flex items-center gap-2 font-bold uppercase tracking-wider text-sm px-4 py-2 bg-white text-black border border-gray-200 hover:border-black transition-colors"
                 >
                   <Filter size={16} /> Filters
                 </button>
                 <span className="text-sm text-gray-500">Showing 16 products</span>
               </div>
-              
+
               <select className="border border-gray-200 text-sm px-4 py-2 bg-white focus:outline-none focus:border-black cursor-pointer rounded-none">
                 <option>Sort by: Featured</option>
                 <option>Price: Low to High</option>

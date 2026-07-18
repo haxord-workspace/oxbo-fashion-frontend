@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import { LoadingButton } from '../components/common/LoadingButton';
+import { LoadingButton } from '../../components/common/LoadingButton';
 import toast from 'react-hot-toast';
+import { useAppSelector, useAppDispatch } from '../../app/hooks';
+import { fetchCart, applyCouponAsync, removeCouponAsync } from '../../features/cart/cartSlice';
+import { userOrdersApi } from '../../services/user/orders.Api';
 
 interface CheckoutFormData {
   firstName: string;
@@ -37,27 +40,18 @@ const Checkout: React.FC = () => {
     }
   };
 
-  // Mock order items for the summary
-  const orderItems = [
-    {
-      id: '1',
-      name: 'RAW BLACK WIDE',
-      price: 1399,
-      image: '/images/model1.png',
-      quantity: 1,
-    },
-    {
-      id: '2',
-      name: 'TIPS GREEN WIDE',
-      price: 1599,
-      image: '/images/model2.png',
-      quantity: 1,
-    }
-  ];
+  const dispatch = useAppDispatch();
+  const { items: cartItems, couponCode, discountPercent } = useAppSelector((state) => state.cart);
+  const [couponInput, setCouponInput] = useState('');
 
-  const subtotal = orderItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = 99;
-  const total = subtotal + shipping;
+  useEffect(() => {
+    dispatch(fetchCart());
+  }, [dispatch]);
+
+  const subtotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+  const discountAmount = subtotal * (discountPercent / 100);
+  const shipping: number = cartItems.length > 0 ? 0 : 0; // Free shipping as per UI
+  const total = subtotal - discountAmount + shipping;
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -91,17 +85,37 @@ const Checkout: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
     
     setIsSubmitting(true);
-    // Normally handle order creation API call here
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Typically, you'd create a shipping address first or pass the required fields.
+      // Assuming backend uses shippingAddressId, we will use a dummy one for now, or you'd save it and pass the ID.
+      await userOrdersApi.createOrder({
+        shippingAddressId: 'address_id_placeholder', // You would typically post the address first
+        paymentReference: paymentMethod === 'card' ? `MOCK_TXN_${Date.now()}` : 'COD',
+        notes: 'Please deliver safely'
+      });
+      
       toast.success('Order placed successfully!');
-      navigate('/');
-    }, 1500);
+      navigate('/orders');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to place order');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleApplyCoupon = () => {
+    if (!couponInput.trim()) return;
+    dispatch(applyCouponAsync({ code: couponInput, cartTotal: subtotal }));
+  };
+
+  const handleRemoveCoupon = () => {
+    dispatch(removeCouponAsync());
+    setCouponInput('');
   };
 
   return (
@@ -220,20 +234,45 @@ const Checkout: React.FC = () => {
               <h2 className="text-lg font-bold uppercase tracking-wider mb-6">Order Summary</h2>
               
               <div className="space-y-6 mb-6">
-                {orderItems.map((item) => (
-                  <div key={item.id} className="flex gap-4">
+                {cartItems.map((item) => (
+                  <div key={item.product.id + (item.selectedSize || '')} className="flex gap-4">
                     <div className="w-20 h-24 bg-gray-200 flex-shrink-0">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
-                        <h3 className="text-xs font-bold uppercase">{item.name}</h3>
+                        <h3 className="text-xs font-bold uppercase">{item.product.name}</h3>
                         <p className="text-gray-500 text-xs mt-1">Qty: {item.quantity}</p>
+                        {item.selectedSize && <p className="text-gray-500 text-xs">Size: {item.selectedSize}</p>}
                       </div>
-                      <p className="text-sm font-medium">Rs. {item.price.toLocaleString('en-IN')}.00</p>
+                      <p className="text-sm font-medium">Rs. {item.product.price.toLocaleString('en-IN')}.00</p>
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Coupon Section */}
+              <div className="mb-6">
+                <label className="block text-xs font-medium text-gray-700 uppercase mb-2">Discount Code</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value)}
+                    disabled={!!couponCode}
+                    placeholder="Enter code" 
+                    className="flex-1 border rounded-none px-4 py-2 text-sm focus:outline-none border-gray-300 focus:border-black"
+                  />
+                  {couponCode ? (
+                    <button type="button" onClick={handleRemoveCoupon} className="bg-red-500 text-white px-4 py-2 text-xs font-bold uppercase hover:bg-red-600 transition-colors">
+                      Remove
+                    </button>
+                  ) : (
+                    <button type="button" onClick={handleApplyCoupon} className="bg-black text-white px-4 py-2 text-xs font-bold uppercase hover:bg-gray-800 transition-colors">
+                      Apply
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="border-t border-gray-200 pt-6 space-y-4 text-sm">
@@ -241,9 +280,15 @@ const Checkout: React.FC = () => {
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">Rs. {subtotal.toLocaleString('en-IN')}.00</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount ({couponCode})</span>
+                    <span className="font-medium">- Rs. {discountAmount.toLocaleString('en-IN')}.00</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">Rs. {shipping.toLocaleString('en-IN')}.00</span>
+                  <span className="font-medium">{shipping === 0 ? 'FREE' : `Rs. ${shipping.toLocaleString('en-IN')}.00`}</span>
                 </div>
                 <div className="flex justify-between border-t border-gray-200 pt-4 text-base font-bold">
                   <span>Total</span>

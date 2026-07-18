@@ -36,7 +36,6 @@ export const AdminCategoryDetails = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [productForm, setProductForm] = useState({
@@ -75,7 +74,6 @@ export const AdminCategoryDetails = () => {
 
   const openModal = (mode: 'add' | 'edit', product: any = null) => {
     setModalMode(mode);
-    setSelectedProduct(product);
     if (mode === 'edit' && product) {
       setProductForm({
         name: product.name || '',

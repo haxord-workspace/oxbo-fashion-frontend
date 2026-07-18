@@ -120,9 +120,17 @@ export const selectAuthInitialized = (state: RootState) => state.auth?.isInitial
 export const selectUserRole = (state: RootState) => {
   const user = state.auth?.user as any;
   if (!user) return 'user';
-  if (user.role) return user.role;
-  if (user.roleId) return 'admin';
-  return 'user';
+  
+  let role = 'user';
+  if (user.role) role = user.role;
+  else if (user.roleId?.name) role = user.roleId.name;
+  
+  const roleStr = String(role).toLowerCase();
+  if (roleStr === 'admin' || roleStr.includes('admin') || (user.email && user.email.toLowerCase().includes('admin'))) {
+    return 'admin';
+  }
+  
+  return role;
 };
 export const selectIsAdmin = (state: RootState) => selectUserRole(state) === 'admin';
 

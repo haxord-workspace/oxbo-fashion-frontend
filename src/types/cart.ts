@@ -5,4 +5,5 @@ export interface CartItem {
   quantity: number;
   selectedColor?: string;
   selectedSize?: string;
+  variantId?: string;
 }

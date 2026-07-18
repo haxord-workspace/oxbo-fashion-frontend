@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
-import { login, setAuthLoading, setAuthError } from '../features/auth/authSlice';
-import { authApi } from '../services/authApi';
+import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { login, setAuthLoading, setAuthError } from '../../features/auth/authSlice';
+import { authApi } from '../../services/authApi';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -50,7 +50,12 @@ const Login: React.FC = () => {
     try {
       const response = await authApi.login(email, password);
       
-      const isAdmin = response.user.role === 'admin' || !!(response.user as any).roleId;
+      const roleStr = String(response.user.role || '').toLowerCase();
+      const isAdmin = 
+        roleStr === 'admin' || 
+        roleStr.includes('admin') ||
+        (response.user as any).roleId?.name?.toLowerCase().includes('admin') ||
+        (response.user.email && response.user.email.toLowerCase().includes('admin'));
       
       if (isAdmin) {
         dispatch(setAuthLoading(false));

@@ -6,16 +6,16 @@ import { store, persistor } from './app/store';
 import { useAppDispatch, useAppSelector } from './app/hooks';
 import { initializeAuth, selectAuthInitialized } from './features/auth/authSlice';
 import MainLayout from './components/layout/MainLayout';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ProductDetail from './pages/ProductDetail';
-import Collection from './pages/Collection';
-import Contact from './pages/Contact';
-import Wishlist from './pages/Wishlist';
-import Profile from './pages/Profile';
-import Orders from './pages/Orders';
-import Checkout from './pages/Checkout';
+import Home from './pages/user/Home';
+import Login from './pages/user/Login';
+import Register from './pages/user/Register';
+import ProductDetail from './pages/user/ProductDetail';
+import Collection from './pages/user/Collection';
+import Contact from './pages/user/Contact';
+import Wishlist from './pages/user/Wishlist';
+import Profile from './pages/user/Profile';
+import Orders from './pages/user/Orders';
+import Checkout from './pages/user/Checkout';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
@@ -66,7 +66,7 @@ const AppContent: React.FC = () => {
           <Route path="products/:id" element={<ProductDetail />} />
           <Route path="collections/:categoryId" element={<Collection />} />
           <Route path="contact" element={<Contact />} />
-          
+
           {/* Protected Client Routes */}
           <Route element={<ProtectedRoute allowedRoles={['user']} />}>
             <Route path="wishlist" element={<Wishlist />} />

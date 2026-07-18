@@ -1,7 +1,7 @@
 import React from 'react';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useAppDispatch } from '../../app/hooks';
-import { removeItem, updateQuantity } from './cartSlice';
+import { removeFromCartAsync, updateCartItemAsync } from './cartSlice';
 import type { CartItem as CartItemType } from '../../types';
 
 interface CartItemProps {
@@ -13,17 +13,17 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
   const { product, quantity } = item;
 
   const handleIncrement = () => {
-    dispatch(updateQuantity({ id: product.id, quantity: quantity + 1 }));
+    dispatch(updateCartItemAsync({ id: product.id, variantId: item.variantId, quantity: quantity + 1 }));
   };
 
   const handleDecrement = () => {
     if (quantity > 1) {
-      dispatch(updateQuantity({ id: product.id, quantity: quantity - 1 }));
+      dispatch(updateCartItemAsync({ id: product.id, variantId: item.variantId, quantity: quantity - 1 }));
     }
   };
 
   const handleRemove = () => {
-    dispatch(removeItem(product.id));
+    dispatch(removeFromCartAsync({ id: product.id, variantId: item.variantId }));
   };
 
   return (

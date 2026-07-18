@@ -88,21 +88,33 @@ export const AdminProducts = () => {
   const [productForm, setProductForm] = useState<{
     name: string;
     description: string;
+    shortDescription: string;
     categoryId: string;
     brandId: string;
     mrp: string;
     price: string;
     status: string;
+    isFeatured: boolean;
+    tags: string;
+    seoTitle: string;
+    seoDescription: string;
+    seoKeywords: string;
     image: string;
     imageFile?: File | null;
   }>({
     name: '',
     description: '',
+    shortDescription: '',
     categoryId: '',
     brandId: '',
     mrp: '',
     price: '',
-    status: 'draft',
+    status: 'active',
+    isFeatured: false,
+    tags: '',
+    seoTitle: '',
+    seoDescription: '',
+    seoKeywords: '',
     image: '',
     imageFile: null
   });
@@ -173,11 +185,17 @@ export const AdminProducts = () => {
       setProductForm({
         name: product.name || '',
         description: product.description || '',
+        shortDescription: product.shortDescription || '',
         categoryId: product.categoryId?._id || product.categoryId || '',
         brandId: product.brandId?._id || product.brandId || '',
         mrp: initialMrp,
         price: initialPrice,
-        status: product.status || 'draft',
+        status: product.status || 'active',
+        isFeatured: product.isFeatured || false,
+        tags: Array.isArray(product.tags) ? product.tags.join(', ') : (product.tags || ''),
+        seoTitle: product.seo?.title || '',
+        seoDescription: product.seo?.description || '',
+        seoKeywords: Array.isArray(product.seo?.keywords) ? product.seo.keywords.join(', ') : (product.seo?.keywords || ''),
         image: product.thumbnail || product.image || product.images?.[0]?.url || '',
         imageFile: null
       });
@@ -193,11 +211,17 @@ export const AdminProducts = () => {
       setProductForm({
         name: '',
         description: '',
+        shortDescription: '',
         categoryId: categories.length > 0 ? (categories[0].id || categories[0]._id) : '',
         brandId: brands.length > 0 ? (brands[0].id || brands[0]._id) : '',
         mrp: '',
         price: '',
-        status: 'draft',
+        status: 'active',
+        isFeatured: false,
+        tags: '',
+        seoTitle: '',
+        seoDescription: '',
+        seoKeywords: '',
         image: '',
         imageFile: null
       });
@@ -229,9 +253,21 @@ export const AdminProducts = () => {
       formData.append('name', productForm.name);
       formData.append('slug', productForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
       formData.append('description', productForm.description || '');
+      formData.append('shortDescription', productForm.shortDescription || '');
       formData.append('categoryId', productForm.categoryId);
       formData.append('brandId', productForm.brandId);
       formData.append('status', productForm.status);
+      formData.append('isFeatured', String(productForm.isFeatured));
+      
+      const tagsArray = productForm.tags.split(',').map(t => t.trim()).filter(Boolean);
+      if (tagsArray.length > 0) formData.append('tags', JSON.stringify(tagsArray));
+      
+      if (productForm.seoTitle) formData.append('seo[title]', productForm.seoTitle);
+      if (productForm.seoDescription) formData.append('seo[description]', productForm.seoDescription);
+      
+      const keywordsArray = productForm.seoKeywords.split(',').map(t => t.trim()).filter(Boolean);
+      if (keywordsArray.length > 0) formData.append('seo[keywords]', JSON.stringify(keywordsArray));
+      
       if (productForm.imageFile) {
         formData.append('thumbnail', productForm.imageFile);
       } else if (productForm.image) {
@@ -461,6 +497,14 @@ export const AdminProducts = () => {
             }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="E.g., Classic White Tee" />
             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Short Description</label>
+            <input type="text" value={productForm.shortDescription} onChange={e => setProductForm({...productForm, shortDescription: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="A short catchphrase..." />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Full Description</label>
+            <textarea value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black h-24" placeholder="Detailed product description..."></textarea>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
@@ -479,6 +523,35 @@ export const AdminProducts = () => {
                   <option key={b.id || b._id} value={b.id || b._id}>{b.name}</option>
                 ))}
               </select>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+              <input type="text" value={productForm.tags} onChange={e => setProductForm({...productForm, tags: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="shirt, cotton, formal" />
+            </div>
+            <div className="flex items-center mt-6">
+              <input type="checkbox" id="isFeatured" checked={productForm.isFeatured} onChange={e => setProductForm({...productForm, isFeatured: e.target.checked})} className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black" />
+              <label htmlFor="isFeatured" className="ml-2 block text-sm text-gray-900">Is Featured Product?</label>
+            </div>
+          </div>
+
+          <div className="border border-gray-200 p-3 rounded-md space-y-3">
+            <h4 className="text-sm font-semibold">SEO Details</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">SEO Title</label>
+                <input type="text" value={productForm.seoTitle} onChange={e => setProductForm({...productForm, seoTitle: e.target.value})} className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="SEO Title" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">SEO Keywords</label>
+                <input type="text" value={productForm.seoKeywords} onChange={e => setProductForm({...productForm, seoKeywords: e.target.value})} className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="keyword1, keyword2" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">SEO Description</label>
+              <textarea value={productForm.seoDescription} onChange={e => setProductForm({...productForm, seoDescription: e.target.value})} className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black h-16" placeholder="SEO meta description..."></textarea>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">

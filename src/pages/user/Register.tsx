@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
-import { register as registerAction, setAuthLoading, setAuthError } from '../features/auth/authSlice';
-import { authApi } from '../services/authApi';
+import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { register as registerAction, setAuthLoading, setAuthError } from '../../features/auth/authSlice';
+import { authApi } from '../../services/authApi';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -22,10 +22,10 @@ const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   const [errors, setErrors] = useState<FormErrors>({});
 
   const dispatch = useAppDispatch();
@@ -42,7 +42,7 @@ const Register: React.FC = () => {
     if (!lastName.trim()) {
       newErrors.lastName = 'Last name is required';
     }
-    
+
     if (!email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
@@ -93,9 +93,9 @@ const Register: React.FC = () => {
         password,
         phone
       };
-      
+
       const response = await authApi.register(data);
-      
+
       dispatch(registerAction(response));
       toast.success(response.message || 'Account created successfully!');
       navigate('/');
@@ -128,9 +128,8 @@ const Register: React.FC = () => {
                 name="firstName"
                 type="text"
                 autoComplete="given-name"
-                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
-                  errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
-                }`}
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                  }`}
                 placeholder="FIRST NAME"
                 value={firstName}
                 onChange={(e) => {
@@ -148,9 +147,8 @@ const Register: React.FC = () => {
                 name="lastName"
                 type="text"
                 autoComplete="family-name"
-                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
-                  errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
-                }`}
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                  }`}
                 placeholder="LAST NAME"
                 value={lastName}
                 onChange={(e) => {
@@ -168,9 +166,8 @@ const Register: React.FC = () => {
                 name="email"
                 type="email"
                 autoComplete="email"
-                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
-                  errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
-                }`}
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                  }`}
                 placeholder="EMAIL ADDRESS"
                 value={email}
                 onChange={(e) => {
@@ -188,9 +185,8 @@ const Register: React.FC = () => {
                 name="phone"
                 type="tel"
                 autoComplete="tel"
-                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
-                  errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
-                }`}
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                  }`}
                 placeholder="PHONE NUMBER"
                 value={phone}
                 onChange={(e) => {
@@ -208,9 +204,8 @@ const Register: React.FC = () => {
                 name="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
-                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 pr-10 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
-                  errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
-                }`}
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 pr-10 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                  }`}
                 placeholder="PASSWORD"
                 value={password}
                 onChange={(e) => {
@@ -235,9 +230,8 @@ const Register: React.FC = () => {
                 name="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 autoComplete="new-password"
-                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 pr-10 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
-                  errors.confirmPassword ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
-                }`}
+                className={`relative block w-full appearance-none rounded-xl border px-3 py-3 pr-10 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${errors.confirmPassword ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                  }`}
                 placeholder="CONFIRM PASSWORD"
                 value={confirmPassword}
                 onChange={(e) => {
