@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { adminReportsApi, type ReportParams } from '../../services/admin/adminReports.Api';
 import { useAppSelector } from '../../app/hooks';
 import { selectIsStoreManager } from '../../features/auth/authSlice';
 import { 
-  TrendingUp, TrendingDown, DollarSign, Package, 
+  TrendingUp, TrendingDown, DollarSign, 
   ShoppingCart, Users, AlertTriangle, Clock, CreditCard, Award, Store
 } from 'lucide-react';
 
