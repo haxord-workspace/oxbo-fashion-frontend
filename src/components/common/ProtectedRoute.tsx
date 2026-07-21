@@ -4,7 +4,7 @@ import { useAppSelector } from '../../app/hooks';
 import { selectIsAuthenticated, selectUserRole } from '../../features/auth/authSlice';
 
 interface ProtectedRouteProps {
-  allowedRoles?: ('user' | 'admin')[];
+  allowedRoles?: ('user' | 'admin' | 'storemanager')[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {

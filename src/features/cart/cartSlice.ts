@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { CartItem } from '../../types';
+import type { CartItem, Coupon } from '../../types';
 import type { RootState } from '../../app/store';
 import { cartApi } from '../../services/user/cart.Api';
 import { userCouponsApi } from '../../services/user/coupons.Api';
@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 interface CartState {
   items: CartItem[];
   couponCode: string | null;
-  discountPercent: number;
+  appliedCoupon: Coupon | null;
   isLoading: boolean;
   error: string | null;
 }
@@ -17,7 +17,7 @@ interface CartState {
 const initialState: CartState = {
   items: [],
   couponCode: null,
-  discountPercent: 0,
+  appliedCoupon: null,
   isLoading: false,
   error: null,
 };
@@ -83,11 +83,34 @@ export const clearCartAsync = createAsyncThunk('cart/clear', async (_, { rejectW
 
 export const applyCouponAsync = createAsyncThunk('cart/applyCoupon', async ({ code, cartTotal }: { code: string, cartTotal: number }, { rejectWithValue }) => {
   try {
-    const validateResponse = await userCouponsApi.validateCoupon(code, cartTotal);
-    await cartApi.applyCoupon(code);
-    return { code, percent: validateResponse.discountPercent || 10 }; // Fallback 10% if not returned
+    const cleanCode = code.trim().toUpperCase();
+    
+    // Validate with user API (backend handles validation rules)
+    const validateResponse = await userCouponsApi.validateCoupon(cleanCode, cartTotal);
+    
+    // Apply to cart on backend
+    const applyResponse = await cartApi.applyCoupon(cleanCode);
+    
+    // Extract coupon from response if available
+    let coupon = validateResponse.data?.coupon || validateResponse.coupon;
+
+    if (!coupon || !coupon.type) {
+      // Fallback: if backend doesn't return full coupon details, construct a fixed discount based on the updated cart
+      const discountAmount = applyResponse.data?.discount ?? applyResponse.discount ?? 0;
+      coupon = {
+        code: cleanCode,
+        type: 'fixed',
+        value: discountAmount,
+        isActive: true
+      };
+    } else {
+      // Ensure code is set just in case
+      coupon.code = cleanCode;
+    }
+
+    return coupon;
   } catch (err: any) {
-    return rejectWithValue(err.response?.data?.message || err.message);
+    return rejectWithValue(err.response?.data?.message || err.message || 'Failed to apply coupon');
   }
 });
 
@@ -121,12 +144,40 @@ const cartSlice = createSlice({
       .addCase(fetchCart.fulfilled, (state, action) => {
         state.isLoading = false;
         const data = action.payload;
+
+        const mapApiItemToCartItem = (apiItem: any) => {
+          if (apiItem.product) return apiItem;
+          
+          return {
+            product: {
+              id: apiItem.productId?._id || apiItem.productId?.id || 'unknown',
+              name: apiItem.productId?.name || 'Unknown Product',
+              imageUrl: apiItem.productId?.thumbnail || apiItem.productId?.imageUrl,
+              price: apiItem.price || apiItem.variantId?.price || apiItem.productId?.price || 0,
+              mrp: apiItem.variantId?.price || apiItem.productId?.mrp || 0,
+              category: apiItem.productId?.categoryId || 'Category',
+            },
+            quantity: apiItem.quantity || 1,
+            selectedColor: apiItem.variantId?.attributes?.color,
+            selectedSize: apiItem.variantId?.attributes?.size,
+            variantId: apiItem.variantId?._id || apiItem.variantId?.id || (typeof apiItem.variantId === 'string' ? apiItem.variantId : undefined),
+          };
+        };
+
         if (data.items) {
-          state.items = data.items;
+          state.items = data.items.map(mapApiItemToCartItem);
           state.couponCode = data.couponCode || null;
-          state.discountPercent = data.discountPercent || 0;
+          if (data.coupon) {
+            state.appliedCoupon = data.coupon;
+          } else if (data.discountPercent) {
+            state.appliedCoupon = { code: data.couponCode || '', type: 'percentage', value: data.discountPercent, isActive: true };
+          } else if (data.discount !== undefined) {
+            state.appliedCoupon = { code: data.couponCode || '', type: 'fixed', value: data.discount, isActive: true };
+          } else {
+            state.appliedCoupon = null;
+          }
         } else if (Array.isArray(data)) {
-          state.items = data;
+          state.items = data.map(mapApiItemToCartItem);
         }
       })
       .addCase(fetchCart.rejected, (state, action) => {
@@ -169,14 +220,14 @@ const cartSlice = createSlice({
       .addCase(clearCartAsync.fulfilled, (state) => {
         state.items = [];
         state.couponCode = null;
-        state.discountPercent = 0;
+        state.appliedCoupon = null;
       })
 
       // Apply Coupon
       .addCase(applyCouponAsync.fulfilled, (state, action) => {
         state.couponCode = action.payload.code;
-        state.discountPercent = action.payload.percent;
-        toast.success('Coupon applied!');
+        state.appliedCoupon = action.payload;
+        toast.success('Coupon applied successfully');
       })
       .addCase(applyCouponAsync.rejected, (_state, action) => {
         toast.error((action.payload as string) || 'Invalid coupon code');
@@ -185,7 +236,7 @@ const cartSlice = createSlice({
       // Remove Coupon
       .addCase(removeCouponAsync.fulfilled, (state) => {
         state.couponCode = null;
-        state.discountPercent = 0;
+        state.appliedCoupon = null;
         toast.success('Coupon removed');
       });
   }
@@ -195,12 +246,29 @@ export const { addItemLocal } = cartSlice.actions;
 
 // Selectors
 export const selectCartCount = (state: RootState) => 
-  state.cart.items.reduce((count, item) => count + item.quantity, 0);
+  state.cart.items.reduce((count, item) => count + (item.quantity || 0), 0);
 
 export const selectCartTotal = (state: RootState) => {
-  const subtotal = state.cart.items.reduce((total, item) => total + (item.product.price * item.quantity), 0);
-  const discount = subtotal * (state.cart.discountPercent / 100);
-  return subtotal - discount;
+  const subtotal = state.cart.items.reduce((total, item) => {
+    if (!item || !item.product || typeof item.product.price !== 'number') return total;
+    return total + (item.product.price * item.quantity);
+  }, 0);
+  
+  const coupon = state.cart.appliedCoupon;
+  let discount = 0;
+  
+  if (coupon) {
+    if (coupon.type === 'percentage') {
+      discount = subtotal * (coupon.value / 100);
+      if (coupon.maximumDiscount && discount > coupon.maximumDiscount) {
+        discount = coupon.maximumDiscount;
+      }
+    } else if (coupon.type === 'fixed') {
+      discount = coupon.value;
+    }
+  }
+  
+  return Math.max(0, subtotal - discount);
 };
 
 export const selectShippingCharge = (_state: RootState) => {

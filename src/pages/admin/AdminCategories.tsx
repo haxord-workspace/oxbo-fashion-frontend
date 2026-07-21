@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAppSelector } from '../../app/hooks';
+import { selectIsStoreManager } from '../../features/auth/authSlice';
 import { Plus, Edit2, Trash2, Search, Loader2, Image as ImageIcon, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -15,6 +17,7 @@ interface FormErrors {
 
 export const AdminCategories = () => {
   const navigate = useNavigate();
+  const isStoreManager = useAppSelector(selectIsStoreManager);
   
   // Data States
   const [categories, setCategories] = useState<Category[]>([]);
@@ -35,12 +38,20 @@ export const AdminCategories = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
   // Form States
-  const [categoryForm, setCategoryForm] = useState({
+  const [categoryForm, setCategoryForm] = useState<{
+    name: string;
+    description: string;
+    isActive: boolean;
+    sortOrder: number;
+    parentCategory: string;
+    suggestions: { title: string; description: string }[];
+  }>({
     name: '',
     description: '',
     isActive: true,
     sortOrder: 0,
-    parentCategory: ''
+    parentCategory: '',
+    suggestions: []
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -101,7 +112,8 @@ export const AdminCategories = () => {
         description: category.description || '',
         isActive: category.isActive !== false,
         sortOrder: category.sortOrder || 0,
-        parentCategory: typeof category.parentCategory === 'object' ? category.parentCategory?._id || category.parentCategory?.id || '' : category.parentCategory || ''
+        parentCategory: typeof category.parentCategory === 'object' ? category.parentCategory?._id || category.parentCategory?.id || '' : category.parentCategory || '',
+        suggestions: category.suggestions || []
       });
       if (category.image) {
         setImagePreview(category.image);
@@ -112,7 +124,8 @@ export const AdminCategories = () => {
         description: '',
         isActive: true,
         sortOrder: 0,
-        parentCategory: ''
+        parentCategory: '',
+        suggestions: []
       });
     }
     setErrors({});
@@ -147,6 +160,11 @@ export const AdminCategories = () => {
       formData.append('sortOrder', String(categoryForm.sortOrder));
       if (categoryForm.parentCategory) {
         formData.append('parentCategory', categoryForm.parentCategory);
+      }
+      if (categoryForm.suggestions && categoryForm.suggestions.length > 0) {
+        formData.append('suggestions', JSON.stringify(categoryForm.suggestions));
+      } else {
+        formData.append('suggestions', JSON.stringify([]));
       }
       
       if (imageFile) {
@@ -335,13 +353,15 @@ export const AdminCategories = () => {
                         >
                           <Edit2 size={16} />
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); openModal('delete', cat); }}
-                          className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" 
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {!isStoreManager && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); openModal('delete', cat); }}
+                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" 
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -493,6 +513,63 @@ export const AdminCategories = () => {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-sm font-medium text-gray-700">Suggestions</label>
+              <button
+                type="button"
+                onClick={() => setCategoryForm({ ...categoryForm, suggestions: [...categoryForm.suggestions, { title: '', description: '' }] })}
+                className="text-xs flex items-center gap-1 text-black font-medium hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+              >
+                <Plus size={14} /> Add Suggestion
+              </button>
+            </div>
+            <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
+              {categoryForm.suggestions.map((suggestion, index) => (
+                <div key={index} className="flex gap-2 items-start border border-gray-100 bg-gray-50 p-2 rounded">
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      value={suggestion.title}
+                      onChange={e => {
+                        const newSuggestions = [...categoryForm.suggestions];
+                        newSuggestions[index].title = e.target.value;
+                        setCategoryForm({ ...categoryForm, suggestions: newSuggestions });
+                      }}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                      placeholder="Suggestion Title"
+                    />
+                    <input
+                      type="text"
+                      value={suggestion.description}
+                      onChange={e => {
+                        const newSuggestions = [...categoryForm.suggestions];
+                        newSuggestions[index].description = e.target.value;
+                        setCategoryForm({ ...categoryForm, suggestions: newSuggestions });
+                      }}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                      placeholder="Suggestion Description"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSuggestions = [...categoryForm.suggestions];
+                      newSuggestions.splice(index, 1);
+                      setCategoryForm({ ...categoryForm, suggestions: newSuggestions });
+                    }}
+                    className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              {categoryForm.suggestions.length === 0 && (
+                <p className="text-sm text-gray-500 italic">No suggestions added yet.</p>
+              )}
             </div>
           </div>
 

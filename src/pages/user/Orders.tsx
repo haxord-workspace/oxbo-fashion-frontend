@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { userOrdersApi } from '../../services/user/orders.Api';
 import toast from 'react-hot-toast';
+import { AdminPagination } from '../../components/admin/AdminPagination';
 
 const Orders: React.FC = () => {
   const navigate = useNavigate();
@@ -11,20 +12,45 @@ const Orders: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+  
   useEffect(() => {
     fetchOrders();
-  }, [statusFilter]);
+  }, [statusFilter, currentPage]);
 
   const fetchOrders = async () => {
     setIsLoading(true);
     try {
       // Optional: Pass statusFilter to getOrderHistory if API supports it, otherwise filter locally
       const statusParam = statusFilter === 'All' ? undefined : statusFilter;
-      const response = await userOrdersApi.getOrderHistory(1, 100, statusParam);
+      const response = await userOrdersApi.getOrderHistory(currentPage, itemsPerPage, statusParam);
       
       // Assume response.data or response is array, or response.orders, etc.
-      const fetchedOrders = Array.isArray(response) ? response : (response.data || response.orders || []);
+      let fetchedOrders = [];
+      let total = 0;
+      
+      if (response.data && Array.isArray(response.data.orders)) {
+        fetchedOrders = response.data.orders;
+        total = response.data.total || 0;
+      } else if (response.data && Array.isArray(response.data)) {
+        fetchedOrders = response.data;
+        total = response.total || fetchedOrders.length;
+      } else if (Array.isArray(response.orders)) {
+        fetchedOrders = response.orders;
+        total = response.total || 0;
+      } else if (Array.isArray(response)) {
+        fetchedOrders = response;
+        total = fetchedOrders.length;
+      }
+
       setOrders(fetchedOrders);
+      setTotalOrders(total);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to fetch orders');
     } finally {
@@ -157,6 +183,18 @@ const Orders: React.FC = () => {
             ))
           )}
         </div>
+
+        {totalOrders > 0 && (
+          <div className="mt-8">
+            <AdminPagination 
+              currentPage={currentPage}
+              totalPages={Math.ceil(totalOrders / itemsPerPage) || 1}
+              onPageChange={setCurrentPage}
+              totalItems={totalOrders}
+              itemsPerPage={itemsPerPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

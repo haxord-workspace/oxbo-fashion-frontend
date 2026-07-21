@@ -139,7 +139,9 @@ const ProductDetail: React.FC = () => {
       product: {
         ...product,
         id: product.id || (product as any)._id,
-        imageUrl: displayImages[0]
+        imageUrl: displayImages[0],
+        price: Number(activeVariant?.salePrice || activeVariant?.price || product.price || 1499),
+        mrp: Number(activeVariant?.price || product.mrp)
       },
       quantity,
       selectedColor,

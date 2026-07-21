@@ -11,6 +11,7 @@ const ORDER_STATUSES = ['All', 'Pending', 'Processing', 'Confirmed', 'Packed', '
 
 export const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState('All');
+  const [storeFilter, setStoreFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
   // State for Orders
@@ -43,6 +44,7 @@ export const AdminOrders = () => {
         page: currentPage,
         limit: itemsPerPage,
         status: statusFilter !== 'All' ? statusFilter : undefined,
+        store: storeFilter !== '' ? storeFilter : undefined,
         search: searchQuery || undefined
       });
       setOrders(response.orders);
@@ -156,12 +158,24 @@ export const AdminOrders = () => {
   };
 
   useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const { stores } = await adminStoreApi.getStores({ limit: 100 });
+        setAvailableStores(stores);
+      } catch (error) {
+        console.error('Failed to fetch stores', error);
+      }
+    };
+    fetchStores();
+  }, []);
+
+  useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchOrders();
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [currentPage, statusFilter, searchQuery]);
+  }, [currentPage, statusFilter, storeFilter, searchQuery]);
 
   const totalPages = Math.ceil(totalOrders / itemsPerPage) || 1;
 
@@ -180,6 +194,16 @@ export const AdminOrders = () => {
         </div>
         <div className="flex items-center gap-2">
           <Filter size={16} className="text-gray-500" />
+          <select 
+            value={storeFilter}
+            onChange={(e) => setStoreFilter(e.target.value)}
+            className="border border-gray-200 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-black cursor-pointer"
+          >
+            <option value="">All Stores</option>
+            {availableStores.map(store => (
+              <option key={store._id || store.id} value={store._id || store.id}>{store.name}</option>
+            ))}
+          </select>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}

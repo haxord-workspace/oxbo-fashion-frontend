@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useAppSelector } from '../../app/hooks';
+import { selectIsStoreManager } from '../../features/auth/authSlice';
 import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import AdminModal from '../../components/common/AdminModal';
@@ -18,6 +20,7 @@ interface FormErrors {
 }
 
 export const AdminProducts = () => {
+  const isStoreManager = useAppSelector(selectIsStoreManager);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -99,8 +102,7 @@ export const AdminProducts = () => {
     seoTitle: string;
     seoDescription: string;
     seoKeywords: string;
-    image: string;
-    imageFile?: File | null;
+    images: { url: string; file?: File | null }[];
   }>({
     name: '',
     description: '',
@@ -115,8 +117,7 @@ export const AdminProducts = () => {
     seoTitle: '',
     seoDescription: '',
     seoKeywords: '',
-    image: '',
-    imageFile: null
+    images: []
   });
   
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
@@ -182,6 +183,19 @@ export const AdminProducts = () => {
       
       const mappedVariants = Object.values(variantsByColor);
 
+      const initialImages = [];
+      if (product.thumbnail || product.image) {
+        initialImages.push({ url: product.thumbnail || product.image });
+      } else if (Array.isArray(product.images) && product.images.length > 0) {
+        initialImages.push({ url: product.images[0]?.url || product.images[0] });
+      }
+      
+      if (Array.isArray(product.gallery) && product.gallery.length > 0) {
+        product.gallery.forEach((g: any) => {
+          initialImages.push({ url: g.url || g });
+        });
+      }
+
       setProductForm({
         name: product.name || '',
         description: product.description || '',
@@ -196,8 +210,7 @@ export const AdminProducts = () => {
         seoTitle: product.seo?.title || '',
         seoDescription: product.seo?.description || '',
         seoKeywords: Array.isArray(product.seo?.keywords) ? product.seo.keywords.join(', ') : (product.seo?.keywords || ''),
-        image: product.thumbnail || product.image || product.images?.[0]?.url || '',
-        imageFile: null
+        images: initialImages
       });
       
       if (mappedVariants.length > 0) {
@@ -222,8 +235,7 @@ export const AdminProducts = () => {
         seoTitle: '',
         seoDescription: '',
         seoKeywords: '',
-        image: '',
-        imageFile: null
+        images: []
       });
       setVariants([{ color: '', images: '', size28: '', size30: '', size32: '', size34: '' }]);
     }
@@ -236,7 +248,7 @@ export const AdminProducts = () => {
     if (!productForm.name.trim()) newErrors.name = 'Product name is required';
     if (!productForm.mrp) newErrors.mrp = 'MRP is required';
     if (!productForm.price) newErrors.price = 'Discount price is required';
-    if (!productForm.image.trim()) newErrors.image = 'Image URL is required';
+    if (productForm.images.length === 0) newErrors.image = 'At least one image is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -268,10 +280,24 @@ export const AdminProducts = () => {
       const keywordsArray = productForm.seoKeywords.split(',').map(t => t.trim()).filter(Boolean);
       if (keywordsArray.length > 0) formData.append('seo[keywords]', JSON.stringify(keywordsArray));
       
-      if (productForm.imageFile) {
-        formData.append('thumbnail', productForm.imageFile);
-      } else if (productForm.image) {
-        formData.append('thumbnail', productForm.image);
+      if (productForm.images.length > 0) {
+        const firstImg = productForm.images[0];
+        if (firstImg.file) {
+          formData.append('thumbnail', firstImg.file);
+        } else if (firstImg.url && !firstImg.url.startsWith('blob:')) {
+          formData.append('thumbnail', firstImg.url);
+        }
+
+        const gallery = productForm.images.slice(1);
+        if (gallery.length > 0) {
+          gallery.forEach(img => {
+            if (img.file) {
+              formData.append('gallery', img.file);
+            } else if (img.url && !img.url.startsWith('blob:')) {
+              formData.append('existingGallery', img.url);
+            }
+          });
+        }
       }
       
       let productId = (selectedProduct as any)?._id || selectedProduct?.id;
@@ -434,9 +460,11 @@ export const AdminProducts = () => {
                         >
                           <Edit2 size={16} />
                         </button>
-                        <button className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
-                          <Trash2 size={16} />
-                        </button>
+                        {!isStoreManager && (
+                          <button className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -474,17 +502,44 @@ export const AdminProducts = () => {
         ) : (
         <form className="space-y-4" onSubmit={handleProductSubmit} noValidate>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
-            <div className="flex items-center gap-4">
-              {productForm.image && (
-                <img src={productForm.image} alt="Preview" className="w-16 h-16 rounded object-cover border border-gray-200" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product Images</label>
+            <div className="flex flex-col gap-4">
+              {productForm.images.length > 0 && (
+                <div className="flex flex-wrap items-center gap-4">
+                  {productForm.images.map((img, idx) => (
+                    <div key={idx} className="relative">
+                      <img src={img.url} alt={`Preview ${idx}`} className="w-16 h-16 rounded object-cover border border-gray-200" />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const newImages = [...productForm.images];
+                          newImages.splice(idx, 1);
+                          setProductForm({...productForm, images: newImages});
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
-              <input type="file" accept="image/*" onChange={e => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  setCropImageSrc(URL.createObjectURL(file));
+              <input type="file" accept="image/*" multiple onChange={e => {
+                const files = Array.from(e.target.files || []);
+                if (files.length === 1) {
+                  setCropImageSrc(URL.createObjectURL(files[0]));
+                } else if (files.length > 1) {
+                  const newImages = files.map(file => ({
+                    url: URL.createObjectURL(file),
+                    file: file
+                  }));
+                  setProductForm({
+                    ...productForm,
+                    images: [...productForm.images, ...newImages]
+                  });
+                  if (errors.image) setErrors({ ...errors, image: undefined });
                 }
-                e.target.value = ''; // Reset input to allow selecting the same file again
+                e.target.value = ''; 
               }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.image ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'} text-sm`} />
             </div>
             {errors.image && <p className="mt-1 text-xs text-red-500">{errors.image}</p>}
@@ -497,14 +552,7 @@ export const AdminProducts = () => {
             }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="E.g., Classic White Tee" />
             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Short Description</label>
-            <input type="text" value={productForm.shortDescription} onChange={e => setProductForm({...productForm, shortDescription: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="A short catchphrase..." />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Description</label>
-            <textarea value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black h-24" placeholder="Detailed product description..."></textarea>
-          </div>
+          
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
@@ -524,6 +572,55 @@ export const AdminProducts = () => {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Short Description</label>
+            <input type="text" value={productForm.shortDescription} onChange={e => setProductForm({...productForm, shortDescription: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="A short catchphrase..." />
+          </div>
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-gray-700">Full Description</label>
+              {(() => {
+                const selectedCat = categories.find(c => (c.id || c._id) === productForm.categoryId);
+                let categorySuggestions = selectedCat?.suggestions || [];
+                
+                // Fallback in case the backend stored it as a stringified JSON array
+                if (typeof categorySuggestions === 'string') {
+                  try { categorySuggestions = JSON.parse(categorySuggestions); } catch(e){}
+                } else if (Array.isArray(categorySuggestions) && categorySuggestions.length > 0 && typeof categorySuggestions[0] === 'string') {
+                  try { categorySuggestions = JSON.parse(categorySuggestions[0]); } catch(e){}
+                }
+
+                if (Array.isArray(categorySuggestions) && categorySuggestions.length > 0) {
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Insert template:</span>
+                      <select 
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val) {
+                            setProductForm(prev => ({ ...prev, description: val }));
+                            e.target.selectedIndex = 0; // Reset so they can select again
+                          }
+                        }}
+                        className="text-xs border border-gray-300 rounded focus:outline-none focus:border-black py-0.5 px-1 bg-white"
+                        defaultValue=""
+                      >
+                        <option value="" disabled>Select a suggestion...</option>
+                        {categorySuggestions.map((s: any, idx: number) => {
+                          const title = s?.title || `Suggestion ${idx + 1}`;
+                          const desc = s?.description || '';
+                          return <option key={idx} value={desc}>{title}</option>;
+                        })}
+                      </select>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+            <textarea value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black h-24" placeholder="Detailed product description..."></textarea>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -584,17 +681,51 @@ export const AdminProducts = () => {
           
           <div className="border-t border-gray-200 pt-4 mt-4">
             <h4 className="text-sm font-bold mb-3 uppercase">Variants & Inventory</h4>
-            
+
             {variants.map((v, index) => (
               <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
                 <div className="grid grid-cols-2 gap-4 mb-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Color Name</label>
-                    <input type="text" value={v.color} onChange={e => {
-                      const newVariants = [...variants];
-                      newVariants[index].color = e.target.value;
-                      setVariants(newVariants);
-                    }} placeholder="E.g., Black" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-black" />
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-8 h-8 rounded-full border border-gray-300 shadow-sm flex-shrink-0" 
+                        style={{ 
+                          backgroundColor: [
+                            {name:'Black',hex:'#000000'}, {name:'White',hex:'#FFFFFF'}, {name:'Red',hex:'#ef4444'}, {name:'Blue',hex:'#3b82f6'},
+                            {name:'Green',hex:'#22c55e'}, {name:'Yellow',hex:'#eab308'}, {name:'Pink',hex:'#ec4899'}, {name:'Purple',hex:'#a855f7'},
+                            {name:'Orange',hex:'#f97316'}, {name:'Grey',hex:'#6b7280'}, {name:'Brown',hex:'#78350f'}, {name:'Navy',hex:'#1e3a8a'},
+                            {name:'Olive',hex:'#3f6212'}, {name:'Maroon',hex:'#7f1d1d'}
+                          ].find(c => c.name.toLowerCase() === v.color.toLowerCase())?.hex || v.color || 'transparent' 
+                        }} 
+                      />
+                      <input type="text" value={v.color} onChange={e => {
+                        const newVariants = [...variants];
+                        newVariants[index].color = e.target.value;
+                        setVariants(newVariants);
+                      }} placeholder="E.g., Black" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-black" />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {[
+                        {name:'Black',hex:'#000000'}, {name:'White',hex:'#FFFFFF'}, {name:'Red',hex:'#ef4444'}, {name:'Blue',hex:'#3b82f6'},
+                        {name:'Green',hex:'#22c55e'}, {name:'Yellow',hex:'#eab308'}, {name:'Pink',hex:'#ec4899'}, {name:'Purple',hex:'#a855f7'},
+                        {name:'Orange',hex:'#f97316'}, {name:'Grey',hex:'#6b7280'}, {name:'Brown',hex:'#78350f'}, {name:'Navy',hex:'#1e3a8a'},
+                        {name:'Olive',hex:'#3f6212'}, {name:'Maroon',hex:'#7f1d1d'}
+                      ].map(c => (
+                        <button
+                          key={c.name}
+                          type="button"
+                          onClick={() => {
+                            const newVariants = [...variants];
+                            newVariants[index].color = c.name;
+                            setVariants(newVariants);
+                          }}
+                          className={`w-5 h-5 rounded-full shadow-sm hover:scale-110 transition-transform ${v.color.toLowerCase() === c.name.toLowerCase() ? 'ring-2 ring-offset-1 ring-black border-transparent' : 'border border-gray-300'}`}
+                          style={{ backgroundColor: c.hex }}
+                          title={c.name}
+                        />
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Color Images (Comma separated URLs)</label>
@@ -649,8 +780,10 @@ export const AdminProducts = () => {
           onCropComplete={(croppedFile) => {
             setProductForm({
               ...productForm,
-              imageFile: croppedFile,
-              image: URL.createObjectURL(croppedFile)
+              images: [...productForm.images, {
+                url: URL.createObjectURL(croppedFile),
+                file: croppedFile
+              }]
             });
             setCropImageSrc(null);
             if (errors.image) setErrors({ ...errors, image: undefined });

@@ -20,6 +20,8 @@ export const AdminUsers = () => {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [customerStats, setCustomerStats] = useState<{
     totalCustomers: number;
     activeCustomers: number;
@@ -90,6 +92,12 @@ export const AdminUsers = () => {
       if (searchQuery) {
         params.search = searchQuery;
       }
+      if (roleFilter) {
+        params.role = roleFilter;
+      }
+      if (statusFilter) {
+        params.status = statusFilter;
+      }
       const data = await adminUserApi.getAllUsers(params);
       setUsers(data.users);
       setTotalUsers(data.total);
@@ -98,7 +106,7 @@ export const AdminUsers = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchQuery]);
+  }, [currentPage, itemsPerPage, searchQuery, roleFilter, statusFilter]);
 
   useEffect(() => {
     fetchUsers();
@@ -123,7 +131,7 @@ export const AdminUsers = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, roleFilter, statusFilter]);
 
   const getRoleBadge = (user: User) => {
     const roleName = user.roleId?.name || user.role || 'user';
@@ -362,15 +370,36 @@ export const AdminUsers = () => {
       </div>
 
       <div className="flex justify-between items-center mb-6">
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm"
-          />
+        <div className="flex flex-1 gap-4 items-center">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm"
+            />
+          </div>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm bg-white"
+          >
+            <option value="">All Roles</option>
+            <option value="CUSTOMER">Customer</option>
+            <option value="6a4cb6298643931db473ae84">Store Manager</option>
+            <option value="6a4c9d66477aee2f5fa8c820">Super Admin</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm bg-white"
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
         <div className="flex gap-2">
           {selectedUserIds.length > 0 && (

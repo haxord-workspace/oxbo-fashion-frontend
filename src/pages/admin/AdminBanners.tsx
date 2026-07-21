@@ -255,6 +255,7 @@ export const AdminBanners = () => {
                 <option value="home_top">Home Top</option>
                 <option value="home_middle">Home Middle</option>
                 <option value="category_top">Category Top</option>
+                <option value="carousel">Carousel</option>
               </select>
             </div>
           </div>

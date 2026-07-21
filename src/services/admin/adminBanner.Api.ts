@@ -9,6 +9,9 @@ export interface Banner {
   isActive: boolean;
   sortOrder: number;
   position: string;
+  startDate?: string;
+  endDate?: string;
+  isDeleted?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

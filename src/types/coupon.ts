@@ -8,7 +8,10 @@ export interface Coupon {
   minimumOrder?: number;
   maximumDiscount?: number;
   usageLimit?: number;
+  usedCount?: number;
   isActive: boolean;
+  isDeleted?: boolean;
+  startDate?: string;
   expiryDate?: string;
   createdAt?: string;
   updatedAt?: string;

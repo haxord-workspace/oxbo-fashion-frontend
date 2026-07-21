@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Filter, X } from 'lucide-react';
 import ProductGrid from '../../components/layout/ProductGrid';
+import BannerDisplay from '../../components/layout/BannerDisplay';
 
 const Collection: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -17,6 +18,7 @@ const Collection: React.FC = () => {
 
   return (
     <div className="flex-1 bg-white min-h-screen">
+      <BannerDisplay position="category_top" />
       <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-8 md:py-12">
         <div className="mb-8 md:mb-12 text-center md:text-left">
           <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tight text-black italic" style={{ fontFamily: 'Impact, sans-serif' }}>

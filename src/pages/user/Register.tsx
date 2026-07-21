@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { register as registerAction, setAuthLoading, setAuthError } from '../../features/auth/authSlice';
@@ -30,7 +30,13 @@ const Register: React.FC = () => {
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isLoading } = useAppSelector(state => state.auth);
+  const { isLoading, user, token } = useAppSelector(state => state.auth);
+
+  useEffect(() => {
+    if (user || token) {
+      navigate('/');
+    }
+  }, [user, token, navigate]);
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -100,8 +106,9 @@ const Register: React.FC = () => {
       toast.success(response.message || 'Account created successfully!');
       navigate('/');
     } catch (err: any) {
-      dispatch(setAuthError(err.message || 'Failed to register'));
-      toast.error(err.message || 'Registration failed');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to register';
+      dispatch(setAuthError(errorMessage));
+      toast.error(errorMessage);
     }
   };
 

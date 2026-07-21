@@ -24,8 +24,8 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 api.interceptors.request.use(async (config) => {
-  let token: string | undefined | null = Cookies.get('accessToken');
-  const refreshToken = Cookies.get('refreshToken');
+  let token: string | undefined | null = Cookies.get('accessToken') || localStorage.getItem('accessToken');
+  const refreshToken = Cookies.get('refreshToken') || localStorage.getItem('refreshToken');
 
   // If no access token but we have a refresh token, try to refresh before sending the request
   if (!token && refreshToken && !config.url?.includes('/auth/refresh')) {
@@ -52,6 +52,7 @@ api.interceptors.request.use(async (config) => {
           refreshResponse.data.accessToken || '';
         if (newAccessToken) {
           Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
+          localStorage.setItem('accessToken', newAccessToken);
           token = newAccessToken;
         }
         processQueue(null, token);
@@ -99,6 +100,7 @@ api.interceptors.response.use(
           if (newAccessToken) {
             // Some backends return the token in body even if using cookies
             Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
+            localStorage.setItem('accessToken', newAccessToken);
             originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           }
 

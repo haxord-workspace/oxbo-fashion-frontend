@@ -9,12 +9,12 @@ export const adminStoreApi = {
       message: response.data.message
     };
   },
-  
+
   getStores: async (params?: { page?: number; limit?: number; search?: string }): Promise<{ stores: Store[], total: number }> => {
     const response = await api.get('/stores', { params });
     let stores = [];
     let total = 0;
-    
+
     if (Array.isArray(response.data.data)) {
       stores = response.data.data;
       total = response.data.total || response.data.data.length;
@@ -25,17 +25,17 @@ export const adminStoreApi = {
       stores = response.data;
       total = stores.length;
     }
-    
+
     return { stores, total };
   },
-  
+
   getStoreById: async (storeId: string): Promise<{ store: Store }> => {
     const response = await api.get(`/stores/${storeId}`);
     return {
       store: response.data.data?.store || response.data.data || response.data
     };
   },
-  
+
   updateStore: async (storeId: string, data: Partial<Store>): Promise<{ store: Store, message?: string }> => {
     const response = await api.put(`/stores/${storeId}`, data);
     return {
@@ -51,7 +51,7 @@ export const adminStoreApi = {
       message: response.data.message
     };
   },
-  
+
   deactivateStore: async (storeId: string): Promise<{ store: Store, message?: string }> => {
     const response = await api.patch(`/stores/${storeId}/deactivate`);
     return {

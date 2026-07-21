@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAppSelector } from '../../app/hooks';
+import { selectIsStoreManager } from '../../features/auth/authSlice';
 import { Plus, Edit2, Trash2, Search, Loader2, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminModal from '../../components/common/AdminModal';
@@ -13,6 +15,7 @@ interface FormErrors {
 }
 
 export const AdminBrands = () => {
+  const isStoreManager = useAppSelector(selectIsStoreManager);
   // Data States
   const [brands, setBrands] = useState<Brand[]>([]);
   const [totalBrands, setTotalBrands] = useState(0);
@@ -286,13 +289,15 @@ export const AdminBrands = () => {
                         >
                           <Edit2 size={16} />
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); openModal('delete', brand); }}
-                          className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" 
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {!isStoreManager && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); openModal('delete', brand); }}
+                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" 
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

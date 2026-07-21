@@ -1,7 +1,7 @@
 import api from '../api';
 
 export const adminOrderApi = {
-  getOrders: async (params?: { page?: number; limit?: number; search?: string; status?: string }) => {
+  getOrders: async (params?: { page?: number; limit?: number; search?: string; status?: string; store?: string }) => {
     const response = await api.get('/orders/admin', { params });
     const data = response.data.data || response.data;
     return {

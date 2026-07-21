@@ -50,5 +50,20 @@ export const userOrdersApi = {
   cancelOrder: async (orderId: string, data?: any) => {
     const response = await api.patch(`/orders/${orderId}/cancel`, data);
     return response.data;
+  },
+
+  /**
+   * Placeholders for Razorpay Integration
+   */
+  createRazorpayOrder: async (data: any) => {
+    // Replace with your actual endpoint that returns Razorpay order_id
+    const response = await api.post('/payment/razorpay/create', data);
+    return response.data;
+  },
+  
+  verifyRazorpayPayment: async (data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+    // Replace with your actual endpoint that verifies the payment signature
+    const response = await api.post('/payment/razorpay/verify', data);
+    return response.data;
   }
 };

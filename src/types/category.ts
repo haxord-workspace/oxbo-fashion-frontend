@@ -7,6 +7,7 @@ export interface Category {
   sortOrder?: number;
   image?: string;
   parentCategory?: string | null;
+  suggestions?: { title: string; description: string }[];
   createdAt?: string;
   updatedAt?: string;
 }

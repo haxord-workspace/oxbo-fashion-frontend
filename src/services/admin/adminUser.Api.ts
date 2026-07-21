@@ -2,7 +2,7 @@ import api from '../api';
 import type { User } from '../../types';
 
 export const adminUserApi = {
-  getAllUsers: async (params?: { page?: number; limit?: number; search?: string }): Promise<{ users: User[], total: number }> => {
+  getAllUsers: async (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }): Promise<{ users: User[], total: number }> => {
     const response = await api.get('/users', { params });
     const data = response.data.data || response.data;
     const users = data.users || data.docs || (Array.isArray(data) ? data : []);

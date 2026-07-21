@@ -23,13 +23,17 @@ const AdminLogin: React.FC = () => {
 
   useEffect(() => {
     if (token) {
+      const storeManagerRoleId = import.meta.env.VITE_STORE_MANAGER_ROLE_ID;
+      const userRoleId = (user as any)?.roleId?._id || (user as any)?.roleId?.id || (user as any)?.roleId || (user as any)?.role;
+      const isStoreManager = storeManagerRoleId && String(userRoleId) === String(storeManagerRoleId);
+
       const roleStr = String(user?.role || '').toLowerCase();
       const isAdmin = 
         roleStr === 'admin' || 
         roleStr.includes('admin') ||
         (user as any)?.roleId?.name?.toLowerCase().includes('admin') ||
         (user?.email && user.email.toLowerCase().includes('admin'));
-      if (isAdmin) {
+      if (isAdmin || isStoreManager) {
         navigate('/admin/dashboard');
       } else {
         navigate('/');
@@ -64,6 +68,10 @@ const AdminLogin: React.FC = () => {
     try {
       const response = await authApi.login(email, password);
       
+      const storeManagerRoleId = import.meta.env.VITE_STORE_MANAGER_ROLE_ID;
+      const userRoleId = (response.user as any).roleId?._id || (response.user as any).roleId?.id || (response.user as any).roleId || response.user.role;
+      const isStoreManager = storeManagerRoleId && String(userRoleId) === String(storeManagerRoleId);
+
       const roleStr = String(response.user.role || '').toLowerCase();
       const isAdmin = 
         roleStr === 'admin' || 
@@ -71,14 +79,18 @@ const AdminLogin: React.FC = () => {
         (response.user as any).roleId?.name?.toLowerCase().includes('admin') ||
         (response.user.email && response.user.email.toLowerCase().includes('admin'));
       
-      if (!isAdmin) {
+      if (!isAdmin && !isStoreManager) {
         dispatch(setAuthLoading(false));
         toast.error('Access denied. Admin privileges required.');
         return;
       }
       
       // Ensure the role is set for the frontend Redux state
-      response.user.role = 'admin';
+      if (isAdmin && !response.user.role) {
+        response.user.role = 'admin';
+      } else if (isStoreManager && !response.user.role) {
+        response.user.role = 'storemanager';
+      }
       
       dispatch(login(response));
       toast.success(response.message || 'Admin login successful!');

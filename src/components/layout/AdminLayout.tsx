@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { logout, selectCurrentUser } from '../../features/auth/authSlice';
+import { logout, selectCurrentUser, selectIsStoreManager } from '../../features/auth/authSlice';
 import { authApi } from '../../services/authApi';
 import toast from 'react-hot-toast';
 import {
@@ -45,6 +45,7 @@ const AdminLayout: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const user = useAppSelector(selectCurrentUser);
+  const isStoreManager = useAppSelector(selectIsStoreManager);
 
   const handleLogout = async () => {
     try {
@@ -86,7 +87,14 @@ const AdminLayout: React.FC = () => {
 
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-3">
-            {navItems.map((item) => {
+            {navItems
+              .filter(item => {
+                if (isStoreManager) {
+                  return !['Stores', 'Users', 'Settings', 'Banners', 'Coupons', 'Notifications'].includes(item.name);
+                }
+                return true;
+              })
+              .map((item) => {
               const isActive = location.pathname.startsWith(item.path);
               const Icon = item.icon;
               return (

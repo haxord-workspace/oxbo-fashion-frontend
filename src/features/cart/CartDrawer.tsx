@@ -75,9 +75,11 @@ const CartDrawer: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {cartItems.map((item) => (
-                <CartItem key={item.product.id} item={item} />
-              ))}
+              {cartItems.map((item, index) => {
+                if (!item || !item.product) return null;
+                const uniqueKey = `${item.product.id || 'no-id'}-${item.variantId || 'no-variant'}-${index}`;
+                return <CartItem key={uniqueKey} item={item} />;
+              })}
             </div>
           )}
         </div>
@@ -102,11 +104,19 @@ const CartDrawer: React.FC = () => {
             <div className="space-y-2 text-sm text-gray-600 border-t border-gray-200 pt-4">
               <div className="flex justify-between">
                 <p>Original Price (MRP)</p>
-                <p>Rs. {cartItems.reduce((total, item) => total + (item.product.mrp || item.product.price) * item.quantity, 0).toLocaleString('en-IN')}</p>
+                <p>Rs. {cartItems.reduce((total, item) => {
+                  if (!item || !item.product) return total;
+                  return total + ((item.product.mrp || item.product.price || 0) * (item.quantity || 0));
+                }, 0).toLocaleString('en-IN')}</p>
               </div>
               <div className="flex justify-between text-green-600 font-medium">
                 <p>Total Savings</p>
-                <p>- Rs. {cartItems.reduce((total, item) => total + ((item.product.mrp || item.product.price) - item.product.price) * item.quantity, 0).toLocaleString('en-IN')}</p>
+                <p>- Rs. {cartItems.reduce((total, item) => {
+                  if (!item || !item.product) return total;
+                  const mrp = item.product.mrp || item.product.price || 0;
+                  const price = item.product.price || 0;
+                  return total + ((mrp - price) * (item.quantity || 0));
+                }, 0).toLocaleString('en-IN')}</p>
               </div>
               <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
                 <p>Final Payable Amount</p>

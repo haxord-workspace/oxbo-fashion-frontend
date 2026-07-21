@@ -121,6 +121,12 @@ export const selectUserRole = (state: RootState) => {
   const user = state.auth?.user as any;
   if (!user) return 'user';
   
+  const storeManagerRoleId = import.meta.env.VITE_STORE_MANAGER_ROLE_ID;
+  const userRoleId = user.roleId?._id || user.roleId?.id || user.roleId || user.role;
+  if (storeManagerRoleId && String(userRoleId) === String(storeManagerRoleId)) {
+    return 'storemanager';
+  }
+  
   let role = 'user';
   if (user.role) role = user.role;
   else if (user.roleId?.name) role = user.roleId.name;
@@ -133,5 +139,10 @@ export const selectUserRole = (state: RootState) => {
   return role;
 };
 export const selectIsAdmin = (state: RootState) => selectUserRole(state) === 'admin';
+export const selectIsStoreManager = (state: RootState) => {
+  const role = selectUserRole(state);
+  const roleStr = String(role).toLowerCase();
+  return roleStr === 'storemanager' || roleStr.includes('manager') || roleStr.includes('store');
+};
 
 export default authSlice.reducer;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { login, setAuthLoading, setAuthError } from '../../features/auth/authSlice';
@@ -18,7 +18,13 @@ const Login: React.FC = () => {
   
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isLoading } = useAppSelector(state => state.auth);
+  const { isLoading, user, token } = useAppSelector(state => state.auth);
+
+  useEffect(() => {
+    if (user || token) {
+      navigate('/');
+    }
+  }, [user, token, navigate]);
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -71,8 +77,9 @@ const Login: React.FC = () => {
       toast.success(response.message || 'Welcome back!');
       navigate('/');
     } catch (err: any) {
-      dispatch(setAuthError(err.message || 'Failed to login'));
-      toast.error(err.message || 'Login failed');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to login';
+      dispatch(setAuthError(errorMessage));
+      toast.error(errorMessage);
     }
   };
 
@@ -129,6 +136,13 @@ const Login: React.FC = () => {
                 }}
               />
               {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
+            </div>
+            <div className="flex items-center justify-end mt-2">
+              <div className="text-sm">
+                <Link to="/forgot-password" className="font-semibold text-black hover:underline">
+                  Forgot your password?
+                </Link>
+              </div>
             </div>
           </div>
 

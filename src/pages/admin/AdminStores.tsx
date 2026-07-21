@@ -29,9 +29,10 @@ export const AdminStores = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [isAdminsModalOpen, setIsAdminsModalOpen] = useState(false);
-  const [storeAdmins, setStoreAdmins] = useState<User[]>([]);
+  const [storeAdmins, setStoreAdmins] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedUserIdToAssign, setSelectedUserIdToAssign] = useState('');
+  const [isPrimaryAdmin, setIsPrimaryAdmin] = useState(false);
   const [isAdminsLoading, setIsAdminsLoading] = useState(false);
 
   const [storeForm, setStoreForm] = useState({
@@ -217,12 +218,14 @@ export const AdminStores = () => {
     setIsAdminsLoading(true);
     try {
       const storeId = selectedStore._id || selectedStore.id;
-      await adminStoreApi.assignStoreAdmin(storeId, { userId: selectedUserIdToAssign, isPrimary: true });
+      await adminStoreApi.assignStoreAdmin(storeId, { userId: selectedUserIdToAssign, isPrimary: isPrimaryAdmin });
       toast.success('Admin assigned successfully');
       
-      const newAdmin = allUsers.find(u => (u._id || u.id) === selectedUserIdToAssign);
-      if (newAdmin) setStoreAdmins([...storeAdmins, newAdmin]);
+      const adminsData = await adminStoreApi.getStoreAdmins(storeId);
+      setStoreAdmins(adminsData.admins || []);
+      
       setSelectedUserIdToAssign('');
+      setIsPrimaryAdmin(false);
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || 'Failed to assign admin');
     } finally {
@@ -237,7 +240,9 @@ export const AdminStores = () => {
       const storeId = selectedStore._id || selectedStore.id;
       await adminStoreApi.removeStoreAdmin(storeId, adminId);
       toast.success('Admin removed successfully');
-      setStoreAdmins(storeAdmins.filter(a => (a._id || a.id) !== adminId));
+      
+      const adminsData = await adminStoreApi.getStoreAdmins(storeId);
+      setStoreAdmins(adminsData.admins || []);
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || 'Failed to remove admin');
     } finally {
@@ -480,21 +485,28 @@ export const AdminStores = () => {
               </div>
             ) : storeAdmins.length > 0 ? (
               <div className="space-y-3">
-                {storeAdmins.map(admin => (
-                  <div key={admin._id || admin.id} className="flex justify-between items-center bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-100 transition-colors hover:border-gray-200">
+                {storeAdmins.map(admin => {
+                  const userObj = admin.userId || admin.user || admin;
+                  return (
+                  <div key={admin._id || admin.id || userObj._id} className="flex justify-between items-center bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-100 transition-colors hover:border-gray-200">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                      <span className="text-sm font-semibold text-gray-900">{admin.firstName} {admin.lastName}</span>
-                      <span className="text-xs sm:text-sm text-gray-500">{admin.email}</span>
+                      <span className="text-sm font-semibold text-gray-900">{userObj.firstName} {userObj.lastName}</span>
+                      <span className="text-xs sm:text-sm text-gray-500">{userObj.email}</span>
+                      {admin.isPrimary && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">
+                          Primary
+                        </span>
+                      )}
                     </div>
                     <button 
-                      onClick={() => handleRemoveAdmin(admin._id || admin.id || '')} 
+                      onClick={() => handleRemoveAdmin(userObj._id || userObj.id || admin._id || admin.id || '')} 
                       className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
                       disabled={isAdminsLoading}
                     >
                       <Trash2 size={14} />
                     </button>
                   </div>
-                ))}
+                )})}
               </div>
             ) : (
               <p className="text-sm text-gray-500 italic bg-gray-50 p-3 rounded-md text-center">No admins assigned to this store.</p>
@@ -504,30 +516,53 @@ export const AdminStores = () => {
           {/* Assign New Admin */}
           <div className="border-t border-gray-200 pt-6">
             <h4 className="text-sm font-medium text-gray-700 mb-3">Assign New Admin</h4>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <select 
-                value={selectedUserIdToAssign} 
-                onChange={e => setSelectedUserIdToAssign(e.target.value)}
-                className="flex-1 px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white transition-colors"
-                disabled={isAdminsLoading}
-              >
-                <option value="">Select a user to assign...</option>
-                {allUsers
-                  .filter(user => !storeAdmins.some(admin => (admin._id || admin.id) === (user._id || user.id)))
-                  .map(user => (
-                    <option key={user._id || user.id} value={user._id || user.id}>
-                      {user.firstName} {user.lastName} ({user.email})
-                    </option>
-                  ))
-                }
-              </select>
-              <button 
-                onClick={handleAssignAdmin}
-                disabled={!selectedUserIdToAssign || isAdminsLoading}
-                className="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
-              >
-                {isAdminsLoading && selectedUserIdToAssign ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign Admin'}
-              </button>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <select 
+                  value={selectedUserIdToAssign} 
+                  onChange={e => setSelectedUserIdToAssign(e.target.value)}
+                  className="flex-1 px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white transition-colors"
+                  disabled={isAdminsLoading}
+                >
+                  <option value="">Select a user to assign...</option>
+                  {allUsers
+                    .filter(user => {
+                      // Check if user is a Store Manager or Admin
+                      const isManager = user.roleId?.name === 'Store Manager' || user.roleId?.name === 'Admin' || user.role === 'store_manager' || user.role === 'admin';
+                      
+                      // Check if not already assigned
+                      const isNotAssigned = !storeAdmins.some(admin => {
+                        const uId = admin.userId?._id || admin.userId || admin._id || admin.id;
+                        return uId === (user._id || user.id);
+                      });
+
+                      return isManager && isNotAssigned;
+                    })
+                    .map(user => (
+                      <option key={user._id || user.id} value={user._id || user.id}>
+                        {user.firstName} {user.lastName} ({user.email})
+                      </option>
+                    ))
+                  }
+                </select>
+                <button 
+                  onClick={handleAssignAdmin}
+                  disabled={!selectedUserIdToAssign || isAdminsLoading}
+                  className="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
+                >
+                  {isAdminsLoading && selectedUserIdToAssign ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign Admin'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2 px-1">
+                <input 
+                  type="checkbox" 
+                  id="isPrimaryAdmin" 
+                  checked={isPrimaryAdmin} 
+                  onChange={(e) => setIsPrimaryAdmin(e.target.checked)}
+                  className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                />
+                <label htmlFor="isPrimaryAdmin" className="text-sm text-gray-700">Set as Primary Admin</label>
+              </div>
             </div>
           </div>
         </div>

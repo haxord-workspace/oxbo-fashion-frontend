@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Reviews from '../../components/layout/review';
 import ProductGrid from '../../components/layout/ProductGrid';
-import OfferBanner from '../../components/layout/OfferBanner';
 import ShopByCategory from '../../components/layout/ShopByCategory';
+import BannerDisplay from '../../components/layout/BannerDisplay';
 
 const Home: React.FC = () => {
   const heroScrollRef = useRef<HTMLDivElement>(null);
@@ -33,6 +33,8 @@ const Home: React.FC = () => {
   return (
     <div className="w-full flex flex-col bg-white overflow-hidden">
       
+      <BannerDisplay position="home_top" />
+
       {/* Hero Section */}
       <section 
         ref={heroScrollRef}
@@ -82,7 +84,7 @@ const Home: React.FC = () => {
       <ShopByCategory />
 
       {/* Offer Banner Section */}
-      <OfferBanner />
+      <BannerDisplay position="home_middle" />
 
       {/* Product Grid Section */}
       <ProductGrid />
