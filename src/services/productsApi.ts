@@ -15,6 +15,11 @@ export const productsApi = {
     return data;
   },
 
+  getProductVariants: async (id: string): Promise<any> => {
+    const { data } = await axiosInstance.get(`/products/${id}/variants`);
+    return data;
+  },
+
   getProductsByCategory: async (category: string): Promise<Product[]> => {
     const { data } = await axiosInstance.get(`/products/category/${category}`);
     return data;

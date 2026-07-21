@@ -1,0 +1,46 @@
+export interface ProductVariant {
+  _id?: string;
+  id?: string;
+  color: string;
+  images: string[];
+  price?: number;
+  salePrice?: number;
+  sizes: {
+    size: string;
+    stock: number;
+  }[];
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number; // Discounted/Current price
+  mrp?: number; // Original Price
+  discountAmount?: number;
+  imageUrl?: string;
+  thumbnail?: string;
+  gallery?: string[];
+  category: string;
+  subCategory?: string;
+  storeId?: string; // For multi-store
+  variants?: ProductVariant[];
+}
+
+export interface ProductFilters {
+  category?: string;
+  subCategory?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
