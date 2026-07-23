@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart } from 'lucide-react';
+import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { addToCartAsync } from '../../features/cart/cartSlice';
 import { toggleCart } from '../../features/ui/uiSlice';
@@ -9,6 +9,7 @@ import { selectIsAuthenticated } from '../../features/auth/authSlice';
 import Accordion from '../../components/common/Accordion';
 
 import { productsApi } from '../../services/productsApi';
+import { userReviewsApi } from '../../services/user/reviews.Api';
 import type { Product } from '../../types';
 
 const SIZES = ['28', '30', '32', '34']; // Fallback sizes if variants have none
@@ -20,6 +21,9 @@ const ProductDetail: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
 
   const isWishlisted = useAppSelector(state => selectIsWishlisted(state, product?.id || (product as any)?._id || ''));
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
@@ -86,6 +90,35 @@ const ProductDetail: React.FC = () => {
       }
     };
     fetchProduct();
+  }, [id]);
+
+  const fetchReviews = async () => {
+    if (!id) return;
+    setIsLoadingReviews(true);
+    try {
+      const data: any = await userReviewsApi.getProductReviews(id);
+      let reviewList = [];
+      if (Array.isArray(data)) {
+        reviewList = data;
+      } else if (data?.reviews && Array.isArray(data.reviews)) {
+        reviewList = data.reviews;
+      } else if (data?.data && Array.isArray(data.data)) {
+        reviewList = data.data;
+      } else if (data?.data?.data && Array.isArray(data.data.data)) {
+        reviewList = data.data.data;
+      } else if (data?.data?.reviews && Array.isArray(data.data.reviews)) {
+        reviewList = data.data.reviews;
+      }
+      setReviews(reviewList);
+    } catch (err) {
+      console.error("Failed to fetch reviews", err);
+    } finally {
+      setIsLoadingReviews(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
   }, [id]);
 
   // Derived state based on variants
@@ -487,6 +520,45 @@ const ProductDetail: React.FC = () => {
           </div>
 
         </div>
+      </div>
+
+      {/* Customer Reviews Section */}
+      <div className="px-4 sm:px-8 py-16 border-t border-gray-100">
+        <h2 className="text-2xl sm:text-3xl mb-8">Customer Reviews</h2>
+
+        {isLoadingReviews ? (
+          <div className="text-gray-500 animate-pulse">Loading reviews...</div>
+        ) : reviews.length === 0 ? (
+          <div className="text-gray-500">No reviews yet for this product.</div>
+        ) : (
+          <div className="space-y-8 max-w-4xl">
+            {reviews.map((review, idx) => (
+              <div key={review._id || review.id || idx} className="border-b border-gray-100 pb-6">
+                <div className="flex items-center gap-1 mb-2">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <Star 
+                      key={star} 
+                      size={16} 
+                      className={star <= (review.rating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} 
+                    />
+                  ))}
+                </div>
+                <h4 className="font-bold text-gray-900 mb-2">{review.title}</h4>
+                <p className="text-sm text-gray-600 mb-4">{review.review || review.comment}</p>
+                {review.images && review.images.length > 0 && (
+                  <div className="flex gap-2">
+                    {review.images.map((img: string, i: number) => (
+                      <img key={i} src={img} alt="Review" className="w-20 h-20 object-cover border border-gray-200 rounded" />
+                    ))}
+                  </div>
+                )}
+                {review.user && (
+                  <p className="text-xs text-gray-400 mt-2">By {review.user.name || review.user.firstName || 'Anonymous'} on {new Date(review.createdAt || review.date || Date.now()).toLocaleDateString()}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* You May Also Like Section */}

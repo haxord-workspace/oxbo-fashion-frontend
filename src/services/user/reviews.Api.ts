@@ -22,7 +22,7 @@ export const userReviewsApi = {
    * Get all reviews for a specific product
    */
   getProductReviews: async (productId: string) => {
-    const response = await api.get(`/reviews?productId=${productId}`);
+    const response = await api.get(`/reviews/product/${productId}`);
     return response.data;
   }
 };

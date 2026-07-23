@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, FileText, Store, Eye } from 'lucide-react';
+import { Search, Filter, FileText, Store, Eye, Truck } from 'lucide-react';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import AdminModal from '../../components/common/AdminModal';
@@ -10,12 +10,13 @@ import { productsApi } from '../../services/productsApi';
 import { adminInventoryApi } from '../../services/admin/adminInventory.Api';
 import toast from 'react-hot-toast';
 import { useAppSelector } from '../../app/hooks';
-import { selectIsAdmin } from '../../features/auth/authSlice';
+import { selectIsAdmin, selectIsStoreManager } from '../../features/auth/authSlice';
 
 const ORDER_STATUSES = ['All', 'Pending', 'Processing', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'];
 
 export const AdminOrders = () => {
   const isAdmin = useAppSelector(selectIsAdmin);
+  const isStoreManager = useAppSelector(selectIsStoreManager);
   const [statusFilter, setStatusFilter] = useState('All');
   const [storeFilter, setStoreFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,6 +33,17 @@ export const AdminOrders = () => {
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [isAssigningStore, setIsAssigningStore] = useState(false);
   const [assignStoreError, setAssignStoreError] = useState('');
+
+  // Tracking Modal State
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
+  const [orderToTrack, setOrderToTrack] = useState<any>(null);
+  const [trackingForm, setTrackingForm] = useState({
+    trackingNumber: '',
+    courierName: '',
+    estimatedDeliveryDate: ''
+  });
+  const [isUpdatingTracking, setIsUpdatingTracking] = useState(false);
+  const [trackingError, setTrackingError] = useState('');
 
   // Store Stock Levels
   const [storeStockLevels, setStoreStockLevels] = useState<Record<string, number>>({});
@@ -217,6 +229,39 @@ export const AdminOrders = () => {
     }
   };
 
+  const openTrackingModal = (order: any) => {
+    setOrderToTrack(order);
+    setTrackingForm({
+      trackingNumber: order.trackingNumber || '',
+      courierName: order.courierName || '',
+      estimatedDeliveryDate: order.estimatedDeliveryDate ? new Date(order.estimatedDeliveryDate).toISOString().slice(0, 16) : ''
+    });
+    setTrackingError('');
+    setIsTrackingModalOpen(true);
+  };
+
+  const handleTrackingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderToTrack) return;
+    setIsUpdatingTracking(true);
+    setTrackingError('');
+    try {
+      const formattedDate = trackingForm.estimatedDeliveryDate ? new Date(trackingForm.estimatedDeliveryDate).toISOString() : undefined;
+      const response = await adminOrderApi.updateOrderTracking(orderToTrack._id || orderToTrack.id, {
+        ...trackingForm,
+        estimatedDeliveryDate: formattedDate
+      });
+      setIsTrackingModalOpen(false);
+      toast.success(response?.message || 'Courier staff assigned successfully');
+      fetchOrders();
+    } catch (error: any) {
+      console.error('Failed to update tracking', error);
+      setTrackingError(error.response?.data?.message || 'Failed to assign courier staff');
+    } finally {
+      setIsUpdatingTracking(false);
+    }
+  };
+
   useEffect(() => {
     const fetchStores = async () => {
       try {
@@ -373,6 +418,12 @@ export const AdminOrders = () => {
                         <button onClick={() => openStoreModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-600 hover:text-white hover:bg-orange-600 bg-orange-50 rounded-md transition-colors">
                           <Store size={14} />
                           {order.store || order.storeId ? 'Reassign' : 'Assign'}
+                        </button>
+                      )}
+                      {isStoreManager && (
+                        <button onClick={() => openTrackingModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 hover:text-white hover:bg-teal-600 bg-teal-50 rounded-md transition-colors whitespace-nowrap">
+                          <Truck size={14} />
+                          Assign Courier
                         </button>
                       )}
                       <button onClick={() => openDetailsModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 hover:text-white hover:bg-indigo-600 bg-indigo-50 rounded-md transition-colors">
@@ -646,6 +697,72 @@ export const AdminOrders = () => {
             </div>
           </div>
         )})()}
+      </AdminModal>
+
+      <AdminModal
+        isOpen={isTrackingModalOpen}
+        onClose={() => setIsTrackingModalOpen(false)}
+        title="Assign Courier Staff"
+      >
+        <form className="space-y-4" onSubmit={handleTrackingSubmit}>
+          {trackingError && (
+            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md border border-red-100">
+              {trackingError}
+            </div>
+          )}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Courier Name</label>
+            <input 
+              type="text" 
+              value={trackingForm.courierName}
+              onChange={e => setTrackingForm({...trackingForm, courierName: e.target.value})}
+              placeholder="e.g. BlueDart"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tracking Number</label>
+            <input 
+              type="text" 
+              value={trackingForm.trackingNumber}
+              onChange={e => setTrackingForm({...trackingForm, trackingNumber: e.target.value})}
+              placeholder="e.g. AWB987654321IN"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Delivery Date & Time</label>
+            <input 
+              type="datetime-local" 
+              value={trackingForm.estimatedDeliveryDate}
+              onChange={e => setTrackingForm({...trackingForm, estimatedDeliveryDate: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+              required
+            />
+          </div>
+          
+          <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
+            <button 
+              type="button" 
+              onClick={() => setIsTrackingModalOpen(false)} 
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <LoadingButton 
+              type="submit" 
+              isLoading={isUpdatingTracking} 
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors"
+            >
+              Assign Courier
+            </LoadingButton>
+          </div>
+        </form>
       </AdminModal>
     </PageWrapper>
   );

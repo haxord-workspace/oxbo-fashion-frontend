@@ -28,7 +28,9 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
         const filteredBanners = allBanners.filter(banner => {
           if (!banner.isActive) return false;
           if (banner.isDeleted === true) return false;
-          if (banner.position !== position) return false;
+          const normalizedBannerPos = (banner.position || '').toLowerCase().replace(/[-_\s]/g, '');
+          const normalizedTargetPos = (position || '').toLowerCase().replace(/[-_\s]/g, '');
+          if (normalizedBannerPos !== normalizedTargetPos) return false;
 
           if (banner.startDate) {
             const start = new Date(banner.startDate);
@@ -73,10 +75,14 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
     setCurrentIndex((prevIndex) => (prevIndex - 1 + banners.length) % banners.length);
   };
 
+  const heightClass = position === 'Carousel' 
+    ? 'h-[50vh] md:h-[70vh] lg:h-[85vh]' 
+    : 'h-56 md:h-[350px] lg:h-[450px]';
+
   if (isLoading) {
     return (
       <div className={`w-full mb-8 ${className}`}>
-        <div className="w-full h-56 md:h-[350px] lg:h-[450px] bg-gray-200 animate-pulse"></div>
+        <div className={`w-full ${heightClass} bg-gray-200 animate-pulse`}></div>
       </div>
     );
   }
@@ -87,7 +93,7 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
 
   return (
     <div className={`w-full mb-4 ${className}`}>
-      <div className="relative w-full h-56 md:h-[350px] lg:h-[450px] overflow-hidden group bg-gray-100">
+      <div className={`relative w-full ${heightClass} overflow-hidden group bg-gray-100`}>
         {/* Slides Container */}
         <div 
           className="flex w-full h-full transition-transform duration-700 ease-in-out" 

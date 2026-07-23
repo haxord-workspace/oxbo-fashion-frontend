@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, X } from 'lucide-react';
+import { ChevronLeft, X, Star } from 'lucide-react';
 import { userOrdersApi } from '../../services/user/orders.Api';
+import { userReviewsApi } from '../../services/user/reviews.Api';
 import { productsApi } from '../../services/productsApi';
 import toast from 'react-hot-toast';
 import { AdminPagination } from '../../components/admin/AdminPagination';
@@ -38,6 +39,53 @@ const Orders: React.FC = () => {
   const [selectedProductItem, setSelectedProductItem] = useState<any>(null);
   const [fullProductDetails, setFullProductDetails] = useState<any>(null);
   const [isFetchingProduct, setIsFetchingProduct] = useState(false);
+
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewProduct, setReviewProduct] = useState<any>(null);
+  const [rating, setRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewText, setReviewText] = useState('');
+  const [reviewImage, setReviewImage] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  const openReviewModal = (item: any) => {
+    setReviewProduct(item);
+    setRating(5);
+    setReviewTitle('');
+    setReviewText('');
+    setReviewImage('');
+    setReviewModalOpen(true);
+  };
+
+  const closeReviewModal = () => {
+    setReviewModalOpen(false);
+    setReviewProduct(null);
+  };
+
+  const submitReview = async () => {
+    const productId = reviewProduct?.productId || reviewProduct?.product?._id || reviewProduct?.product?.id || (typeof reviewProduct?.product === 'string' ? reviewProduct.product : null) || reviewProduct?._id;
+    
+    if (!productId) {
+      toast.error("Could not identify product.");
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      await userReviewsApi.addReview({
+        productId,
+        rating,
+        title: reviewTitle,
+        review: reviewText,
+      });
+      toast.success("Review submitted successfully!");
+      closeReviewModal();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to submit review.");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   const openProductDetails = async (item: any) => {
     setSelectedProductItem(item);
@@ -179,16 +227,31 @@ const Orders: React.FC = () => {
                   {(order.orderedItems || order.items || []).map((item: any, idx: number) => (
                     <div 
                       key={item.id || item._id || idx} 
-                      onClick={() => openProductDetails(item)}
-                      className="flex items-center gap-4 cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded transition-colors"
+                      className="flex items-center gap-4 hover:bg-gray-50 p-2 -mx-2 rounded transition-colors"
                     >
-                      <div className="w-16 h-20 bg-gray-100 flex-shrink-0 border border-gray-100 flex items-center justify-center text-xs text-gray-400">
+                      <div 
+                        className="w-16 h-20 bg-gray-100 flex-shrink-0 border border-gray-100 flex items-center justify-center text-xs text-gray-400 cursor-pointer"
+                        onClick={() => openProductDetails(item)}
+                      >
                         <OrderItemImage item={item} />
                       </div>
                       <div className="flex-1 flex justify-between">
                         <div>
-                          <h4 className="text-sm font-bold uppercase text-gray-900">{item.productName || item.name}</h4>
+                          <h4 
+                            className="text-sm font-bold uppercase text-gray-900 cursor-pointer"
+                            onClick={() => openProductDetails(item)}
+                          >
+                            {item.productName || item.name}
+                          </h4>
                           <p className="text-xs text-gray-500 mt-1">Qty: {item.quantity || item.qty}</p>
+                          {order.status === 'Delivered' && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); openReviewModal(item); }}
+                              className="mt-2 text-xs font-bold text-primary underline"
+                            >
+                              Write a Review
+                            </button>
+                          )}
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-medium text-gray-900">Rs. {(item.price || 0).toLocaleString('en-IN')}.00</p>
@@ -297,6 +360,80 @@ const Orders: React.FC = () => {
           </div>
         </div>
       )})()}
+
+      {/* Review Modal */}
+      {reviewModalOpen && reviewProduct && (
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50 z-[100]">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden relative">
+            <button 
+              onClick={closeReviewModal}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 z-10"
+            >
+              <X size={20} />
+            </button>
+            <div className="p-6">
+              <h3 className="text-lg font-bold uppercase tracking-widest border-b border-gray-100 pb-4 mb-4">Write a Review</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <button 
+                        key={star} 
+                        onClick={() => setRating(star)}
+                        className="focus:outline-none"
+                      >
+                        <Star size={24} className={star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <input 
+                    type="text" 
+                    value={reviewTitle}
+                    onChange={e => setReviewTitle(e.target.value)}
+                    placeholder="E.g., Excellent quality!"
+                    className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-primary text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Review</label>
+                  <textarea 
+                    value={reviewText}
+                    onChange={e => setReviewText(e.target.value)}
+                    placeholder="Tell us what you think..."
+                    rows={4}
+                    className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-primary text-sm"
+                  />
+                </div>
+
+            
+              </div>
+            </div>
+            <div className="bg-gray-50 p-4 border-t border-gray-100 flex justify-end gap-2">
+              <button 
+                onClick={closeReviewModal}
+                className="px-6 py-2 border border-gray-300 text-sm font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors"
+                disabled={isSubmittingReview}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={submitReview}
+                className="px-6 py-2 bg-primary text-white text-sm font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors disabled:opacity-50"
+                disabled={isSubmittingReview || !reviewTitle || !reviewText}
+              >
+                {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

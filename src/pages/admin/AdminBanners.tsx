@@ -23,13 +23,13 @@ export const AdminBanners = () => {
   
   const [bannerForm, setBannerForm] = useState<Partial<Banner>>({
     title: '',
-    position: 'home_top',
+    position: 'Home-Top',
     image: '',
     isActive: true,
     redirectUrl: '',
     sortOrder: 1
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
 
   // Pagination State
@@ -62,23 +62,23 @@ export const AdminBanners = () => {
     if (mode === 'edit' && banner) {
       setBannerForm({
         title: banner.title || '',
-        position: banner.position || 'home_top',
+        position: banner.position || 'Home-Top',
         image: banner.image || '',
         isActive: banner.isActive !== false,
         redirectUrl: banner.redirectUrl || '',
         sortOrder: banner.sortOrder || 1
       });
-      setImageFile(null);
+      setImageFiles([]);
     } else {
       setBannerForm({
         title: '',
-        position: 'home_top',
+        position: 'Home-Top',
         image: '',
         isActive: true,
         redirectUrl: '',
         sortOrder: 1
       });
-      setImageFile(null);
+      setImageFiles([]);
     }
     setErrors({});
     setIsModalOpen(true);
@@ -87,7 +87,7 @@ export const AdminBanners = () => {
   const validateForm = () => {
     const newErrors: FormErrors = {};
     if (!bannerForm.title?.trim()) newErrors.title = 'Banner title is required';
-    if (!imageFile && !bannerForm.image) newErrors.image = 'Image is required';
+    if (imageFiles.length === 0 && !bannerForm.image) newErrors.image = 'Image is required';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -98,24 +98,39 @@ export const AdminBanners = () => {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      if (bannerForm.title) formData.append('title', bannerForm.title);
-      if (imageFile) {
-        formData.append('image', imageFile);
-      } else if (bannerForm.image && typeof bannerForm.image === 'string') {
-        formData.append('image', bannerForm.image);
-      }
-      if (bannerForm.redirectUrl) formData.append('redirectUrl', bannerForm.redirectUrl);
-      formData.append('isActive', String(bannerForm.isActive));
-      if (bannerForm.sortOrder) formData.append('sortOrder', String(bannerForm.sortOrder));
-      if (bannerForm.position) formData.append('position', bannerForm.position);
+      if (modalMode === 'add' && bannerForm.position === 'Carousel' && imageFiles.length > 1) {
+        const promises = imageFiles.map(file => {
+          const formData = new FormData();
+          if (bannerForm.title) formData.append('title', bannerForm.title);
+          formData.append('image', file);
+          if (bannerForm.redirectUrl) formData.append('redirectUrl', bannerForm.redirectUrl);
+          formData.append('isActive', String(bannerForm.isActive));
+          if (bannerForm.sortOrder) formData.append('sortOrder', String(bannerForm.sortOrder));
+          formData.append('position', bannerForm.position || 'Carousel');
+          return adminBannerApi.createBanner(formData);
+        });
+        await Promise.all(promises);
+        toast.success(`${imageFiles.length} banners created successfully`);
+      } else {
+        const formData = new FormData();
+        if (bannerForm.title) formData.append('title', bannerForm.title);
+        if (imageFiles.length > 0) {
+          formData.append('image', imageFiles[0]);
+        } else if (bannerForm.image && typeof bannerForm.image === 'string') {
+          formData.append('image', bannerForm.image);
+        }
+        if (bannerForm.redirectUrl) formData.append('redirectUrl', bannerForm.redirectUrl);
+        formData.append('isActive', String(bannerForm.isActive));
+        if (bannerForm.sortOrder) formData.append('sortOrder', String(bannerForm.sortOrder));
+        if (bannerForm.position) formData.append('position', bannerForm.position || 'Home-Top');
 
-      if (modalMode === 'add') {
-        await adminBannerApi.createBanner(formData);
-        toast.success('Banner created successfully');
-      } else if (modalMode === 'edit' && selectedBanner) {
-        await adminBannerApi.updateBanner(selectedBanner._id || selectedBanner.id || '', formData);
-        toast.success('Banner updated successfully');
+        if (modalMode === 'add') {
+          await adminBannerApi.createBanner(formData);
+          toast.success('Banner created successfully');
+        } else if (modalMode === 'edit' && selectedBanner) {
+          await adminBannerApi.updateBanner(selectedBanner._id || selectedBanner.id || '', formData);
+          toast.success('Banner updated successfully');
+        }
       }
       setIsModalOpen(false);
       fetchBanners();
@@ -251,28 +266,43 @@ export const AdminBanners = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
-              <select value={bannerForm.position} onChange={e => setBannerForm({...bannerForm, position: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
-                <option value="home_top">Home Top</option>
-                <option value="home_middle">Home Middle</option>
-                <option value="category_top">Category Top</option>
-                <option value="carousel">Carousel</option>
+              <select value={bannerForm.position} onChange={e => {
+                const newPos = e.target.value;
+                setBannerForm({...bannerForm, position: newPos});
+                if (newPos !== 'Carousel' && imageFiles.length > 1) {
+                  setImageFiles([imageFiles[0]]);
+                }
+              }} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
+                <option value="Home-Top">Home Top</option>
+                <option value="Home-Middle">Home Middle</option>
+                <option value="Category Top">Category Top</option>
+                <option value="Carousel">Carousel</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Image File</label>
-            <input type="file" accept="image/*" onChange={e => {
-              if (e.target.files && e.target.files[0]) {
-                setImageFile(e.target.files[0]);
+            <label className="block text-sm font-medium text-gray-700 mb-1">Image File{bannerForm.position === 'Carousel' ? 's' : ''}</label>
+            <input type="file" accept="image/*" multiple={bannerForm.position === 'Carousel'} onChange={e => {
+              if (e.target.files && e.target.files.length > 0) {
+                if (bannerForm.position === 'Carousel') {
+                  setImageFiles(Array.from(e.target.files));
+                } else {
+                  setImageFiles([e.target.files[0]]);
+                }
                 if (errors.image) setErrors({...errors, image: undefined});
               }
             }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.image ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} />
-            {imageFile ? (
-              <img src={URL.createObjectURL(imageFile)} alt="Preview" className="mt-2 h-20 object-cover" />
-            ) : bannerForm.image && typeof bannerForm.image === 'string' ? (
-              <img src={bannerForm.image} alt="Preview" className="mt-2 h-20 object-cover" />
-            ) : null}
+            
+            <div className="flex flex-wrap gap-2 mt-2">
+              {imageFiles.length > 0 ? (
+                imageFiles.map((file, idx) => (
+                  <img key={idx} src={URL.createObjectURL(file)} alt="Preview" className="h-20 object-cover rounded" />
+                ))
+              ) : bannerForm.image && typeof bannerForm.image === 'string' ? (
+                <img src={bannerForm.image} alt="Preview" className="h-20 object-cover rounded" />
+              ) : null}
+            </div>
             {errors.image && <p className="mt-1 text-xs text-red-500">{errors.image}</p>}
           </div>
 
