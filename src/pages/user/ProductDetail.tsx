@@ -168,6 +168,35 @@ const ProductDetail: React.FC = () => {
     dispatch(toggleCart());
   };
 
+  const handleBuyNow = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    if (!product) return;
+
+    // Find the selected variant to pass its ID
+    let variantId = 'default';
+    if (activeVariant) {
+      variantId = activeVariant._id || activeVariant.id || 'default';
+    }
+
+    dispatch(addToCartAsync({
+      product: {
+        ...product,
+        id: product.id || (product as any)._id,
+        imageUrl: displayImages[0],
+        price: Number(activeVariant?.salePrice || activeVariant?.price || product.price || 1499),
+        mrp: Number(activeVariant?.price || product.mrp)
+      },
+      quantity,
+      selectedColor,
+      selectedSize,
+      variantId
+    }));
+    navigate('/checkout');
+  };
+
   const handleToggleWishlist = () => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -422,7 +451,10 @@ const ProductDetail: React.FC = () => {
             </button>
           </div>
 
-          <button className="w-full border border-primary rounded-xl py-4 font-medium mb-10 hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={handleBuyNow}
+            className="w-full border border-primary rounded-xl py-4 font-medium mb-10 hover:bg-gray-50 transition-colors"
+          >
             Buy it now
           </button>
 

@@ -53,17 +53,15 @@ export const userOrdersApi = {
   },
 
   /**
-   * Placeholders for Razorpay Integration
+   * Razorpay Integration
    */
-  createRazorpayOrder: async (data: any) => {
-    // Replace with your actual endpoint that returns Razorpay order_id
-    const response = await api.post('/payment/razorpay/create', data);
+  createRazorpayOrder: async (data: { orderId: string }) => {
+    const response = await api.post('/payments/create-order', data);
     return response.data;
   },
   
   verifyRazorpayPayment: async (data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-    // Replace with your actual endpoint that verifies the payment signature
-    const response = await api.post('/payment/razorpay/verify', data);
+    const response = await api.post('/payments/verify', data);
     return response.data;
   }
 };

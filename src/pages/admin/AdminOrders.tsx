@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Truck, FileText, Store, Eye } from 'lucide-react';
+import { Search, Filter, FileText, Store, Eye } from 'lucide-react';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import AdminModal from '../../components/common/AdminModal';
 import { LoadingButton } from '../../components/common/LoadingButton';
 import { adminOrderApi } from '../../services/admin/adminOrder.Api';
 import { adminStoreApi } from '../../services/admin/adminStore.Api';
+import { productsApi } from '../../services/productsApi';
+import { adminInventoryApi } from '../../services/admin/adminInventory.Api';
 import toast from 'react-hot-toast';
 import { useAppSelector } from '../../app/hooks';
 import { selectIsAdmin } from '../../features/auth/authSlice';
@@ -23,13 +25,6 @@ export const AdminOrders = () => {
   const [totalOrders, setTotalOrders] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Tracking Modal State
-  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
-  const [orderToTrack, setOrderToTrack] = useState<any>(null);
-  const [trackingForm, setTrackingForm] = useState({ trackingNumber: '', courierName: '', estimatedDeliveryDate: '' });
-  const [isSubmittingTracking, setIsSubmittingTracking] = useState(false);
-  const [trackingErrors, setTrackingErrors] = useState<Record<string, string>>({});
-
   // Assign Store Modal State
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [orderToAssign, setOrderToAssign] = useState<any>(null);
@@ -38,14 +33,77 @@ export const AdminOrders = () => {
   const [isAssigningStore, setIsAssigningStore] = useState(false);
   const [assignStoreError, setAssignStoreError] = useState('');
 
+  // Store Stock Levels
+  const [storeStockLevels, setStoreStockLevels] = useState<Record<string, number>>({});
+  const [isFetchingStock, setIsFetchingStock] = useState(false);
+
+  useEffect(() => {
+    const fetchStockLevels = async () => {
+      if (!isStoreModalOpen || !orderToAssign || !selectedStoreId) {
+        setStoreStockLevels({});
+        return;
+      }
+      setIsFetchingStock(true);
+      const newStockLevels: Record<string, number> = {};
+      const items = orderToAssign.orderedItems || orderToAssign.items || orderToAssign.products || [];
+      
+      try {
+        await Promise.all(items.map(async (item: any) => {
+          const variantId = item.variantId || item.variant?._id || item.variant?.id || item.variant;
+          const productId = item.productId || item.product?._id || item.product?.id || item.product;
+          
+          if (!variantId && !productId) return;
+          const key = variantId || productId;
+          
+          try {
+            const params: any = {
+              'filters[storeId]': selectedStoreId,
+              limit: 1,
+              sort: '-createdAt'
+            };
+            if (variantId && typeof variantId === 'string') {
+              params['filters[variantId]'] = variantId;
+            } else if (productId && typeof productId === 'string') {
+              params['filters[productId]'] = productId;
+            }
+            
+            const res = await adminInventoryApi.getTransactions(params);
+            const latestTx = res.data?.[0] || (res.data?.data && res.data.data[0]);
+            
+            if (latestTx && latestTx.currentQuantity !== undefined) {
+              newStockLevels[key as string] = latestTx.currentQuantity;
+            } else {
+              newStockLevels[key as string] = 0;
+            }
+          } catch (e) {
+            newStockLevels[key as string] = 0;
+          }
+        }));
+        setStoreStockLevels(newStockLevels);
+      } catch (error) {
+        console.error('Failed to fetch stock levels', error);
+      } finally {
+        setIsFetchingStock(false);
+      }
+    };
+    
+    fetchStockLevels();
+  }, [selectedStoreId, isStoreModalOpen, orderToAssign]);
+
   // Details Modal State
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
 
+  // Product Details Modal State
+  const [isProductDetailsOpen, setIsProductDetailsOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [fullProductDetails, setFullProductDetails] = useState<any>(null);
+  const [isFetchingProduct, setIsFetchingProduct] = useState(false);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 50; // The user specified limit=50 in the API request
+  const itemsPerPage = 10; // The user specified limit=50 in the API request
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -75,55 +133,29 @@ export const AdminOrders = () => {
     }
   };
 
-  const openTrackingModal = (order: any) => {
-    setOrderToTrack(order);
-    setTrackingForm({
-      trackingNumber: order.tracking?.trackingNumber || order.trackingNumber || '',
-      courierName: order.tracking?.courierName || order.courierName || order.courier || '',
-      estimatedDeliveryDate: order.tracking?.estimatedDeliveryDate 
-        ? new Date(order.tracking.estimatedDeliveryDate).toISOString().slice(0, 16) 
-        : order.estimatedDeliveryDate 
-          ? new Date(order.estimatedDeliveryDate).toISOString().slice(0, 16) 
-          : ''
-    });
-    setTrackingErrors({});
-    setIsTrackingModalOpen(true);
-  };
-
-  const handleTrackingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!orderToTrack) return;
-    setIsSubmittingTracking(true);
-    setTrackingErrors({});
-    try {
-      const payload = {
-        trackingNumber: trackingForm.trackingNumber,
-        courierName: trackingForm.courierName,
-        estimatedDeliveryDate: trackingForm.estimatedDeliveryDate ? new Date(trackingForm.estimatedDeliveryDate).toISOString() : undefined
-      };
-      await adminOrderApi.updateOrderTracking(orderToTrack._id || orderToTrack.id, payload);
-      setIsTrackingModalOpen(false);
-      fetchOrders();
-    } catch (error: any) {
-      console.error('Failed to update tracking', error);
-      if (error.response?.data?.errors) {
-        const errorsObj: Record<string, string> = {};
-        error.response.data.errors.forEach((err: any) => {
-          const field = err.field?.replace('body.', '') || 'general';
-          errorsObj[field] = err.message;
-        });
-        setTrackingErrors(errorsObj);
-      } else {
-        setTrackingErrors({ general: error.response?.data?.message || 'An error occurred while saving.' });
-      }
-    } finally {
-      setIsSubmittingTracking(false);
-    }
-  };
-
   const openDetailsModal = (order: any) => {
     setSelectedOrder(order);
     setIsDetailsModalOpen(true);
+  };
+
+  const openProductDetails = async (item: any) => {
+    setSelectedProduct(item);
+    setIsProductDetailsOpen(true);
+    setFullProductDetails(null);
+    
+    const productId = item.productId || item.product?._id || item.product?.id || (typeof item.product === 'string' ? item.product : null) || item._id;
+    if (productId && typeof productId === 'string') {
+      setIsFetchingProduct(true);
+      try {
+        const response: any = await productsApi.getProductById(productId);
+        const p = response.data?.product || response.data || response;
+        setFullProductDetails(p);
+      } catch (error) {
+        console.error('Failed to fetch product details', error);
+      } finally {
+        setIsFetchingProduct(false);
+      }
+    }
   };
 
   const handleDownloadInvoice = async (orderId: string) => {
@@ -300,7 +332,11 @@ export const AdminOrders = () => {
                   <td className="py-4 px-4">
                     <div className="space-y-1">
                       {(order.orderedItems || order.items || order.products || []).map((item: any, i: number) => (
-                        <div key={i} className="flex items-center gap-2 text-xs">
+                        <div 
+                          key={i} 
+                          onClick={() => openProductDetails(item)}
+                          className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors"
+                        >
                           {item.image || item.imageUrl || item.product?.image || item.product?.images?.[0] ? (
                             <img src={item.image || item.imageUrl || item.product?.image || item.product?.images?.[0]} alt="product" className="w-6 h-6 object-cover rounded border border-gray-100" />
                           ) : (
@@ -343,11 +379,6 @@ export const AdminOrders = () => {
                         <Eye size={14} />
                         View
                       </button>
-                      <button onClick={() => openTrackingModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-white hover:bg-blue-600 bg-blue-50 rounded-md transition-colors">
-                        <Truck size={14} />
-                        Track
-                      </button>
-                   
                     </div>
                   </td>
                 </tr>
@@ -366,78 +397,6 @@ export const AdminOrders = () => {
           itemsPerPage={itemsPerPage}
         />
       )}
-
-      <AdminModal
-        isOpen={isTrackingModalOpen}
-        onClose={() => setIsTrackingModalOpen(false)}
-        title="Update Tracking Info"
-      >
-        <form className="space-y-4" onSubmit={handleTrackingSubmit}>
-          {trackingErrors.general && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md border border-red-100">
-              {trackingErrors.general}
-            </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Courier Name</label>
-            <input 
-              type="text" 
-              value={trackingForm.courierName} 
-              onChange={e => {
-                setTrackingForm({...trackingForm, courierName: e.target.value});
-                if (trackingErrors.courierName) setTrackingErrors({...trackingErrors, courierName: ''});
-              }} 
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${trackingErrors.courierName ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-primary'}`} 
-              placeholder="e.g., FedEx, BlueDart" 
-            />
-            {trackingErrors.courierName && <p className="text-red-500 text-xs mt-1">{trackingErrors.courierName}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tracking Number</label>
-            <input 
-              type="text" 
-              value={trackingForm.trackingNumber} 
-              onChange={e => {
-                setTrackingForm({...trackingForm, trackingNumber: e.target.value});
-                if (trackingErrors.trackingNumber) setTrackingErrors({...trackingErrors, trackingNumber: ''});
-              }} 
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${trackingErrors.trackingNumber ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-primary'}`} 
-              placeholder="Enter tracking number" 
-            />
-            {trackingErrors.trackingNumber && <p className="text-red-500 text-xs mt-1">{trackingErrors.trackingNumber}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Delivery Date</label>
-            <input 
-              type="datetime-local" 
-              value={trackingForm.estimatedDeliveryDate} 
-              onChange={e => {
-                setTrackingForm({...trackingForm, estimatedDeliveryDate: e.target.value});
-                if (trackingErrors.estimatedDeliveryDate) setTrackingErrors({...trackingErrors, estimatedDeliveryDate: ''});
-              }} 
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${trackingErrors.estimatedDeliveryDate ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-primary'}`} 
-            />
-            {trackingErrors.estimatedDeliveryDate && <p className="text-red-500 text-xs mt-1">{trackingErrors.estimatedDeliveryDate}</p>}
-          </div>
-          
-          <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
-            <button 
-              type="button" 
-              onClick={() => setIsTrackingModalOpen(false)} 
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <LoadingButton 
-              type="submit" 
-              isLoading={isSubmittingTracking} 
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors"
-            >
-              Update Tracking
-            </LoadingButton>
-          </div>
-        </form>
-      </AdminModal>
 
       <AdminModal
         isOpen={isStoreModalOpen}
@@ -466,6 +425,36 @@ export const AdminOrders = () => {
               ))}
             </select>
           </div>
+          
+          {selectedStoreId && orderToAssign && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-md border border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-800 mb-2">Stock in Selected Store</h4>
+              {isFetchingStock ? (
+                <p className="text-xs text-gray-500 animate-pulse">Checking inventory...</p>
+              ) : (
+                <ul className="space-y-1">
+                  {(orderToAssign.orderedItems || orderToAssign.items || orderToAssign.products || []).map((item: any, i: number) => {
+                     const variantId = item.variantId || item.variant?._id || item.variant?.id || item.variant;
+                     const productId = item.productId || item.product?._id || item.product?.id || item.product;
+                     const key = variantId || productId;
+                     const stock = storeStockLevels[key as string];
+                     const orderedQty = item.quantity || item.qty || 1;
+                     const name = item.productName || item.name || item.product?.name || 'Item';
+                     const hasEnough = stock !== undefined && stock >= orderedQty;
+                     
+                     return (
+                       <li key={i} className="flex justify-between items-center text-xs border-b border-gray-100 pb-1 last:border-0 last:pb-0">
+                         <span className="text-gray-600 truncate pr-2" title={name}>{name} (Req: {orderedQty})</span>
+                         <span className={`font-medium whitespace-nowrap ${hasEnough ? 'text-green-600' : 'text-red-600'}`}>
+                           Stock: {stock !== undefined ? stock : '0'}
+                         </span>
+                       </li>
+                     );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
           
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
             <button 
@@ -551,7 +540,7 @@ export const AdminOrders = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {(selectedOrder.orderedItems || selectedOrder.items || selectedOrder.products || []).map((item: any, idx: number) => (
-                      <tr key={idx}>
+                      <tr key={idx} onClick={() => openProductDetails(item)} className="cursor-pointer hover:bg-gray-50 transition-colors">
                         <td className="py-2 px-3 text-gray-900">
                           {item.productName || item.name || item.product?.name || 'Item'}
                         </td>
@@ -602,6 +591,61 @@ export const AdminOrders = () => {
             </div>
           </div>
         )}
+      </AdminModal>
+
+      <AdminModal
+        isOpen={isProductDetailsOpen}
+        onClose={() => setIsProductDetailsOpen(false)}
+        title="Product Details"
+      >
+        {selectedProduct && (() => {
+          const displayProduct = fullProductDetails || selectedProduct.product || selectedProduct;
+          const image = displayProduct.image || displayProduct.imageUrl || displayProduct.thumbnail || displayProduct.images?.[0] || selectedProduct.image || selectedProduct.imageUrl;
+          const name = displayProduct.name || displayProduct.productName || selectedProduct.productName || selectedProduct.name;
+          const sku = displayProduct.sku || selectedProduct.sku || 'N/A';
+          const price = displayProduct.price || selectedProduct.price || 0;
+          
+          return (
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="w-24 h-32 bg-gray-100 border border-gray-200 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
+                {image ? (
+                  <img src={image} className="w-full h-full object-cover" alt="Product" />
+                ) : (
+                  <span className="text-gray-400 text-xs">No Image</span>
+                )}
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-gray-900">{name}</h4>
+                <p className="text-sm text-gray-600 mt-1">SKU: {sku}</p>
+                <p className="text-sm text-gray-600">Quantity Ordered: {selectedProduct.quantity || selectedProduct.qty || 1}</p>
+                <p className="text-sm font-medium text-gray-900 mt-2">Price: Rs. {price.toLocaleString('en-IN')}</p>
+                {selectedProduct.color && <p className="text-sm text-gray-600">Ordered Color: {selectedProduct.color}</p>}
+                {selectedProduct.size && <p className="text-sm text-gray-600">Ordered Size: {selectedProduct.size}</p>}
+                
+                {isFetchingProduct && <p className="text-xs text-blue-500 mt-2 animate-pulse">Loading full details...</p>}
+                
+                {!isFetchingProduct && fullProductDetails && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 font-bold uppercase mb-1">Live Product Info</p>
+                    <p className="text-xs text-gray-600 line-clamp-2" title={fullProductDetails.description}>{fullProductDetails.description}</p>
+                    <p className="text-xs text-gray-600 mt-1">Category: {fullProductDetails.category?.name || fullProductDetails.category}</p>
+                    <p className="text-xs text-gray-600">In Stock: {fullProductDetails.stock || 'Yes'}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="pt-4 flex justify-end border-t border-gray-200">
+              <button 
+                type="button" 
+                onClick={() => setIsProductDetailsOpen(false)} 
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )})()}
       </AdminModal>
     </PageWrapper>
   );

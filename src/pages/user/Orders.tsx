@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, X } from 'lucide-react';
 import { userOrdersApi } from '../../services/user/orders.Api';
 import { productsApi } from '../../services/productsApi';
 import toast from 'react-hot-toast';
@@ -35,6 +35,27 @@ const Orders: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedProductItem, setSelectedProductItem] = useState<any>(null);
+  const [fullProductDetails, setFullProductDetails] = useState<any>(null);
+  const [isFetchingProduct, setIsFetchingProduct] = useState(false);
+
+  const openProductDetails = async (item: any) => {
+    setSelectedProductItem(item);
+    setFullProductDetails(null);
+    const productId = item.productId || item.product?._id || item.product?.id || (typeof item.product === 'string' ? item.product : null) || item._id;
+    if (productId && typeof productId === 'string') {
+      setIsFetchingProduct(true);
+      try {
+        const response: any = await productsApi.getProductById(productId);
+        const p = response.data?.product || response.data || response;
+        setFullProductDetails(p);
+      } catch (error) {
+        console.error('Failed to fetch product details', error);
+      } finally {
+        setIsFetchingProduct(false);
+      }
+    }
+  };
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -156,7 +177,11 @@ const Orders: React.FC = () => {
 
                 <div className="space-y-4">
                   {(order.orderedItems || order.items || []).map((item: any, idx: number) => (
-                    <div key={item.id || item._id || idx} className="flex items-center gap-4">
+                    <div 
+                      key={item.id || item._id || idx} 
+                      onClick={() => openProductDetails(item)}
+                      className="flex items-center gap-4 cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded transition-colors"
+                    >
                       <div className="w-16 h-20 bg-gray-100 flex-shrink-0 border border-gray-100 flex items-center justify-center text-xs text-gray-400">
                         <OrderItemImage item={item} />
                       </div>
@@ -217,6 +242,61 @@ const Orders: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Product Details Modal */}
+      {selectedProductItem && (() => {
+        const displayProduct = fullProductDetails || selectedProductItem.product || selectedProductItem;
+        const name = displayProduct.name || displayProduct.productName || selectedProductItem.productName || selectedProductItem.name;
+        
+        return (
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-black bg-opacity-50 z-[100]">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden relative">
+            <button 
+              onClick={() => setSelectedProductItem(null)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 z-10"
+            >
+              <X size={20} />
+            </button>
+            <div className="p-6">
+              <h3 className="text-lg font-bold uppercase tracking-widest border-b border-gray-100 pb-4 mb-4">Product Details</h3>
+              <div className="flex gap-6">
+                <div className="w-24 h-32 bg-gray-100 flex-shrink-0 border border-gray-200">
+                  <OrderItemImage item={selectedProductItem} />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <h4 className="text-md font-bold text-gray-900">{name}</h4>
+                  <p className="text-sm text-gray-600">Qty: {selectedProductItem.quantity || selectedProductItem.qty || 1}</p>
+                  <p className="text-sm text-gray-900 font-medium">Rs. {(selectedProductItem.price || 0).toLocaleString('en-IN')}</p>
+                  {selectedProductItem.originalPrice && selectedProductItem.originalPrice > selectedProductItem.price && (
+                    <p className="text-xs text-gray-500 line-through">Rs. {(selectedProductItem.originalPrice || 0).toLocaleString('en-IN')}</p>
+                  )}
+                  {selectedProductItem.color && <p className="text-sm text-gray-600">Ordered Color: {selectedProductItem.color}</p>}
+                  {selectedProductItem.size && <p className="text-sm text-gray-600">Ordered Size: {selectedProductItem.size}</p>}
+                  
+                  {isFetchingProduct && <p className="text-xs text-primary mt-2 animate-pulse">Loading live details...</p>}
+                  
+                  {!isFetchingProduct && fullProductDetails && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 font-bold uppercase mb-1">Live Product Info</p>
+                      <p className="text-xs text-gray-600 line-clamp-2" title={fullProductDetails.description}>{fullProductDetails.description}</p>
+                      <p className="text-xs text-gray-600 mt-1">Category: {fullProductDetails.category?.name || fullProductDetails.category}</p>
+                      <p className="text-xs text-gray-600">In Stock: {fullProductDetails.stock || 'Yes'}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 p-4 border-t border-gray-100 flex justify-end">
+              <button 
+                onClick={() => setSelectedProductItem(null)}
+                className="px-6 py-2 border border-gray-300 text-sm font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )})()}
     </div>
   );
 };

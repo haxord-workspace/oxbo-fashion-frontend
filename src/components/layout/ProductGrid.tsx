@@ -164,7 +164,29 @@ const ProductGrid: React.FC<{ filters?: any }> = ({ filters: externalFilters }) 
           })
         );
         
-        setProducts(productsWithPrices);
+        let finalProducts = productsWithPrices;
+        
+        if (externalFilters) {
+          if (externalFilters.color) {
+             finalProducts = finalProducts.filter(p => p.variants?.some((v: any) => v.color?.toLowerCase() === externalFilters.color.toLowerCase() || v.attributes?.color?.toLowerCase() === externalFilters.color.toLowerCase()));
+          }
+          if (externalFilters.size) {
+             finalProducts = finalProducts.filter(p => p.variants?.some((v: any) => v.sizes?.some((s: any) => s.size === externalFilters.size)));
+          }
+          if (externalFilters.maxPrice && externalFilters.maxPrice < 5000) {
+             finalProducts = finalProducts.filter(p => p.price <= externalFilters.maxPrice);
+          }
+          if (externalFilters.sort === 'price') {
+             finalProducts.sort((a, b) => externalFilters.order === 'asc' ? a.price - b.price : b.price - a.price);
+          } else if (externalFilters.sort === 'createdAt') {
+             // Assuming newer products are at the end, or we can just reverse if 'desc'
+             if (externalFilters.order === 'desc') {
+                finalProducts.reverse(); // Simple approximation
+             }
+          }
+        }
+        
+        setProducts(finalProducts);
       } catch (error) {
         console.error('Failed to fetch products', error);
       } finally {

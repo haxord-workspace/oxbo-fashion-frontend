@@ -6,9 +6,9 @@ export const adminOrderApi = {
     const data = response.data.data || response.data;
     return {
       orders: data.orders || data || [],
-      total: data.total || data.length || 0,
-      page: data.page || 1,
-      pages: data.pages || 1,
+      total: data.pagination?.total || data.total || data.orders?.length || data.length || 0,
+      page: data.pagination?.page || data.page || 1,
+      pages: data.pagination?.totalPages || data.pages || 1,
     };
   },
   updateOrderStatus: async (id: string, status: string) => {

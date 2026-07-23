@@ -48,13 +48,13 @@ export const adminCategoriesApi = {
     
     if (Array.isArray(response.data.data)) {
       categories = response.data.data;
-      total = response.data.total || response.data.data.length;
+      total = response.data.meta?.total || response.data.total || response.data.data.length;
     } else if (response.data.data?.categories || response.data.data?.docs) {
       categories = response.data.data.categories || response.data.data.docs;
-      total = response.data.data.total || response.data.data.totalDocs || categories.length;
+      total = response.data.meta?.total || response.data.data.total || response.data.data.totalDocs || categories.length;
     } else if (Array.isArray(response.data)) {
       categories = response.data;
-      total = categories.length;
+      total = (response.data as any).meta?.total || categories.length;
     }
     
     return { categories, total };
