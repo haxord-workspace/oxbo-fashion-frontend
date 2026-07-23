@@ -153,7 +153,7 @@ export const AdminCategoryDetails = () => {
             </button>
             <button 
               onClick={() => openModal('add')}
-              className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
             >
               <Plus size={18} />
               <span className="text-sm font-medium">Add Product</span>
@@ -169,7 +169,7 @@ export const AdminCategoryDetails = () => {
               placeholder="Search products..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-colors text-sm"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/5 focus:border-primary transition-colors text-sm"
             />
           </div>
         </div>
@@ -208,7 +208,7 @@ export const AdminCategoryDetails = () => {
                       <div className="flex justify-end gap-2">
                         <button 
                           onClick={() => openModal('edit', product)}
-                          className="p-1.5 text-gray-400 hover:text-black transition-colors" 
+                          className="p-1.5 text-gray-400 hover:text-primary transition-colors" 
                           title="Edit"
                         >
                           <Edit2 size={16} />
@@ -253,7 +253,7 @@ export const AdminCategoryDetails = () => {
             <input type="text" value={productForm.name} onChange={e => {
               setProductForm({...productForm, name: e.target.value});
               if (errors.name) setErrors({...errors, name: undefined});
-            }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="E.g., Cargo Pant" />
+            }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="E.g., Cargo Pant" />
             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -262,7 +262,7 @@ export const AdminCategoryDetails = () => {
               <input type="number" value={productForm.price} onChange={e => {
                 setProductForm({...productForm, price: e.target.value});
                 if (errors.price) setErrors({...errors, price: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.price ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="1999" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.price ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="1999" />
               {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price}</p>}
             </div>
             <div>
@@ -270,13 +270,13 @@ export const AdminCategoryDetails = () => {
               <input type="number" value={productForm.stock} onChange={e => {
                 setProductForm({...productForm, stock: e.target.value});
                 if (errors.stock) setErrors({...errors, stock: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.stock ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="100" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.stock ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="100" />
               {errors.stock && <p className="mt-1 text-xs text-red-500">{errors.stock}</p>}
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select value={productForm.status} onChange={e => setProductForm({...productForm, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white">
+            <select value={productForm.status} onChange={e => setProductForm({...productForm, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
               <option value="In Stock">In Stock</option>
               <option value="Low Stock">Low Stock</option>
               <option value="Out of Stock">Out of Stock</option>
@@ -284,7 +284,7 @@ export const AdminCategoryDetails = () => {
           </div>
           <div className="pt-4 flex justify-end gap-3">
             <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-            <LoadingButton type="submit" isLoading={isSubmitting} className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors">Save Product</LoadingButton>
+            <LoadingButton type="submit" isLoading={isSubmitting} className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors">Save Product</LoadingButton>
           </div>
         </form>
       </AdminModal>

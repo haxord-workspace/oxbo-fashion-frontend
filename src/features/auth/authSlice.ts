@@ -27,7 +27,7 @@ export const initializeAuth = createAsyncThunk(
     try {
       // Just try to fetch the profile. If the HttpOnly cookies are present, this will succeed.
       const response = await authApi.getProfile();
-      console.log(response)
+ 
       return response.user;
     } catch (err: any) {
       // If it fails, they are not authenticated (e.g., cookies expired or missing)

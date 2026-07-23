@@ -37,9 +37,9 @@ const Wishlist: React.FC = () => {
   return (
     <div className="w-full max-w-[1920px] mx-auto bg-white min-h-[70vh]">
       <div className="text-xs text-gray-500 py-4 px-4 sm:px-8 border-b border-gray-100 flex gap-2">
-        <Link to="/" className="hover:text-black">Home</Link>
+        <Link to="/" className="hover:text-primary">Home</Link>
         <span>/</span>
-        <span className="text-black uppercase">Wishlist</span>
+        <span className="text-primary uppercase">Wishlist</span>
       </div>
 
       <div className="px-4 sm:px-8 py-8 lg:py-12">
@@ -48,7 +48,7 @@ const Wishlist: React.FC = () => {
           {wishlistItems.length > 0 && (
             <button
               onClick={() => dispatch(clearWishlist())}
-              className="text-sm text-gray-500 hover:text-black underline"
+              className="text-sm text-gray-500 hover:text-primary underline"
             >
               Clear Wishlist
             </button>
@@ -64,7 +64,7 @@ const Wishlist: React.FC = () => {
             <p className="text-gray-500 mb-8">Save items you love and buy them later.</p>
             <Link
               to="/"
-              className="bg-black text-white rounded-xl px-8 py-4 font-medium hover:bg-gray-800 transition-colors uppercase tracking-widest text-sm"
+              className="bg-primary text-white rounded-xl px-8 py-4 font-medium hover:bg-gray-800 transition-colors uppercase tracking-widest text-sm"
             >
               Continue Shopping
             </Link>
@@ -91,7 +91,7 @@ const Wishlist: React.FC = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleMoveToCart(item)}
-                      className="flex-1 bg-black text-white text-xs font-bold uppercase tracking-wider py-3 flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
+                      className="flex-1 bg-primary text-white text-xs font-bold uppercase tracking-wider py-3 flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
                     >
                       <ShoppingBag size={14} /> Move to Cart
                     </button>

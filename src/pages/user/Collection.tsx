@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Filter, X } from 'lucide-react';
 import ProductGrid from '../../components/layout/ProductGrid';
 import BannerDisplay from '../../components/layout/BannerDisplay';
 
 const Collection: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
+  const [searchParams] = useSearchParams();
+  const categoryQuery = searchParams.get('category');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const getFormattedTitle = (id: string | undefined) => {
@@ -16,12 +18,23 @@ const Collection: React.FC = () => {
 
   const title = getFormattedTitle(categoryId);
 
+  let currentFilters: any = {};
+  if (categoryId === 'flash-sale') {
+    currentFilters = { tag: 'flash-sale' };
+  } else if (categoryId === 'new-drops') {
+    currentFilters = { sort: 'createdAt', order: 'desc', limit: 20 };
+  } else if (categoryId === 'all-drops') {
+    currentFilters = {};
+  } else if (categoryQuery) {
+    currentFilters = { category: categoryQuery };
+  }
+
   return (
     <div className="flex-1 bg-white min-h-screen">
       <BannerDisplay position="category_top" />
       <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-8 md:py-12">
         <div className="mb-8 md:mb-12 text-center md:text-left">
-          <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tight text-black italic" style={{ fontFamily: 'Impact, sans-serif' }}>
+          <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tight text-primary italic" style={{ fontFamily: 'Impact, sans-serif' }}>
             {title}
           </h1>
           <p className="mt-4 text-sm md:text-base text-gray-500 uppercase tracking-widest font-semibold">
@@ -38,7 +51,7 @@ const Collection: React.FC = () => {
             <>
               {/* Backdrop */}
               <div
-                className="fixed inset-0 bg-black bg-opacity-50 z-[60] transition-opacity"
+                className="fixed inset-0 bg-primary bg-opacity-50 z-[60] transition-opacity"
                 onClick={() => setIsFilterOpen(false)}
                 aria-hidden="true"
               />
@@ -52,7 +65,7 @@ const Collection: React.FC = () => {
                   </h2>
                   <button
                     onClick={() => setIsFilterOpen(false)}
-                    className="p-2 -mr-2 text-gray-400 hover:text-black transition-colors"
+                    className="p-2 -mr-2 text-gray-400 hover:text-primary transition-colors"
                   >
                     <span className="sr-only">Close filters</span>
                     <X className="w-6 h-6" />
@@ -68,7 +81,7 @@ const Collection: React.FC = () => {
                       {['T-Shirts', 'Jeans', 'Outerwear', 'Accessories'].map((cat) => (
                         <li
                           key={cat}
-                          className="cursor-pointer hover:text-black hover:pl-1 transition-all duration-200"
+                          className="cursor-pointer hover:text-primary hover:pl-1 transition-all duration-200"
                         >
                           {cat}
                         </li>
@@ -87,7 +100,7 @@ const Collection: React.FC = () => {
                       className="w-full h-1 bg-gray-200 rounded-full appearance-none cursor-pointer accent-black
                                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4
                                  [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full
-                                 [&::-webkit-slider-thumb]:bg-black [&::-webkit-slider-thumb]:cursor-pointer
+                                 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer
                                  [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:transition-transform
                                  [&::-webkit-slider-thumb]:hover:scale-110"
                     />
@@ -102,10 +115,10 @@ const Collection: React.FC = () => {
                       Color
                     </h3>
                     <div className="flex flex-wrap gap-3">
-                      {['bg-black', 'bg-white border border-gray-300', 'bg-blue-500', 'bg-red-500', 'bg-green-500'].map((colorClass, idx) => (
+                      {['bg-primary', 'bg-white border border-gray-300', 'bg-blue-500', 'bg-red-500', 'bg-green-500'].map((colorClass, idx) => (
                         <button
                           key={idx}
-                          className={`w-7 h-7 rounded-full ${colorClass} ring-offset-2 hover:ring-2 hover:ring-black
+                          className={`w-7 h-7 rounded-full ${colorClass} ring-offset-2 hover:ring-2 hover:ring-primary
                                      hover:scale-110 active:scale-95 transition-all duration-200`}
                         />
                       ))}
@@ -121,7 +134,7 @@ const Collection: React.FC = () => {
                         <button
                           key={size}
                           className="border border-gray-300 w-10 h-10 text-xs font-medium rounded-sm
-                                     hover:border-black hover:bg-black hover:text-white
+                                     hover:border-primary hover:bg-primary hover:text-white
                                      active:scale-95 transition-all duration-200"
                         >
                           {size}
@@ -134,7 +147,7 @@ const Collection: React.FC = () => {
                 <div className="mt-auto border-t border-gray-200 p-6 bg-gray-50 sticky bottom-0">
                   <button
                     onClick={() => setIsFilterOpen(false)}
-                    className="w-full bg-black text-white font-bold uppercase tracking-widest py-4 text-sm hover:bg-gray-900 transition-colors"
+                    className="w-full bg-primary text-white font-bold uppercase tracking-widest py-4 text-sm hover:bg-gray-900 transition-colors"
                   >
                     Apply Filters
                   </button>
@@ -149,21 +162,21 @@ const Collection: React.FC = () => {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setIsFilterOpen(true)}
-                  className="flex items-center gap-2 font-bold uppercase tracking-wider text-sm px-4 py-2 bg-white text-black border border-gray-200 hover:border-black transition-colors"
+                  className="flex items-center gap-2 font-bold uppercase tracking-wider text-sm px-4 py-2 bg-white text-primary border border-gray-200 hover:border-primary transition-colors"
                 >
                   <Filter size={16} /> Filters
                 </button>
                 <span className="text-sm text-gray-500">Showing 16 products</span>
               </div>
 
-              <select className="border border-gray-200 text-sm px-4 py-2 bg-white focus:outline-none focus:border-black cursor-pointer rounded-none">
+              <select className="border border-gray-200 text-sm px-4 py-2 bg-white focus:outline-none focus:border-primary cursor-pointer rounded-none">
                 <option>Sort by: Featured</option>
                 <option>Price: Low to High</option>
                 <option>Price: High to Low</option>
                 <option>Newest Arrivals</option>
               </select>
             </div>
-            <ProductGrid />
+            <ProductGrid filters={currentFilters} />
           </div>
         </div>
       </div>

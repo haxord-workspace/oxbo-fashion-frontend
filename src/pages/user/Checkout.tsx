@@ -256,7 +256,7 @@ const Checkout: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
           <button 
             onClick={() => navigate(-1)} 
-            className="flex items-center text-sm font-medium text-gray-500 hover:text-black transition-colors"
+            className="flex items-center text-sm font-medium text-gray-500 hover:text-primary transition-colors"
           >
             <ChevronLeft size={16} className="mr-1" />
             Back to Cart
@@ -335,7 +335,7 @@ const Checkout: React.FC = () => {
                         Cancel
                       </button>
                     )}
-                    <button type="button" onClick={handleSaveAddress} disabled={isSavingAddress} className="px-6 py-3 bg-black text-white text-sm font-bold uppercase hover:bg-gray-900 transition-colors">
+                    <button type="button" onClick={handleSaveAddress} disabled={isSavingAddress} className="px-6 py-3 bg-primary text-white text-sm font-bold uppercase hover:bg-gray-900 transition-colors">
                       {isSavingAddress ? 'Saving...' : 'Save Address'}
                     </button>
                   </div>
@@ -343,7 +343,7 @@ const Checkout: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {addresses.map((address) => (
-                    <label key={address._id} className={`block border ${selectedAddressId === address._id ? 'border-black bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors relative`}>
+                    <label key={address._id} className={`block border ${selectedAddressId === address._id ? 'border-primary bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors relative`}>
                       <div className="flex items-start">
                         <input 
                           type="radio" 
@@ -351,7 +351,7 @@ const Checkout: React.FC = () => {
                           value={address._id} 
                           checked={selectedAddressId === address._id} 
                           onChange={() => setSelectedAddressId(address._id || null)}
-                          className="mt-1 h-4 w-4 text-black focus:ring-black border-gray-300"
+                          className="mt-1 h-4 w-4 text-primary focus:ring-primary border-gray-300"
                         />
                         <div className="ml-3 flex-1">
                           <div className="flex items-center justify-between">
@@ -373,7 +373,7 @@ const Checkout: React.FC = () => {
             <div>
               <h2 className="text-lg font-bold uppercase tracking-wider mb-6 pb-2 border-b border-gray-100">Payment Method</h2>
               <div className="space-y-4">
-                <label className={`block border ${paymentMethod === 'razorpay' ? 'border-black bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors`}>
+                <label className={`block border ${paymentMethod === 'razorpay' ? 'border-primary bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors`}>
                   <div className="flex items-center">
                     <input 
                       type="radio" 
@@ -381,7 +381,7 @@ const Checkout: React.FC = () => {
                       value="razorpay" 
                       checked={paymentMethod === 'razorpay'} 
                       onChange={() => setPaymentMethod('razorpay')}
-                      className="h-4 w-4 text-black focus:ring-black border-gray-300"
+                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
                     />
                     <span className="ml-3 text-sm font-medium uppercase tracking-wide">Razorpay (Online Payment)</span>
                   </div>
@@ -392,7 +392,7 @@ const Checkout: React.FC = () => {
                   )}
                 </label>
 
-                <label className={`block border ${paymentMethod === 'cod' ? 'border-black bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors`}>
+                <label className={`block border ${paymentMethod === 'cod' ? 'border-primary bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors`}>
                   <div className="flex items-center">
                     <input 
                       type="radio" 
@@ -400,7 +400,7 @@ const Checkout: React.FC = () => {
                       value="cod" 
                       checked={paymentMethod === 'cod'} 
                       onChange={() => setPaymentMethod('cod')}
-                      className="h-4 w-4 text-black focus:ring-black border-gray-300"
+                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
                     />
                     <span className="ml-3 text-sm font-medium uppercase tracking-wide">Cash on Delivery (COD)</span>
                   </div>
@@ -442,7 +442,7 @@ const Checkout: React.FC = () => {
                     onChange={(e) => setCouponInput(e.target.value)}
                     disabled={!!couponCode}
                     placeholder="Enter code" 
-                    className="flex-1 border rounded-none px-4 py-2 text-sm focus:outline-none border-gray-300 focus:border-black"
+                    className="flex-1 border rounded-none px-4 py-2 text-sm focus:outline-none border-gray-300 focus:border-primary"
                   />
                   {couponCode ? (
                     <button type="button" onClick={handleRemoveCoupon} className="bg-red-500 text-white px-4 py-2 text-xs font-bold uppercase hover:bg-red-600 transition-colors">
@@ -453,7 +453,7 @@ const Checkout: React.FC = () => {
                       type="button" 
                       onClick={handleApplyCoupon} 
                       disabled={isLoading}
-                      className={`text-white px-4 py-2 text-xs font-bold uppercase transition-colors ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-black hover:bg-gray-800'}`}
+                      className={`text-white px-4 py-2 text-xs font-bold uppercase transition-colors ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-gray-800'}`}
                     >
                       {isLoading ? 'Applying' : 'Apply'}
                     </button>
@@ -488,7 +488,7 @@ const Checkout: React.FC = () => {
               <LoadingButton 
                 type="submit"
                 isLoading={isSubmitting}
-                className="w-full bg-black text-white py-4 mt-8 text-sm font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                className="w-full bg-primary text-white py-4 mt-8 text-sm font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               >
                 Place Order
               </LoadingButton>

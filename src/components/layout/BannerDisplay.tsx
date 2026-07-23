@@ -75,8 +75,8 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
 
   if (isLoading) {
     return (
-      <div className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-6 ${className}`}>
-        <div className="w-full h-56 md:h-[350px] lg:h-[450px] bg-gray-200 animate-pulse rounded-2xl shadow-sm"></div>
+      <div className={`w-full mb-8 ${className}`}>
+        <div className="w-full h-56 md:h-[350px] lg:h-[450px] bg-gray-200 animate-pulse"></div>
       </div>
     );
   }
@@ -86,8 +86,8 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
   }
 
   return (
-    <div className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-6 ${className}`}>
-      <div className="relative w-full h-56 md:h-[350px] lg:h-[450px] rounded-2xl shadow-lg overflow-hidden group bg-gray-100">
+    <div className={`w-full mb-4 ${className}`}>
+      <div className="relative w-full h-56 md:h-[350px] lg:h-[450px] overflow-hidden group bg-gray-100">
         {/* Slides Container */}
         <div 
           className="flex w-full h-full transition-transform duration-700 ease-in-out" 
@@ -103,7 +103,7 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
                   alt={banner.title || 'Banner'} 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-[1.02]"
                 />
-                <div className="absolute inset-0 bg-black/0 hover:bg-black/5 transition-colors duration-300" />
+                <div className="absolute inset-0 bg-primary/0 hover:bg-primary/5 transition-colors duration-300" />
               </div>
             );
 
@@ -136,14 +136,14 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
           <>
             <button 
               onClick={goToPrev}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white text-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md backdrop-blur-sm z-10 focus:outline-none focus:ring-2 focus:ring-black/20"
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white text-primary rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md backdrop-blur-sm z-10 focus:outline-none focus:ring-2 focus:ring-primary/20"
               aria-label="Previous slide"
             >
               <ChevronLeft className="w-6 h-6 -ml-0.5" />
             </button>
             <button 
               onClick={goToNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white text-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md backdrop-blur-sm z-10 focus:outline-none focus:ring-2 focus:ring-black/20"
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white text-primary rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md backdrop-blur-sm z-10 focus:outline-none focus:ring-2 focus:ring-primary/20"
               aria-label="Next slide"
             >
               <ChevronRight className="w-6 h-6 -mr-0.5" />

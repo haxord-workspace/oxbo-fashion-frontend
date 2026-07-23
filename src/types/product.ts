@@ -35,6 +35,9 @@ export interface ProductFilters {
   sort?: string;
   page?: number;
   limit?: number;
+  createdBy?: string;
+  search?: string;
+  status?: string;
 }
 
 export interface PaginatedResponse<T> {

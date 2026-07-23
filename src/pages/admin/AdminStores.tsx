@@ -196,16 +196,25 @@ export const AdminStores = () => {
 
   const openAdminsModal = async (store: any) => {
     setSelectedStore(store);
+    setStoreAdmins([]);
+    setAllUsers([]);
     setIsAdminsModalOpen(true);
     setIsAdminsLoading(true);
     try {
       const storeId = store._id || store.id;
-      const [adminsData, usersData] = await Promise.all([
+      const [adminsData, storeManagersData] = await Promise.all([
         adminStoreApi.getStoreAdmins(storeId),
-        adminUserApi.getAllUsers()
+        adminUserApi.getAllUsers({ role: 'Store Manager', limit: 100 }),
+
       ]);
       setStoreAdmins(adminsData.admins || []);
-      setAllUsers(usersData.users || []);
+      
+      const managers = storeManagersData.users || [];
+      const combinedUsers = [...managers];
+      
+      // Filter out any potential duplicates by ID to be safe
+      const uniqueUsers = Array.from(new Map(combinedUsers.map(u => [u._id || u.id, u])).values());
+      setAllUsers(uniqueUsers);
     } catch (err: any) {
       toast.error('Failed to load admins data');
     } finally {
@@ -263,7 +272,7 @@ export const AdminStores = () => {
         headerAction={
           <button
             onClick={() => openModal('add')}
-            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
           >
             <Plus size={18} />
             <span className="text-sm font-medium">Add Store</span>
@@ -278,7 +287,7 @@ export const AdminStores = () => {
               placeholder="Search stores..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm"
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm"
             />
           </div>
         </div>
@@ -310,10 +319,10 @@ export const AdminStores = () => {
                     </div>
                   </div>
                   <div className="flex gap-1">
-                    <button onClick={() => openAdminsModal(store)} className="p-1.5 text-gray-400 hover:text-black transition-colors" title="Manage Admins">
+                    <button onClick={() => openAdminsModal(store)} className="p-1.5 text-gray-400 hover:text-primary transition-colors" title="Manage Admins">
                       <Shield size={16} />
                     </button>
-                    <button onClick={() => openModal('edit', store)} className="p-1.5 text-gray-400 hover:text-black transition-colors" title="Edit">
+                    <button onClick={() => openModal('edit', store)} className="p-1.5 text-gray-400 hover:text-primary transition-colors" title="Edit">
                       <Edit2 size={16} />
                     </button>
                     <button 
@@ -341,7 +350,7 @@ export const AdminStores = () => {
                   </div>
                   <div className="flex justify-between pt-2 border-t border-gray-100 mt-2">
                     <span>Phone:</span>
-                    <span className="font-medium text-black">{store.phone}</span>
+                    <span className="font-medium text-primary">{store.phone}</span>
                   </div>
                 </div>
               </div>
@@ -391,7 +400,7 @@ export const AdminStores = () => {
               <input type="text" value={storeForm.name} onChange={e => {
                 setStoreForm({...storeForm, name: e.target.value});
                 if (errors.name) setErrors({...errors, name: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="E.g., Kochi Main Hub" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-primary ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'}`} placeholder="E.g., Kochi Main Hub" />
               {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
             </div>
             <div>
@@ -399,7 +408,7 @@ export const AdminStores = () => {
               <input type="text" value={storeForm.code} onChange={e => {
                 setStoreForm({...storeForm, code: e.target.value});
                 if (errors.code) setErrors({...errors, code: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.code ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="E.g., kollam-01" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-primary ${errors.code ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'}`} placeholder="E.g., kollam-01" />
               {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code}</p>}
             </div>
           </div>
@@ -410,7 +419,7 @@ export const AdminStores = () => {
               <input type="email" value={storeForm.email} onChange={e => {
                 setStoreForm({...storeForm, email: e.target.value});
                 if (errors.email) setErrors({...errors, email: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="Store Email" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-primary ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'}`} placeholder="Store Email" />
               {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
             </div>
             <div>
@@ -418,7 +427,7 @@ export const AdminStores = () => {
               <input type="text" value={storeForm.phone} onChange={e => {
                 setStoreForm({...storeForm, phone: e.target.value});
                 if (errors.phone) setErrors({...errors, phone: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="Phone Number" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-primary ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'}`} placeholder="Phone Number" />
               {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
             </div>
           </div>
@@ -429,7 +438,7 @@ export const AdminStores = () => {
               <input type="text" value={storeForm.address.addressLine1} onChange={e => {
                 setStoreForm({...storeForm, address: {...storeForm.address, addressLine1: e.target.value}});
                 if (errors.addressLine1) setErrors({...errors, addressLine1: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.addressLine1 ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="Street Address" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-primary ${errors.addressLine1 ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'}`} placeholder="Street Address" />
               {errors.addressLine1 && <p className="mt-1 text-xs text-red-500">{errors.addressLine1}</p>}
             </div>
             <div>
@@ -437,7 +446,7 @@ export const AdminStores = () => {
               <input type="text" value={storeForm.address.city} onChange={e => {
                 setStoreForm({...storeForm, address: {...storeForm.address, city: e.target.value}});
                 if (errors.city) setErrors({...errors, city: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-black ${errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-black'}`} placeholder="City" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:border-primary ${errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'}`} placeholder="City" />
               {errors.city && <p className="mt-1 text-xs text-red-500">{errors.city}</p>}
             </div>
           </div>
@@ -445,14 +454,14 @@ export const AdminStores = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select value={storeForm.type} onChange={e => setStoreForm({...storeForm, type: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white">
+              <select value={storeForm.type} onChange={e => setStoreForm({...storeForm, type: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
                 <option value="store">Store</option>
                 <option value="warehouse">Warehouse</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select value={storeForm.status} onChange={e => setStoreForm({...storeForm, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white">
+              <select value={storeForm.status} onChange={e => setStoreForm({...storeForm, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
@@ -461,7 +470,7 @@ export const AdminStores = () => {
 
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-200 mt-4">
             <button type="button" onClick={() => setIsModalOpen(false)} disabled={isSubmitting} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2">
+            <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2">
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Store'}
             </button>
           </div>
@@ -521,22 +530,19 @@ export const AdminStores = () => {
                 <select 
                   value={selectedUserIdToAssign} 
                   onChange={e => setSelectedUserIdToAssign(e.target.value)}
-                  className="flex-1 px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white transition-colors"
+                  className="flex-1 px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white transition-colors"
                   disabled={isAdminsLoading}
                 >
                   <option value="">Select a user to assign...</option>
                   {allUsers
                     .filter(user => {
-                      // Check if user is a Store Manager or Admin
-                      const isManager = user.roleId?.name === 'Store Manager' || user.roleId?.name === 'Admin' || user.role === 'store_manager' || user.role === 'admin';
-                      
                       // Check if not already assigned
                       const isNotAssigned = !storeAdmins.some(admin => {
                         const uId = admin.userId?._id || admin.userId || admin._id || admin.id;
                         return uId === (user._id || user.id);
                       });
 
-                      return isManager && isNotAssigned;
+                      return isNotAssigned;
                     })
                     .map(user => (
                       <option key={user._id || user.id} value={user._id || user.id}>
@@ -548,7 +554,7 @@ export const AdminStores = () => {
                 <button 
                   onClick={handleAssignAdmin}
                   disabled={!selectedUserIdToAssign || isAdminsLoading}
-                  className="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
+                  className="px-6 py-2.5 bg-primary text-white text-sm font-medium rounded-xl hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
                 >
                   {isAdminsLoading && selectedUserIdToAssign ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Assign Admin'}
                 </button>
@@ -559,7 +565,7 @@ export const AdminStores = () => {
                   id="isPrimaryAdmin" 
                   checked={isPrimaryAdmin} 
                   onChange={(e) => setIsPrimaryAdmin(e.target.checked)}
-                  className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                 />
                 <label htmlFor="isPrimaryAdmin" className="text-sm text-gray-700">Set as Primary Admin</label>
               </div>

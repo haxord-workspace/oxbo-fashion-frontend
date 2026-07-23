@@ -157,7 +157,7 @@ export const AdminBanners = () => {
         headerAction={
           <button 
             onClick={() => openModal('add')}
-            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
           >
             <Plus size={18} />
             <span className="text-sm font-medium">Add Banner</span>
@@ -200,7 +200,7 @@ export const AdminBanners = () => {
                 <div className="flex gap-2">
                   <button 
                     onClick={() => openModal('edit', banner)}
-                    className="p-2 border border-gray-200 rounded hover:bg-gray-50 text-gray-400 hover:text-black transition-colors"
+                    className="p-2 border border-gray-200 rounded hover:bg-gray-50 text-gray-400 hover:text-primary transition-colors"
                   >
                     <Edit2 size={16} />
                   </button>
@@ -246,12 +246,12 @@ export const AdminBanners = () => {
               <input type="text" value={bannerForm.title} onChange={e => {
                 setBannerForm({...bannerForm, title: e.target.value});
                 if (errors.title) setErrors({...errors, title: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="E.g., Summer Sale" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="E.g., Summer Sale" />
               {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
-              <select value={bannerForm.position} onChange={e => setBannerForm({...bannerForm, position: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white">
+              <select value={bannerForm.position} onChange={e => setBannerForm({...bannerForm, position: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
                 <option value="home_top">Home Top</option>
                 <option value="home_middle">Home Middle</option>
                 <option value="category_top">Category Top</option>
@@ -267,7 +267,7 @@ export const AdminBanners = () => {
                 setImageFile(e.target.files[0]);
                 if (errors.image) setErrors({...errors, image: undefined});
               }
-            }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.image ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} />
+            }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.image ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} />
             {imageFile ? (
               <img src={URL.createObjectURL(imageFile)} alt="Preview" className="mt-2 h-20 object-cover" />
             ) : bannerForm.image && typeof bannerForm.image === 'string' ? (
@@ -279,17 +279,17 @@ export const AdminBanners = () => {
           <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-4 mt-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Redirect URL</label>
-              <input type="text" value={bannerForm.redirectUrl} onChange={e => setBannerForm({...bannerForm, redirectUrl: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="https://..." />
+              <input type="text" value={bannerForm.redirectUrl} onChange={e => setBannerForm({...bannerForm, redirectUrl: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="https://..." />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
-              <input type="number" min="1" value={bannerForm.sortOrder} onChange={e => setBannerForm({...bannerForm, sortOrder: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" />
+              <input type="number" min="1" value={bannerForm.sortOrder} onChange={e => setBannerForm({...bannerForm, sortOrder: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" />
             </div>
           </div>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-200 mt-4">
             <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors" disabled={isSubmitting}>Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2" disabled={isSubmitting}>
+            <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Save Banner'}
             </button>
           </div>

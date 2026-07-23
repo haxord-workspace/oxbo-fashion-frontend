@@ -2,8 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { userOrdersApi } from '../../services/user/orders.Api';
+import { productsApi } from '../../services/productsApi';
 import toast from 'react-hot-toast';
 import { AdminPagination } from '../../components/admin/AdminPagination';
+
+const OrderItemImage: React.FC<{ item: any }> = ({ item }) => {
+  const initialImage = item.image || item.imageUrl || item.product?.image || item.product?.images?.[0] || null;
+  const [imageUrl, setImageUrl] = useState<string | null>(initialImage);
+
+  useEffect(() => {
+    if (!imageUrl && item.productId) {
+      productsApi.getProductById(item.productId)
+        .then((res: any) => {
+          const p = res.data?.product || res.data || res;
+          if (p.thumbnail) setImageUrl(p.thumbnail);
+          else if (p.imageUrl) setImageUrl(p.imageUrl);
+          else if (p.images && p.images.length > 0) setImageUrl(p.images[0]);
+        })
+        .catch(err => console.error("Failed to fetch image for product", item.productId, err));
+    }
+  }, [item.productId, imageUrl]);
+
+  if (imageUrl) {
+    return <img src={imageUrl} alt={item.productName || item.name || 'Product'} className="w-full h-full object-cover" />;
+  }
+  return <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">IMG</div>;
+};
 
 const Orders: React.FC = () => {
   const navigate = useNavigate();
@@ -11,7 +35,7 @@ const Orders: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const itemsPerPage = 10;
@@ -19,7 +43,7 @@ const Orders: React.FC = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter]);
-  
+
   useEffect(() => {
     fetchOrders();
   }, [statusFilter, currentPage]);
@@ -30,11 +54,11 @@ const Orders: React.FC = () => {
       // Optional: Pass statusFilter to getOrderHistory if API supports it, otherwise filter locally
       const statusParam = statusFilter === 'All' ? undefined : statusFilter;
       const response = await userOrdersApi.getOrderHistory(currentPage, itemsPerPage, statusParam);
-      
+
       // Assume response.data or response is array, or response.orders, etc.
       let fetchedOrders = [];
       let total = 0;
-      
+
       if (response.data && Array.isArray(response.data.orders)) {
         fetchedOrders = response.data.orders;
         total = response.data.total || 0;
@@ -71,19 +95,19 @@ const Orders: React.FC = () => {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <button 
-            onClick={() => navigate('/profile')} 
-            className="flex items-center text-sm font-medium text-gray-500 hover:text-black transition-colors self-start sm:self-auto"
+          <button
+            onClick={() => navigate('/profile')}
+            className="flex items-center text-sm font-medium text-gray-500 hover:text-primary transition-colors self-start sm:self-auto"
           >
             <ChevronLeft size={16} className="mr-1" />
             Back to Profile
           </button>
           <h1 className="text-xl font-bold tracking-widest uppercase">Order History</h1>
-          
-          <select 
+
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-auto border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-black text-sm"
+            className="w-full sm:w-auto border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-primary text-sm"
           >
             {orderStatuses.map(status => (
               <option key={status} value={status}>{status}</option>
@@ -113,20 +137,17 @@ const Orders: React.FC = () => {
                     </div>
                     <div>
                       <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Total</span>
-                      <span className="block mt-1 font-medium text-gray-800">Rs. {(order.total || order.totalAmount || 0).toLocaleString('en-IN')}.00</span>
+                      <span className="block mt-1 font-medium text-gray-800">Rs. {(order.grandTotal || order.total || order.totalAmount || 0).toLocaleString('en-IN')}.00</span>
                     </div>
-                    <div>
-                      <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Order ID</span>
-                      <span className="block mt-1 font-medium text-gray-800">{order.id || order._id}</span>
-                    </div>
+               
                   </div>
                   <div>
                     <span className={`inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider border 
-                      ${order.status === 'Delivered' ? 'bg-green-50 text-green-700 border-green-200' : 
+                      ${order.status === 'Delivered' ? 'bg-green-50 text-green-700 border-green-200' :
                         ['Processing', 'Confirmed', 'Packed'].includes(order.status) ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                        ['Shipped', 'Out for Delivery'].includes(order.status) ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                        order.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
-                        'bg-yellow-50 text-yellow-800 border-yellow-200'}`}
+                          ['Shipped', 'Out for Delivery'].includes(order.status) ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                            order.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
+                              'bg-yellow-50 text-yellow-800 border-yellow-200'}`}
                     >
                       {order.status}
                     </span>
@@ -134,15 +155,15 @@ const Orders: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  {(order.items || []).map((item: any) => (
-                    <div key={item.id || item._id} className="flex items-center gap-4">
-                      <div className="w-16 h-20 bg-gray-100 flex-shrink-0 border border-gray-100">
-                        <img src={item.image || item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                  {(order.orderedItems || order.items || []).map((item: any, idx: number) => (
+                    <div key={item.id || item._id || idx} className="flex items-center gap-4">
+                      <div className="w-16 h-20 bg-gray-100 flex-shrink-0 border border-gray-100 flex items-center justify-center text-xs text-gray-400">
+                        <OrderItemImage item={item} />
                       </div>
                       <div className="flex-1 flex justify-between">
                         <div>
-                          <h4 className="text-sm font-bold uppercase text-gray-900">{item.name}</h4>
-                          <p className="text-xs text-gray-500 mt-1">Qty: {item.qty || item.quantity}</p>
+                          <h4 className="text-sm font-bold uppercase text-gray-900">{item.productName || item.name}</h4>
+                          <p className="text-xs text-gray-500 mt-1">Qty: {item.quantity || item.qty}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-medium text-gray-900">Rs. {(item.price || 0).toLocaleString('en-IN')}.00</p>
@@ -159,7 +180,7 @@ const Orders: React.FC = () => {
                 <div className="mt-6 border-t border-gray-100 pt-4 space-y-2 text-sm text-gray-600">
                   <div className="flex justify-between">
                     <span>Original MRP Total</span>
-                    <span>Rs. {(order.mrpTotal || order.total || 0).toLocaleString('en-IN')}.00</span>
+                    <span>Rs. {(order.subtotal || order.mrpTotal || order.total || 0).toLocaleString('en-IN')}.00</span>
                   </div>
                   <div className="flex justify-between text-green-600">
                     <span>Discounts Applied</span>
@@ -167,14 +188,14 @@ const Orders: React.FC = () => {
                   </div>
                   <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-gray-50">
                     <span>Final Amount Paid</span>
-                    <span>Rs. {order.total.toLocaleString('en-IN')}.00</span>
+                    <span>Rs. {(order.grandTotal || order.total || 0).toLocaleString('en-IN')}.00</span>
                   </div>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
                   <button
                     onClick={() => handleBuyAgain(order.id)}
-                    className="px-6 py-2 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors"
+                    className="px-6 py-2 bg-primary text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors"
                   >
                     Buy Again
                   </button>
@@ -186,7 +207,7 @@ const Orders: React.FC = () => {
 
         {totalOrders > 0 && (
           <div className="mt-8">
-            <AdminPagination 
+            <AdminPagination
               currentPage={currentPage}
               totalPages={Math.ceil(totalOrders / itemsPerPage) || 1}
               onPageChange={setCurrentPage}

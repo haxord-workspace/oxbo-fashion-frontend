@@ -254,7 +254,7 @@ export const AdminCategories = () => {
         headerAction={
           <button 
             onClick={() => openModal('add')}
-            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
           >
             <Plus size={18} />
             <span className="text-sm font-medium">Add Category</span>
@@ -269,7 +269,7 @@ export const AdminCategories = () => {
               placeholder="Search categories..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-colors text-sm"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/5 focus:border-primary transition-colors text-sm"
             />
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -277,7 +277,7 @@ export const AdminCategories = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-colors text-sm bg-white"
+              className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/5 focus:border-primary transition-colors text-sm bg-white"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -348,7 +348,7 @@ export const AdminCategories = () => {
                       <div className="flex justify-end gap-2">
                         <button 
                           onClick={(e) => { e.stopPropagation(); openModal('edit', cat); }}
-                          className="p-1.5 text-gray-400 hover:text-black transition-colors" 
+                          className="p-1.5 text-gray-400 hover:text-primary transition-colors" 
                           title="Edit"
                         >
                           <Edit2 size={16} />
@@ -458,7 +458,7 @@ export const AdminCategories = () => {
                   setCategoryForm({ ...categoryForm, name: e.target.value });
                   if (errors.name) setErrors({...errors, name: undefined});
                 }}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 transition-shadow ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-black'}`}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 transition-shadow ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-primary'}`}
                 placeholder="E.g., Summer Collection"
               />
               {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
@@ -468,7 +468,7 @@ export const AdminCategories = () => {
               <select
                 value={categoryForm.parentCategory}
                 onChange={e => setCategoryForm({ ...categoryForm, parentCategory: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black bg-white transition-shadow"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary bg-white transition-shadow"
               >
                 <option value="">None (Root Category)</option>
                 {categoryTree.length > 0
@@ -488,7 +488,7 @@ export const AdminCategories = () => {
             <textarea
               value={categoryForm.description}
               onChange={e => setCategoryForm({ ...categoryForm, description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black min-h-[80px] resize-none transition-shadow"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary min-h-[80px] resize-none transition-shadow"
               placeholder="Brief description of this category..."
             />
           </div>
@@ -500,7 +500,7 @@ export const AdminCategories = () => {
                 type="number"
                 value={categoryForm.sortOrder}
                 onChange={e => setCategoryForm({ ...categoryForm, sortOrder: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition-shadow"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-shadow"
               />
             </div>
             <div>
@@ -508,7 +508,7 @@ export const AdminCategories = () => {
               <select
                 value={categoryForm.isActive ? 'active' : 'inactive'}
                 onChange={e => setCategoryForm({ ...categoryForm, isActive: e.target.value === 'active' })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black bg-white transition-shadow"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary bg-white transition-shadow"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -522,7 +522,7 @@ export const AdminCategories = () => {
               <button
                 type="button"
                 onClick={() => setCategoryForm({ ...categoryForm, suggestions: [...categoryForm.suggestions, { title: '', description: '' }] })}
-                className="text-xs flex items-center gap-1 text-black font-medium hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                className="text-xs flex items-center gap-1 text-primary font-medium hover:bg-gray-100 px-2 py-1 rounded transition-colors"
               >
                 <Plus size={14} /> Add Suggestion
               </button>
@@ -539,7 +539,7 @@ export const AdminCategories = () => {
                         newSuggestions[index].title = e.target.value;
                         setCategoryForm({ ...categoryForm, suggestions: newSuggestions });
                       }}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                       placeholder="Suggestion Title"
                     />
                     <input
@@ -550,7 +550,7 @@ export const AdminCategories = () => {
                         newSuggestions[index].description = e.target.value;
                         setCategoryForm({ ...categoryForm, suggestions: newSuggestions });
                       }}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                       placeholder="Suggestion Description"
                     />
                   </div>
@@ -585,7 +585,7 @@ export const AdminCategories = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 min-w-[130px] justify-center"
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 min-w-[130px] justify-center"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Category'}
             </button>

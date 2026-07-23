@@ -33,7 +33,7 @@ const CartDrawer: React.FC = () => {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-[60] transition-opacity"
+        className="fixed inset-0 bg-primary bg-opacity-50 z-[60] transition-opacity"
         onClick={() => dispatch(toggleCart())}
         aria-hidden="true"
       />
@@ -68,7 +68,7 @@ const CartDrawer: React.FC = () => {
                   dispatch(toggleCart());
                   navigate('/');
                 }}
-                className="mt-6 px-6 py-2 bg-black text-white font-bold tracking-widest uppercase hover:bg-gray-800 transition-colors"
+                className="mt-6 px-6 py-2 bg-primary text-white font-bold tracking-widest uppercase hover:bg-gray-800 transition-colors"
               >
                 Continue Shopping
               </button>
@@ -93,7 +93,7 @@ const CartDrawer: React.FC = () => {
               <input 
                 type="text" 
                 placeholder="Enter Coupon Code" 
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black uppercase text-sm"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary uppercase text-sm"
               />
               <button className="px-4 py-2 bg-gray-200 text-gray-800 font-medium rounded-md hover:bg-gray-300 transition-colors text-sm">
                 Apply
@@ -137,7 +137,7 @@ const CartDrawer: React.FC = () => {
                   navigate('/login');
                 }
               }}
-              className="w-full flex items-center justify-center rounded-md border border-transparent bg-black px-6 py-4 text-base font-medium text-white shadow-sm hover:bg-gray-800 transition-colors uppercase tracking-widest"
+              className="w-full flex items-center justify-center rounded-md border border-transparent bg-primary px-6 py-4 text-base font-medium text-white shadow-sm hover:bg-gray-800 transition-colors uppercase tracking-widest"
             >
               Checkout
             </button>

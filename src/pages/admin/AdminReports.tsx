@@ -5,7 +5,7 @@ import { useAppSelector } from '../../app/hooks';
 import { selectIsStoreManager } from '../../features/auth/authSlice';
 import { 
   TrendingUp, TrendingDown, DollarSign, 
-  ShoppingCart, Users, AlertTriangle, Clock, CreditCard, Award, Store
+  ShoppingCart, Users, AlertTriangle, Clock, CreditCard, Award, Store, Download
 } from 'lucide-react';
 
 export const AdminReports = () => {
@@ -126,20 +126,27 @@ export const AdminReports = () => {
   return (
     <PageWrapper title="Analytics & Reports">
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <p className="text-gray-600">Overview of your store's performance and key metrics.</p>
-        <div className="flex gap-2">
+        <p className="text-gray-600 print:hidden">Overview of your store's performance and key metrics.</p>
+        <div className="flex gap-2 print:hidden">
           <input 
             type="date" 
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-black focus:border-black"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary"
             value={dateRange.startDate}
             onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
           />
           <input 
             type="date" 
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-black focus:border-black"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary"
             value={dateRange.endDate}
             onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
           />
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+          >
+            <Download size={16} />
+            Export PDF
+          </button>
         </div>
       </div>
 

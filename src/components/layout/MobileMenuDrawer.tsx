@@ -36,7 +36,8 @@ const MobileMenuDrawer: React.FC = () => {
     { label: 'TOPS', to: '/collections/tops' },
     { label: 'CONTACT', to: '/contact' },
     {label:'Wishlist', to:'/wishlist'},
-    { label : 'Orders', to: '/orders' },
+    { label: 'Orders', to: '/orders' },
+    { label: 'Notification', to: '/notifications' }
 
   ];
 
@@ -44,7 +45,7 @@ const MobileMenuDrawer: React.FC = () => {
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 z-50 ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+        className={`fixed inset-0 bg-primary/50 backdrop-blur-sm transition-opacity duration-300 z-50 ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
           }`}
         onClick={closeMenu}
       />

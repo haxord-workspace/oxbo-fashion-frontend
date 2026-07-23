@@ -19,6 +19,7 @@ import Wishlist from './pages/user/Wishlist';
 import Profile from './pages/user/Profile';
 import Orders from './pages/user/Orders';
 import Checkout from './pages/user/Checkout';
+import UserNotifications from './pages/user/UserNotifications';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
@@ -61,7 +62,7 @@ const AppContent: React.FC = () => {
   if (!isInitialized) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
-        <Loader2 className="animate-spin h-10 w-10 text-black" />
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
       </div>
     );
   }
@@ -87,6 +88,7 @@ const AppContent: React.FC = () => {
             <Route path="profile" element={<Profile />} />
             <Route path="orders" element={<Orders />} />
             <Route path="checkout" element={<Checkout />} />
+            <Route path="notifications" element={<UserNotifications />} />
           </Route>
         </Route>
 
@@ -105,6 +107,7 @@ const AppContent: React.FC = () => {
             <Route path="orders" element={<AdminOrders />} />
             <Route path="inventory" element={<AdminInventory />} />
             <Route path="reports" element={<AdminReports />} />
+            <Route path="notifications" element={<AdminNotifications />} />
             
             {/* Strictly Admin Only Routes */}
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
@@ -113,7 +116,6 @@ const AppContent: React.FC = () => {
               <Route path="coupons" element={<AdminCoupons />} />
               <Route path="stores" element={<AdminStores />} />
               <Route path="settings" element={<AdminSettings />} />
-              <Route path="notifications" element={<AdminNotifications />} />
             </Route>
           </Route>
         </Route>
