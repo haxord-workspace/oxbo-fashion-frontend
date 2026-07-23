@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppSelector } from '../../app/hooks';
 import { selectIsStoreManager } from '../../features/auth/authSlice';
 import { Plus, Edit2, Trash2, Search, Loader2, Image as ImageIcon, Filter, Package, FolderTree, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
@@ -10,14 +9,13 @@ import { AdminPagination } from '../../components/admin/AdminPagination';
 import { adminCategoriesApi } from '../../services/admin/admincategories.Api';
 import { adminProductApi } from '../../services/admin/adminProduct.Api';
 import { ImageCropper } from '../../components/common/ImageCropper';
-import type { Category, Product } from '../../types';
+import type { Category } from '../../types';
 
 interface FormErrors {
   name?: string;
 }
 
 export const AdminCategories = () => {
-  const navigate = useNavigate();
   const isStoreManager = useAppSelector(selectIsStoreManager);
   
   // Data States

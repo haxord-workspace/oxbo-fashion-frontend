@@ -45,7 +45,6 @@ const Orders: React.FC = () => {
   const [rating, setRating] = useState(5);
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewText, setReviewText] = useState('');
-  const [reviewImage, setReviewImage] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const openReviewModal = (item: any) => {
@@ -53,7 +52,6 @@ const Orders: React.FC = () => {
     setRating(5);
     setReviewTitle('');
     setReviewText('');
-    setReviewImage('');
     setReviewModalOpen(true);
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Loader2, Bell, CheckCircle, Trash2, CheckCheck } from 'lucide-react';
 import { userNotificationsApi } from '../../services/user/notifications.Api';
 import toast from 'react-hot-toast';

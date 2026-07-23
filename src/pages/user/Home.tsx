@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import Reviews from '../../components/layout/review';
 import ProductGrid from '../../components/layout/ProductGrid';
 import ShopByCategory from '../../components/layout/ShopByCategory';
