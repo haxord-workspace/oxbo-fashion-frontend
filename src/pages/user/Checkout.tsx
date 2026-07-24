@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Edit2, Trash2 } from 'lucide-react';
 import { LoadingButton } from '../../components/common/LoadingButton';
@@ -40,9 +40,27 @@ const Checkout: React.FC = () => {
     }
   };
 
-  // Helper to load Razorpay script
+  // Keeps track of the currently open Razorpay checkout instance so a retry
+  // closes the previous one instead of stacking a second overlay on top of it.
+  const razorpayInstanceRef = useRef<any>(null);
+
+  // Helper to load Razorpay script (guarded so retries don't re-inject it)
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const existing = document.querySelector<HTMLScriptElement>(
+        'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+      );
+      if (existing) {
+        existing.addEventListener('load', () => resolve(true));
+        existing.addEventListener('error', () => resolve(false));
+        return;
+      }
+
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.onload = () => resolve(true);
@@ -276,13 +294,22 @@ const Checkout: React.FC = () => {
           },
           modal: {
             ondismiss: function() {
+              razorpayInstanceRef.current = null;
               setIsSubmitting(false);
               toast.error('Payment cancelled');
             }
           }
         };
 
+        // Close any previous checkout instance left over from a cancelled/failed retry
+        // before opening a new one, so overlays never stack.
+        if (razorpayInstanceRef.current) {
+          razorpayInstanceRef.current.close();
+          razorpayInstanceRef.current = null;
+        }
+
         const rzp1 = new (window as any).Razorpay(options);
+        razorpayInstanceRef.current = rzp1;
         rzp1.on('payment.failed', function (response: any) {
           toast.error(response.error.description);
           setIsSubmitting(false);
@@ -593,7 +620,7 @@ const Checkout: React.FC = () => {
               </LoadingButton>
               
               <p className="text-center text-xs text-gray-500 mt-4">
-                Secure checkout powered by Stripe
+                Secure checkout powered by Razorpay
               </p>
             </div>
           </div>

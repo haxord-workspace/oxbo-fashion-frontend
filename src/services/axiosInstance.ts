@@ -1,7 +1,16 @@
 // src/services/axiosInstance.ts
 import axios from "axios";
 
-const BASE_URL =  import.meta.env.VITE_API_URL ;
+const BASE_URL = import.meta.env.VITE_API_URL;
+
+if (import.meta.env.PROD && BASE_URL?.startsWith('/')) {
+  console.error(
+    `VITE_API_URL ("${BASE_URL}") is a relative path. That only works via the Vite dev proxy ` +
+    'and will not reach the backend in a deployed build. Set VITE_API_URL to the backend\'s ' +
+    'absolute URL (e.g. https://your-backend.onrender.com/api/v1) in your hosting provider\'s ' +
+    'environment variables.'
+  );
+}
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
