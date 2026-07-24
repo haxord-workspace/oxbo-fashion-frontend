@@ -53,8 +53,8 @@ const Contact: React.FC = () => {
   return (
     <div className="flex-1 bg-white pt-12 pb-24 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-80px)]">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-16 text-center md:text-left border-b-2 border-black pb-8 inline-block">
-          <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight text-black italic pr-8" style={{ fontFamily: 'Impact, sans-serif' }}>
+        <div className="mb-16 text-center md:text-left border-b-2 border-primary pb-8 inline-block">
+          <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight text-primary italic pr-8" style={{ fontFamily: 'Impact, sans-serif' }}>
             CONTACT US
           </h1>
           <p className="mt-4 text-sm md:text-base text-gray-500 uppercase tracking-widest font-semibold max-w-xl">
@@ -89,19 +89,19 @@ const Contact: React.FC = () => {
             <div>
               <h3 className="text-xl font-black uppercase tracking-wider mb-6">Follow Us</h3>
               <div className="flex space-x-6">
-                <a href="#" className="text-black hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4">Instagram</a>
-                <a href="#" className="text-black hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4">Twitter</a>
-                <a href="#" className="text-black hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4">TikTok</a>
+                <a href="#" className="text-primary hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4">Instagram</a>
+                <a href="#" className="text-primary hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4">Twitter</a>
+                <a href="#" className="text-primary hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4">TikTok</a>
               </div>
             </div>
           </div>
 
           {/* Contact Form */}
           <div className="bg-gray-50 p-8 border border-gray-100 shadow-sm relative">
-            <div className="absolute top-0 left-0 w-full h-1 bg-black"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-primary"></div>
             {isSubmitted ? (
               <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-16">
-                <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center text-white mb-2 shadow-lg">
+                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white mb-2 shadow-lg">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
                 </div>
                 <h3 className="text-2xl font-black uppercase tracking-wider">Message Sent</h3>
@@ -118,7 +118,7 @@ const Contact: React.FC = () => {
                     value={formData.name}
                     onChange={handleChange}
                     className={`w-full px-4 py-3 bg-white border focus:outline-none transition-colors rounded-none ${
-                      errors.name ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-1 focus:ring-black'
+                      errors.name ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary'
                     }`}
                     placeholder="YOUR NAME"
                   />
@@ -133,7 +133,7 @@ const Contact: React.FC = () => {
                     value={formData.email}
                     onChange={handleChange}
                     className={`w-full px-4 py-3 bg-white border focus:outline-none transition-colors rounded-none ${
-                      errors.email ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-1 focus:ring-black'
+                      errors.email ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary'
                     }`}
                     placeholder="YOUR EMAIL"
                   />
@@ -148,7 +148,7 @@ const Contact: React.FC = () => {
                     onChange={handleChange}
                     rows={6}
                     className={`w-full px-4 py-3 bg-white border focus:outline-none transition-colors resize-none rounded-none ${
-                      errors.message ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-1 focus:ring-black'
+                      errors.message ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary'
                     }`}
                     placeholder="HOW CAN WE HELP YOU?"
                   ></textarea>
@@ -157,7 +157,7 @@ const Contact: React.FC = () => {
                 <LoadingButton
                   type="submit"
                   isLoading={isSubmitting}
-                  className="w-full py-4 bg-black text-white font-black uppercase tracking-widest hover:bg-gray-800 transition-colors shadow-md mt-4"
+                  className="w-full py-4 bg-primary text-white font-black uppercase tracking-widest hover:bg-gray-800 transition-colors shadow-md mt-4"
                 >
                   SEND MESSAGE
                 </LoadingButton>

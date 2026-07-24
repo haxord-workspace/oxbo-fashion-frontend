@@ -10,4 +10,9 @@ export interface Category {
   suggestions?: { title: string; description: string }[];
   createdAt?: string;
   updatedAt?: string;
+  subCategoryCount?: number;
+  productCount?: number;
+  totalSubCategories?: number;
+  totalProducts?: number;
+  children?: Category[];
 }

@@ -63,7 +63,7 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
             <button
               type="button"
               onClick={handleDecrement}
-              className="p-1.5 text-gray-600 hover:text-black hover:bg-gray-100 transition-colors rounded-l-md disabled:opacity-50"
+              className="p-1.5 text-gray-600 hover:text-primary hover:bg-gray-100 transition-colors rounded-l-md disabled:opacity-50"
               disabled={quantity <= 1}
             >
               <Minus className="h-4 w-4" />
@@ -72,7 +72,7 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
             <button
               type="button"
               onClick={handleIncrement}
-              className="p-1.5 text-gray-600 hover:text-black hover:bg-gray-100 transition-colors rounded-r-md"
+              className="p-1.5 text-gray-600 hover:text-primary hover:bg-gray-100 transition-colors rounded-r-md"
             >
               <Plus className="h-4 w-4" />
             </button>

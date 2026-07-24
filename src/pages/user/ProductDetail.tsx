@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart } from 'lucide-react';
+import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { addToCartAsync } from '../../features/cart/cartSlice';
 import { toggleCart } from '../../features/ui/uiSlice';
@@ -9,6 +9,7 @@ import { selectIsAuthenticated } from '../../features/auth/authSlice';
 import Accordion from '../../components/common/Accordion';
 
 import { productsApi } from '../../services/productsApi';
+import { userReviewsApi } from '../../services/user/reviews.Api';
 import type { Product } from '../../types';
 
 const SIZES = ['28', '30', '32', '34']; // Fallback sizes if variants have none
@@ -20,6 +21,9 @@ const ProductDetail: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
 
   const isWishlisted = useAppSelector(state => selectIsWishlisted(state, product?.id || (product as any)?._id || ''));
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
@@ -70,8 +74,12 @@ const ProductDetail: React.FC = () => {
         
         // Setup initial defaults
         if (actualProduct.variants && actualProduct.variants.length > 0) {
-          setSelectedColor(actualProduct.variants[0].color);
-          if (actualProduct.variants[0].sizes && actualProduct.variants[0].sizes.length > 0) {
+          const firstColor = actualProduct.variants[0].attributes?.color || actualProduct.variants[0].color;
+          if (firstColor) setSelectedColor(firstColor);
+          
+          if (actualProduct.variants[0].attributes?.size || actualProduct.variants[0].size) {
+            setSelectedSize(actualProduct.variants[0].attributes?.size || actualProduct.variants[0].size);
+          } else if (actualProduct.variants[0].sizes && actualProduct.variants[0].sizes.length > 0) {
             setSelectedSize(actualProduct.variants[0].sizes[0].size);
           }
         }
@@ -84,8 +92,55 @@ const ProductDetail: React.FC = () => {
     fetchProduct();
   }, [id]);
 
+  const fetchReviews = async () => {
+    if (!id) return;
+    setIsLoadingReviews(true);
+    try {
+      const data: any = await userReviewsApi.getProductReviews(id);
+      let reviewList = [];
+      if (Array.isArray(data)) {
+        reviewList = data;
+      } else if (data?.reviews && Array.isArray(data.reviews)) {
+        reviewList = data.reviews;
+      } else if (data?.data && Array.isArray(data.data)) {
+        reviewList = data.data;
+      } else if (data?.data?.data && Array.isArray(data.data.data)) {
+        reviewList = data.data.data;
+      } else if (data?.data?.reviews && Array.isArray(data.data.reviews)) {
+        reviewList = data.data.reviews;
+      }
+      setReviews(reviewList);
+    } catch (err) {
+      console.error("Failed to fetch reviews", err);
+    } finally {
+      setIsLoadingReviews(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, [id]);
+
   // Derived state based on variants
-  const activeVariant = product?.variants?.find(v => v.color === selectedColor) || product?.variants?.[0];
+  const uniqueColors = Array.from(new Set(product?.variants?.map((v: any) => v.attributes?.color || v.color).filter(Boolean))) as string[];
+  
+  const variantsForColor = product?.variants?.filter((v: any) => (v.attributes?.color || v.color) === selectedColor) || [];
+  
+  // Handle both flat structure (v.attributes.size) and nested structure (v.sizes)
+  let availableSizes: { size: string, stock: number, variantId?: string }[] = [];
+  if (variantsForColor.length > 0 && Array.isArray(variantsForColor[0].sizes)) {
+    // Old nested structure
+    availableSizes = variantsForColor[0].sizes;
+  } else {
+    // New flat structure
+    availableSizes = variantsForColor.map((v: any) => ({
+      size: v.attributes?.size || v.size || '',
+      stock: v.status === 'active' ? 10 : 0, // Fallback stock if not provided
+      variantId: v._id || v.id
+    })).filter(s => s.size);
+  }
+
+  const activeVariant = variantsForColor.find((v: any) => (v.attributes?.size || v.size) === selectedSize) || variantsForColor[0] || product?.variants?.[0];
   
   let fallbackImages = ['/placeholder.png'];
   if (product?.thumbnail) {
@@ -97,19 +152,17 @@ const ProductDetail: React.FC = () => {
   const displayImages = activeVariant?.images && activeVariant.images.length > 0 
     ? activeVariant.images 
     : fallbackImages;
-  const availableSizes = Array.isArray(activeVariant?.sizes) ? activeVariant.sizes : [];
 
   // Update size if current size is out of stock in new color
   useEffect(() => {
-    if (activeVariant) {
-      const sizes = Array.isArray(activeVariant.sizes) ? activeVariant.sizes : [];
-      const currentSizeStock = sizes.find(s => s.size === selectedSize)?.stock || 0;
+    if (availableSizes.length > 0) {
+      const currentSizeStock = availableSizes.find(s => s.size === selectedSize)?.stock || 0;
       if (currentSizeStock === 0) {
-        const firstAvailable = sizes.find(s => s.stock > 0);
+        const firstAvailable = availableSizes.find(s => s.stock > 0);
         if (firstAvailable) setSelectedSize(firstAvailable.size);
       }
     }
-  }, [selectedColor, activeVariant, selectedSize]);
+  }, [selectedColor, availableSizes, selectedSize]);
 
   // Reset state when product changes
   useEffect(() => {
@@ -127,12 +180,9 @@ const ProductDetail: React.FC = () => {
     if (!product) return;
 
     // Find the selected variant to pass its ID
-    const selectedVariant = (product.variants?.find(v => v.color === selectedColor) || product.variants?.[0]) as any;
     let variantId = 'default';
-    if (typeof selectedVariant === 'string') {
-      variantId = selectedVariant;
-    } else if (selectedVariant) {
-      variantId = selectedVariant._id || selectedVariant.id || selectedVariant.variantId || 'default';
+    if (activeVariant) {
+      variantId = activeVariant._id || activeVariant.id || 'default';
     }
 
     dispatch(addToCartAsync({
@@ -149,6 +199,35 @@ const ProductDetail: React.FC = () => {
       variantId
     }));
     dispatch(toggleCart());
+  };
+
+  const handleBuyNow = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    if (!product) return;
+
+    // Find the selected variant to pass its ID
+    let variantId = 'default';
+    if (activeVariant) {
+      variantId = activeVariant._id || activeVariant.id || 'default';
+    }
+
+    dispatch(addToCartAsync({
+      product: {
+        ...product,
+        id: product.id || (product as any)._id,
+        imageUrl: displayImages[0],
+        price: Number(activeVariant?.salePrice || activeVariant?.price || product.price || 1499),
+        mrp: Number(activeVariant?.price || product.mrp)
+      },
+      quantity,
+      selectedColor,
+      selectedSize,
+      variantId
+    }));
+    navigate('/checkout');
   };
 
   const handleToggleWishlist = () => {
@@ -243,9 +322,9 @@ const ProductDetail: React.FC = () => {
     <div className="w-full max-w-[1920px] mx-auto bg-white">
       {/* Breadcrumb / Top Bar */}
       <div className="text-xs text-gray-500 py-4 px-4 sm:px-8 border-b border-gray-100 flex flex-wrap gap-2">
-        <Link to="/" className="hover:text-black shrink-0">Home</Link>
+        <Link to="/" className="hover:text-primary shrink-0">Home</Link>
         <span className="shrink-0">/</span>
-        <span className="text-black uppercase truncate">{product.name}</span>
+        <span className="text-primary uppercase truncate">{product.name}</span>
       </div>
 
       <div className="flex flex-col lg:flex-row px-4 sm:px-8 py-8 lg:py-12 gap-8 lg:gap-16">
@@ -272,7 +351,7 @@ const ProductDetail: React.FC = () => {
               <button
                 key={idx}
                 onClick={() => setSelectedImage(idx)}
-                className={`aspect-[3/4] bg-gray-100 overflow-hidden border-2 transition-colors ${selectedImage === idx ? 'border-black' : 'border-transparent'}`}
+                className={`aspect-[3/4] bg-gray-100 overflow-hidden border-2 transition-colors ${selectedImage === idx ? 'border-primary' : 'border-transparent'}`}
               >
                 <img src={img} alt="" className="w-full h-full object-cover" />
               </button>
@@ -310,25 +389,22 @@ const ProductDetail: React.FC = () => {
           </div>
 
           {/* Color Selection */}
-          {product.variants && (
+          {uniqueColors.length > 0 && (
             <div className="mb-6">
               <span className="text-sm block mb-3">Color: <span className="font-semibold">{selectedColor}</span></span>
               <div className="flex flex-wrap gap-3">
-                {product.variants.map((variant, idx) => {
-                  const colorStr = variant.color || '';
-                  return (
-                    <button
-                      key={variant.color || idx}
-                      onClick={() => setSelectedColor(colorStr)}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${selectedColor === colorStr
-                          ? 'border-black scale-110'
-                          : 'border-transparent hover:scale-105'
-                        }`}
-                      style={{ backgroundColor: colorStr.toLowerCase() === 'black' ? '#000' : colorStr.toLowerCase() === 'blue' ? '#3b82f6' : '#ccc' }}
-                      title={colorStr}
-                    />
-                  );
-                })}
+                {uniqueColors.map((colorStr, idx) => (
+                  <button
+                    key={colorStr || idx}
+                    onClick={() => setSelectedColor(colorStr)}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${selectedColor === colorStr
+                        ? 'border-primary scale-110'
+                        : 'border-transparent hover:scale-105'
+                      }`}
+                    style={{ backgroundColor: colorStr.toLowerCase() }}
+                    title={colorStr}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -337,7 +413,7 @@ const ProductDetail: React.FC = () => {
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm">Size: <span className="font-semibold">{selectedSize}</span></span>
               <button className="text-sm underline flex items-center gap-1">
-                <span className="w-4 h-4 inline-block bg-black text-white text-[10px] text-center leading-4">📏</span> Size Chart
+                <span className="w-4 h-4 inline-block bg-primary text-white text-[10px] text-center leading-4">📏</span> Size Chart
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -351,10 +427,10 @@ const ProductDetail: React.FC = () => {
                     onClick={() => !isOutOfStock && setSelectedSize(size)}
                     disabled={isOutOfStock}
                     className={`relative w-12 h-10 border text-sm transition-colors overflow-hidden ${selectedSize === size
-                        ? 'bg-black text-white border-black'
+                        ? 'bg-primary text-white border-primary'
                         : isOutOfStock
                           ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                          : 'bg-white text-black border-gray-300 hover:border-black'
+                          : 'bg-white text-primary border-gray-300 hover:border-primary'
                       }`}
                   >
                     {size}
@@ -402,13 +478,16 @@ const ProductDetail: React.FC = () => {
 
             <button
               onClick={handleAddToCart}
-              className="flex-1 rounded-xl bg-black text-white font-medium text-base py-4 px-6 hover:bg-gray-800 transition-colors"
+              className="flex-1 rounded-xl bg-primary text-white font-medium text-base py-4 px-6 hover:bg-gray-800 transition-colors"
             >
               Add to Cart - Rs. {Number(activeVariant?.salePrice || activeVariant?.price || product.price || 0).toLocaleString('en-IN')}.00
             </button>
           </div>
 
-          <button className="w-full border border-black rounded-xl py-4 font-medium mb-10 hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={handleBuyNow}
+            className="w-full border border-primary rounded-xl py-4 font-medium mb-10 hover:bg-gray-50 transition-colors"
+          >
             Buy it now
           </button>
 
@@ -433,7 +512,7 @@ const ProductDetail: React.FC = () => {
             <span>Share:</span>
             <div className="flex flex-wrap gap-2">
               {['f', 'X', 'P', 'W', 'M'].map(icon => (
-                <button key={icon} className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:border-black hover:text-black transition-colors">
+                <button key={icon} className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:border-primary hover:text-primary transition-colors">
                   {icon === 'W' ? <MessageCircle size={14} /> : icon === 'M' ? <LinkIcon size={14} /> : icon}
                 </button>
               ))}
@@ -441,6 +520,45 @@ const ProductDetail: React.FC = () => {
           </div>
 
         </div>
+      </div>
+
+      {/* Customer Reviews Section */}
+      <div className="px-4 sm:px-8 py-16 border-t border-gray-100">
+        <h2 className="text-2xl sm:text-3xl mb-8">Customer Reviews</h2>
+
+        {isLoadingReviews ? (
+          <div className="text-gray-500 animate-pulse">Loading reviews...</div>
+        ) : reviews.length === 0 ? (
+          <div className="text-gray-500">No reviews yet for this product.</div>
+        ) : (
+          <div className="space-y-8 max-w-4xl">
+            {reviews.map((review, idx) => (
+              <div key={review._id || review.id || idx} className="border-b border-gray-100 pb-6">
+                <div className="flex items-center gap-1 mb-2">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <Star 
+                      key={star} 
+                      size={16} 
+                      className={star <= (review.rating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} 
+                    />
+                  ))}
+                </div>
+                <h4 className="font-bold text-gray-900 mb-2">{review.title}</h4>
+                <p className="text-sm text-gray-600 mb-4">{review.review || review.comment}</p>
+                {review.images && review.images.length > 0 && (
+                  <div className="flex gap-2">
+                    {review.images.map((img: string, i: number) => (
+                      <img key={i} src={img} alt="Review" className="w-20 h-20 object-cover border border-gray-200 rounded" />
+                    ))}
+                  </div>
+                )}
+                {review.user && (
+                  <p className="text-xs text-gray-400 mt-2">By {review.user.name || review.user.firstName || 'Anonymous'} on {new Date(review.createdAt || review.date || Date.now()).toLocaleDateString()}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* You May Also Like Section */}

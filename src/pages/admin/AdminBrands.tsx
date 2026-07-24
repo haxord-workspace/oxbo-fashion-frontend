@@ -205,7 +205,7 @@ export const AdminBrands = () => {
         headerAction={
           <button 
             onClick={() => openModal('add')}
-            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
           >
             <Plus size={18} />
             <span className="text-sm font-medium">Add Brand</span>
@@ -220,7 +220,7 @@ export const AdminBrands = () => {
               placeholder="Search brands..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-colors text-sm"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/5 focus:border-primary transition-colors text-sm"
             />
           </div>
         </div>
@@ -268,7 +268,7 @@ export const AdminBrands = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleToggleStatus(brand); }}
-                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-black/10 focus:ring-offset-1 ${brand.isActive !== false ? 'bg-green-500' : 'bg-gray-200'}`}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/10 focus:ring-offset-1 ${brand.isActive !== false ? 'bg-green-500' : 'bg-gray-200'}`}
                         >
                           <span
                             className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${brand.isActive !== false ? 'translate-x-4' : 'translate-x-1'}`}
@@ -284,7 +284,7 @@ export const AdminBrands = () => {
                       <div className="flex justify-end gap-2">
                         <button 
                           onClick={(e) => { e.stopPropagation(); openModal('edit', brand); }}
-                          className="p-1.5 text-gray-400 hover:text-black transition-colors" 
+                          className="p-1.5 text-gray-400 hover:text-primary transition-colors" 
                           title="Edit"
                         >
                           <Edit2 size={16} />
@@ -393,7 +393,7 @@ export const AdminBrands = () => {
                   setBrandForm({ ...brandForm, name: e.target.value });
                   if (errors.name) setErrors({...errors, name: undefined});
                 }}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 transition-shadow ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-black'}`}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 transition-shadow ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-primary'}`}
                 placeholder="E.g., Nike"
               />
               {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
@@ -404,7 +404,7 @@ export const AdminBrands = () => {
               <textarea
                 value={brandForm.description}
                 onChange={e => setBrandForm({ ...brandForm, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black min-h-[80px] resize-none transition-shadow"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary min-h-[80px] resize-none transition-shadow"
                 placeholder="Brief description of this brand..."
               />
             </div>
@@ -414,7 +414,7 @@ export const AdminBrands = () => {
               <select
                 value={brandForm.isActive ? 'active' : 'inactive'}
                 onChange={e => setBrandForm({ ...brandForm, isActive: e.target.value === 'active' })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black bg-white transition-shadow"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary bg-white transition-shadow"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -433,7 +433,7 @@ export const AdminBrands = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 min-w-[130px] justify-center"
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 min-w-[130px] justify-center"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Brand'}
               </button>

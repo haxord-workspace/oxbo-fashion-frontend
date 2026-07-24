@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Bell } from 'lucide-react';
+import { Loader2, Bell, X } from 'lucide-react';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import { adminNotificationApi } from '../../services/admin/adminNotification.Api';
@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 
 export const AdminNotifications = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [selectedNotification, setSelectedNotification] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalNotifications, setTotalNotifications] = useState(0);
@@ -19,9 +20,12 @@ export const AdminNotifications = () => {
         page: currentPage,
         limit: itemsPerPage
       });
-      // Assuming response contains notifications array and total count
-      setNotifications(response.notifications || response.data || []);
-      setTotalNotifications(response.total || response.count || 0);
+      // Handle nested response format: { data: { data: [...], total: 15 } }
+      const notifs = response?.data?.data || response?.data || response?.notifications || [];
+      const total = response?.data?.total || response?.total || response?.count || 0;
+      
+      setNotifications(Array.isArray(notifs) ? notifs : []);
+      setTotalNotifications(total);
     } catch (err: any) {
       toast.error(err.message || 'Failed to fetch notifications');
     } finally {
@@ -75,7 +79,11 @@ export const AdminNotifications = () => {
                 </tr>
               ) : notifications.length > 0 ? (
                 notifications.map((notification, index) => (
-                  <tr key={notification._id || notification.id || index} className="hover:bg-gray-50 transition-colors">
+                  <tr 
+                    key={notification._id || notification.id || index} 
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => setSelectedNotification(notification)}
+                  >
                     <td className="py-4 px-6">
                       <div className="flex items-start gap-3">
                         <div className="mt-1 p-2 bg-gray-100 rounded-lg text-gray-500">
@@ -134,6 +142,82 @@ export const AdminNotifications = () => {
             totalItems={totalNotifications}
             itemsPerPage={itemsPerPage}
           />
+        </div>
+      )}
+
+      {/* Modal */}
+      {selectedNotification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <h3 className="text-xl font-bold text-gray-900">Notification Details</h3>
+              <button 
+                onClick={() => setSelectedNotification(null)}
+                className="text-gray-400 hover:text-gray-700 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <span className="text-xs font-semibold text-gray-500 uppercase">Title</span>
+                <p className="mt-1 text-gray-900 font-medium">{selectedNotification.title}</p>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-gray-500 uppercase">Message</span>
+                <p className="mt-1 text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg border border-gray-100">{selectedNotification.message}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-xs font-semibold text-gray-500 uppercase">Type</span>
+                  <div className="mt-1">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${getBadgeClass(selectedNotification.type)}`}>
+                      {selectedNotification.type || 'system'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-gray-500 uppercase">Priority</span>
+                  <div className="mt-1">
+                    <span className={`capitalize ${getPriorityClass(selectedNotification.priority)}`}>
+                      {selectedNotification.priority || 'normal'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-gray-500 uppercase">Channel</span>
+                  <p className="mt-1 text-gray-900 capitalize">{selectedNotification.channel || 'email'}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-gray-500 uppercase">Status</span>
+                  <p className="mt-1 text-gray-900 capitalize">{selectedNotification.status || 'pending'}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase">Date Sent</span>
+                  <p className="mt-1 text-gray-900">
+                    {selectedNotification.createdAt 
+                      ? new Date(selectedNotification.createdAt).toLocaleString(undefined, {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })
+                      : 'N/A'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button 
+                onClick={() => setSelectedNotification(null)}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </PageWrapper>

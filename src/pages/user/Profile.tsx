@@ -137,11 +137,11 @@ const Profile: React.FC = () => {
     <div className="flex-1 bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 relative">
       {/* Cropper Modal */}
       {isCropping && imageSrc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary bg-opacity-75 p-4">
           <div className="bg-white p-6 max-w-md w-full relative flex flex-col h-[500px]">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold uppercase tracking-wider">Crop Image</h3>
-              <button onClick={() => setIsCropping(false)} className="text-gray-500 hover:text-black">
+              <button onClick={() => setIsCropping(false)} className="text-gray-500 hover:text-primary">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -174,7 +174,7 @@ const Profile: React.FC = () => {
               </div>
               <button
                 onClick={handleCropSave}
-                className="w-full bg-black text-white font-bold py-3 uppercase tracking-widest text-sm hover:bg-gray-900 transition-colors"
+                className="w-full bg-primary text-white font-bold py-3 uppercase tracking-widest text-sm hover:bg-gray-900 transition-colors"
               >
                 Apply Crop
               </button>
@@ -201,7 +201,7 @@ const Profile: React.FC = () => {
                   </div>
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-white border rounded-xl border-black text-black text-xs font-bold uppercase tracking-wider hover:bg-black hover:text-white transition-colors"
+                    className="px-4 py-2 bg-white border rounded-xl border-primary text-primary text-xs font-bold uppercase tracking-wider hover:bg-primary hover:text-white transition-colors"
                   >
                     Edit Profile
                   </button>
@@ -252,7 +252,7 @@ const Profile: React.FC = () => {
                 <div className="pt-6 flex justify-center md:justify-start">
                   <button
                     onClick={handleLogout}
-                    className="w-full md:w-auto rounded-xl px-8 py-3 bg-black text-white font-bold hover:bg-gray-800 transition-colors uppercase tracking-widest text-xs"
+                    className="w-full md:w-auto rounded-xl px-8 py-3 bg-primary text-white font-bold hover:bg-gray-800 transition-colors uppercase tracking-widest text-xs"
                   >
                     Sign Out
                   </button>
@@ -262,7 +262,7 @@ const Profile: React.FC = () => {
           ) : (
             <form onSubmit={handleSave} className="space-y-8 text-left" noValidate>
               <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-                <h3 className="text-lg font-bold uppercase tracking-wider text-black">Edit Profile</h3>
+                <h3 className="text-lg font-bold uppercase tracking-wider text-primary">Edit Profile</h3>
                 <button
                   type="button"
                   onClick={() => {
@@ -294,7 +294,7 @@ const Profile: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute inset-0 flex items-center justify-center bg-primary bg-opacity-50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Camera className="w-8 h-8" />
                   </button>
@@ -309,7 +309,7 @@ const Profile: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-sm font-bold uppercase tracking-wider text-black hover:underline"
+                  className="text-sm font-bold uppercase tracking-wider text-primary hover:underline"
                 >
                   Change Photo
                 </button>
@@ -326,7 +326,7 @@ const Profile: React.FC = () => {
                       setFormData({ ...formData, firstName: e.target.value });
                       if (errors.firstName) setErrors({ ...errors, firstName: undefined });
                     }}
-                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
                       }`}
                   />
                   {errors.firstName && <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>}
@@ -342,7 +342,7 @@ const Profile: React.FC = () => {
                       setFormData({ ...formData, lastName: e.target.value });
                       if (errors.lastName) setErrors({ ...errors, lastName: undefined });
                     }}
-                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
                       }`}
                   />
                   {errors.lastName && <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>}
@@ -358,7 +358,7 @@ const Profile: React.FC = () => {
                       setFormData({ ...formData, phone: e.target.value });
                       if (errors.phone) setErrors({ ...errors, phone: undefined });
                     }}
-                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
                       }`}
                   />
                   {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
@@ -374,7 +374,7 @@ const Profile: React.FC = () => {
                       setFormData({ ...formData, pincode: e.target.value });
                       if (errors.pincode) setErrors({ ...errors, pincode: undefined });
                     }}
-                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${errors.pincode ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${errors.pincode ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
                       }`}
                   />
                   {errors.pincode && <p className="mt-1 text-xs text-red-500">{errors.pincode}</p>}
@@ -390,7 +390,7 @@ const Profile: React.FC = () => {
                       setFormData({ ...formData, address: e.target.value });
                       if (errors.address) setErrors({ ...errors, address: undefined });
                     }}
-                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${errors.address ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                    className={`mt-1 block w-full rounded-none border px-3 py-2 focus:outline-none sm:text-sm ${errors.address ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
                       }`}
                   />
                   {errors.address && <p className="mt-1 text-xs text-red-500">{errors.address}</p>}
@@ -412,14 +412,14 @@ const Profile: React.FC = () => {
                     });
                     setErrors({});
                   }}
-                  className="bg-white py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black mr-4 uppercase tracking-wider"
+                  className="bg-white py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary mr-4 uppercase tracking-wider"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 uppercase tracking-wider"
+                  className="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium text-white bg-primary hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 uppercase tracking-wider"
                 >
                   {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Save Changes'}
                 </button>
@@ -432,14 +432,14 @@ const Profile: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
             <button
               onClick={() => navigate('/orders')}
-              className="w-full bg-white border border-gray-200 py-4 text-center text-sm font-bold uppercase tracking-widest text-black hover:bg-gray-50 transition-colors shadow-sm"
+              className="w-full bg-white border border-gray-200 py-4 text-center text-sm font-bold uppercase tracking-widest text-primary hover:bg-gray-50 transition-colors shadow-sm"
             >
               View Order History
             </button>
 
             <button
               onClick={() => navigate('/wishlist')}
-              className="w-full bg-white border border-gray-200 py-4 text-center text-sm font-bold uppercase tracking-widest text-black hover:bg-gray-50 transition-colors shadow-sm"
+              className="w-full bg-white border border-gray-200 py-4 text-center text-sm font-bold uppercase tracking-widest text-primary hover:bg-gray-50 transition-colors shadow-sm"
             >
               My Wishlist
             </button>

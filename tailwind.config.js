@@ -11,6 +11,11 @@ export default {
         oswald: ['Oswald', 'sans-serif'],
       },
       colors: {
+        primary: {
+          DEFAULT: '#004b5c',
+          light: '#006a81',
+          dark: '#00333e',
+        },
         black: '#000000',
         white: '#ffffff',
         gray: {

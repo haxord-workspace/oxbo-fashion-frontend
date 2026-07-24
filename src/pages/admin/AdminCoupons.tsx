@@ -169,7 +169,7 @@ export const AdminCoupons = () => {
         headerAction={
           <button 
             onClick={() => openModal('add')}
-            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
           >
             <Plus size={18} />
             <span className="text-sm font-medium">Create Coupon</span>
@@ -179,7 +179,7 @@ export const AdminCoupons = () => {
         <div className="overflow-x-auto min-h-[300px]">
           {isLoadingData ? (
             <div className="flex justify-center items-center h-48">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
@@ -200,7 +200,7 @@ export const AdminCoupons = () => {
                 ) : (
                   coupons.map((coupon) => (
                     <tr key={coupon._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-4 px-4 font-mono font-medium text-black">{coupon.code}</td>
+                      <td className="py-4 px-4 font-mono font-medium text-primary">{coupon.code}</td>
                       <td className="py-4 px-4 text-green-600 font-medium">
                         {coupon.type === 'percentage' ? `${coupon.value}% OFF` : `₹${coupon.value} OFF`}
                       </td>
@@ -214,7 +214,7 @@ export const AdminCoupons = () => {
                       </td>
                       <td className="py-4 px-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => openModal('edit', coupon)} className="p-1.5 text-gray-400 hover:text-black transition-colors"><Edit2 size={16} /></button>
+                          <button onClick={() => openModal('edit', coupon)} className="p-1.5 text-gray-400 hover:text-primary transition-colors"><Edit2 size={16} /></button>
                           <button onClick={() => openDeleteModal(coupon._id as string)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
                         </div>
                       </td>
@@ -247,7 +247,7 @@ export const AdminCoupons = () => {
               <input type="text" value={couponForm.code} onChange={e => {
                 setCouponForm({...couponForm, code: e.target.value});
                 if (errors.code) setErrors({...errors, code: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 uppercase transition-colors ${errors.code ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="E.g., SUMMER50" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 uppercase transition-colors ${errors.code ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="E.g., SUMMER50" />
               {errors.code && <p className="mt-1 text-xs text-red-500">{errors.code}</p>}
             </div>
             <div>
@@ -255,20 +255,20 @@ export const AdminCoupons = () => {
               <input type="text" value={couponForm.title} onChange={e => {
                 setCouponForm({...couponForm, title: e.target.value});
                 if (errors.title) setErrors({...errors, title: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="Summer Sale 20%" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="Summer Sale 20%" />
               {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
             </div>
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <input type="text" value={couponForm.description} onChange={e => setCouponForm({...couponForm, description: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="Get 20% off up to ₹500..." />
+            <input type="text" value={couponForm.description} onChange={e => setCouponForm({...couponForm, description: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="Get 20% off up to ₹500..." />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
-              <select value={couponForm.type} onChange={e => setCouponForm({...couponForm, type: e.target.value as 'percentage' | 'fixed'})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black">
+              <select value={couponForm.type} onChange={e => setCouponForm({...couponForm, type: e.target.value as 'percentage' | 'fixed'})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
                 <option value="percentage">Percentage (%)</option>
                 <option value="fixed">Fixed Amount (Rs.)</option>
               </select>
@@ -278,7 +278,7 @@ export const AdminCoupons = () => {
               <input type="number" value={couponForm.value} onChange={e => {
                 setCouponForm({...couponForm, value: e.target.value});
                 if (errors.value) setErrors({...errors, value: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.value ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="20" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.value ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="20" />
               {errors.value && <p className="mt-1 text-xs text-red-500">{errors.value}</p>}
             </div>
           </div>
@@ -286,25 +286,25 @@ export const AdminCoupons = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Min Order Value (Rs.)</label>
-              <input type="number" value={couponForm.minimumOrder} onChange={e => setCouponForm({...couponForm, minimumOrder: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="1000" />
+              <input type="number" value={couponForm.minimumOrder} onChange={e => setCouponForm({...couponForm, minimumOrder: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="1000" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Max Discount (Rs.)</label>
-              <input type="number" value={couponForm.maximumDiscount} onChange={e => setCouponForm({...couponForm, maximumDiscount: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="500" />
+              <input type="number" value={couponForm.maximumDiscount} onChange={e => setCouponForm({...couponForm, maximumDiscount: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="500" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Usage Limit (per coupon)</label>
-              <input type="number" value={couponForm.usageLimit} onChange={e => setCouponForm({...couponForm, usageLimit: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="100" />
+              <input type="number" value={couponForm.usageLimit} onChange={e => setCouponForm({...couponForm, usageLimit: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="100" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
               <input type="date" value={couponForm.expiryDate} onChange={e => {
                 setCouponForm({...couponForm, expiryDate: e.target.value});
                 if (errors.expiryDate) setErrors({...errors, expiryDate: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.expiryDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.expiryDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} />
               {errors.expiryDate && <p className="mt-1 text-xs text-red-500">{errors.expiryDate}</p>}
             </div>
           </div>
@@ -323,7 +323,7 @@ export const AdminCoupons = () => {
 
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
             <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-            <LoadingButton type="submit" isLoading={isSubmitting} className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors">Save Coupon</LoadingButton>
+            <LoadingButton type="submit" isLoading={isSubmitting} className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors">Save Coupon</LoadingButton>
           </div>
         </form>
       </AdminModal>

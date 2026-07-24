@@ -28,7 +28,7 @@ const AdminModal: React.FC<AdminModalProps> = ({ isOpen, onClose, title, childre
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-primary/50 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
       
@@ -38,7 +38,7 @@ const AdminModal: React.FC<AdminModalProps> = ({ isOpen, onClose, title, childre
           <h3 className="text-lg font-bold text-gray-900">{title}</h3>
           <button 
             onClick={onClose}
-            className="text-gray-400 hover:text-black transition-colors p-1"
+            className="text-gray-400 hover:text-primary transition-colors p-1"
           >
             <X size={20} />
           </button>

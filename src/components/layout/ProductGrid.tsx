@@ -69,13 +69,13 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
             onClick={prevImage}
-            className="w-7 h-7 bg-white/80 hover:bg-white rounded-full flex items-center justify-center text-black shadow-sm"
+            className="w-7 h-7 bg-white/80 hover:bg-white rounded-full flex items-center justify-center text-primary shadow-sm"
           >
             <ChevronLeft size={16} strokeWidth={2} />
           </button>
           <button 
             onClick={nextImage}
-            className="w-7 h-7 bg-white/80 hover:bg-white rounded-full flex items-center justify-center text-black shadow-sm"
+            className="w-7 h-7 bg-white/80 hover:bg-white rounded-full flex items-center justify-center text-primary shadow-sm"
           >
             <ChevronRight size={16} strokeWidth={2} />
           </button>
@@ -94,7 +94,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         {/* Wishlist Button */}
         <button 
           onClick={handleToggleWishlist}
-          className="absolute top-3 right-3 p-2 bg-white/80 hover:bg-white rounded-full flex items-center justify-center text-black shadow-sm transition-transform hover:scale-110 z-10"
+          className="absolute top-3 right-3 p-2 bg-white/80 hover:bg-white rounded-full flex items-center justify-center text-primary shadow-sm transition-transform hover:scale-110 z-10"
         >
           <Heart size={16} strokeWidth={2} className={isWishlisted ? 'fill-red-500 text-red-500' : ''} />
         </button>
@@ -102,7 +102,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
 
       {/* Product Details */}
       <div className="mt-3 flex flex-col items-start text-left">
-        <h3 className="text-[11px] sm:text-xs font-bold text-black uppercase tracking-wider mb-1">
+        <h3 className="text-[11px] sm:text-xs font-bold text-primary uppercase tracking-wider mb-1">
           {product.name}
         </h3>
         <div className="flex items-center gap-2 text-[11px] sm:text-xs">
@@ -131,18 +131,62 @@ const ProductSkeleton: React.FC = () => {
   );
 };
 
-const ProductGrid: React.FC = () => {
+const ProductGrid: React.FC<{ filters?: any }> = ({ filters: externalFilters }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
+
+  const filtersString = JSON.stringify(externalFilters);
 
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
       try {
-        const response: any = await productsApi.getProducts();
-        // The backend returns { data: { products: [...] } } or { data: [...] }
+        const filters = externalFilters ? { ...externalFilters } : {};
+        const response: any = await productsApi.getProducts(filters);
         const productsList = response.data?.products || (Array.isArray(response.data) ? response.data : []);
-        setProducts(productsList);
+        
+        // Fetch variants for all products to get their correct prices
+        const productsWithPrices = await Promise.all(
+          productsList.map(async (p: any) => {
+            try {
+              const productId = p._id || p.id;
+              const vRes = await productsApi.getProductVariants(productId);
+              const variants = Array.isArray(vRes.data) ? vRes.data : (Array.isArray(vRes) ? vRes : []);
+              if (variants.length > 0) {
+                p.price = variants[0].salePrice || variants[0].price;
+                p.mrp = variants[0].costPrice;
+                p.variants = variants; // Store variants for image extraction too
+              }
+              return p;
+            } catch (err) {
+              return p;
+            }
+          })
+        );
+        
+        let finalProducts = productsWithPrices;
+        
+        if (externalFilters) {
+          if (externalFilters.color) {
+             finalProducts = finalProducts.filter(p => p.variants?.some((v: any) => v.color?.toLowerCase() === externalFilters.color.toLowerCase() || v.attributes?.color?.toLowerCase() === externalFilters.color.toLowerCase()));
+          }
+          if (externalFilters.size) {
+             finalProducts = finalProducts.filter(p => p.variants?.some((v: any) => v.sizes?.some((s: any) => s.size === externalFilters.size)));
+          }
+          if (externalFilters.maxPrice && externalFilters.maxPrice < 5000) {
+             finalProducts = finalProducts.filter(p => p.price <= externalFilters.maxPrice);
+          }
+          if (externalFilters.sort === 'price') {
+             finalProducts.sort((a, b) => externalFilters.order === 'asc' ? a.price - b.price : b.price - a.price);
+          } else if (externalFilters.sort === 'createdAt') {
+             // Assuming newer products are at the end, or we can just reverse if 'desc'
+             if (externalFilters.order === 'desc') {
+                finalProducts.reverse(); // Simple approximation
+             }
+          }
+        }
+        
+        setProducts(finalProducts);
       } catch (error) {
         console.error('Failed to fetch products', error);
       } finally {
@@ -151,7 +195,7 @@ const ProductGrid: React.FC = () => {
     };
     
     fetchProducts();
-  }, []);
+  }, [filtersString]);
 
   return (
     <section className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-16">

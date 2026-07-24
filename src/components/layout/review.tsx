@@ -66,7 +66,7 @@ const Reviews: React.FC = () => {
 
   return (
     <section className="w-full bg-white py-16">
-      <h2 className="text-center text-lg sm:text-xl font-oswald uppercase tracking-widest mb-6 text-black">
+      <h2 className="text-center text-lg sm:text-xl font-oswald uppercase tracking-widest mb-6 text-primary">
         Reviews
       </h2>
       
@@ -75,7 +75,7 @@ const Reviews: React.FC = () => {
         {/* Left Arrow */}
         <button 
           onClick={() => scroll('left')}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 text-black hover:opacity-70 transition-opacity"
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 text-primary hover:opacity-70 transition-opacity"
         >
           <ChevronLeft size={36} strokeWidth={1.5} />
         </button>
@@ -111,15 +111,15 @@ const Reviews: React.FC = () => {
                     <Star 
                       key={i} 
                       size={20} 
-                      className={i < review.rating ? "fill-black text-black" : "text-black"} 
+                      className={i < review.rating ? "fill-primary text-primary" : "text-primary"} 
                       strokeWidth={1.5}
                     />
                   ))}
                 </div>
 
-                <div className="flex items-center gap-1 font-bold text-black mb-2 text-sm">
+                <div className="flex items-center gap-1 font-bold text-primary mb-2 text-sm">
                   {review.author}
-                  <BadgeCheck size={16} className="fill-black text-[#e9e9e9]" />
+                  <BadgeCheck size={16} className="fill-primary text-[#e9e9e9]" />
                 </div>
 
                 <div className="text-[11px] text-gray-400 uppercase tracking-widest font-semibold mt-1">
@@ -133,7 +133,7 @@ const Reviews: React.FC = () => {
         {/* Right Arrow */}
         <button 
           onClick={() => scroll('right')}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 text-black hover:opacity-70 transition-opacity"
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 text-primary hover:opacity-70 transition-opacity"
         >
           <ChevronRight size={36} strokeWidth={1.5} />
         </button>

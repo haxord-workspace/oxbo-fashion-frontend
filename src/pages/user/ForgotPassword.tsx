@@ -40,7 +40,7 @@ const ForgotPassword = () => {
     <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-black uppercase">
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-primary uppercase">
             Forgot Password
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
@@ -56,8 +56,8 @@ const ForgotPassword = () => {
                 name="email"
                 type="email"
                 autoComplete="email"
-                className={`relative block w-full appearance-none rounded-none border px-3 py-3 text-black placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
-                  error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'
+                className={`relative block w-full appearance-none rounded-none border px-3 py-3 text-primary placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                  error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
                 }`}
                 placeholder="EMAIL ADDRESS"
                 value={email}
@@ -74,14 +74,14 @@ const ForgotPassword = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative flex w-full justify-center border border-transparent bg-black py-3 px-4 text-sm font-semibold uppercase text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+              className="group relative flex w-full justify-center border border-transparent bg-primary py-3 px-4 text-sm font-semibold uppercase text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Send OTP'}
             </button>
           </div>
           
           <div className="text-center mt-4">
-            <Link to="/login" className="font-semibold text-black hover:underline text-sm">
+            <Link to="/login" className="font-semibold text-primary hover:underline text-sm">
               Back to Sign In
             </Link>
           </div>

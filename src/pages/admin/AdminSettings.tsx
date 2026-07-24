@@ -233,25 +233,25 @@ export const AdminSettings = () => {
       <div className="max-w-2xl">
         <div className="flex border-b border-gray-200 mb-6">
           <button
-            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'general' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'general' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             onClick={() => setActiveTab('general')}
           >
             General Settings
           </button>
           <button
-            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'tax' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'tax' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             onClick={() => setActiveTab('tax')}
           >
             Tax Settings
           </button>
           <button
-            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'shipping' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'shipping' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             onClick={() => setActiveTab('shipping')}
           >
             Shipping Settings
           </button>
           <button
-            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'payment' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'payment' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             onClick={() => setActiveTab('payment')}
           >
             Payment Settings
@@ -268,7 +268,7 @@ export const AdminSettings = () => {
                     <img src={settingsForm.siteLogo} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
-                <label className="cursor-pointer bg-white px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black flex items-center gap-2">
+                <label className="cursor-pointer bg-white px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary flex items-center gap-2">
                   <Upload size={16} />
                   Upload Logo
                   <input type="file" className="hidden" accept="image/*" onChange={handleLogoChange} />
@@ -281,7 +281,7 @@ export const AdminSettings = () => {
               <input type="text" value={settingsForm.siteName} onChange={e => {
                 setSettingsForm({ ...settingsForm, siteName: e.target.value });
                 if (errors.siteName) setErrors({ ...errors, siteName: undefined });
-              }} className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-1 transition-colors ${errors.siteName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} />
+              }} className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-1 transition-colors ${errors.siteName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} />
               {errors.siteName && <p className="mt-1 text-xs text-red-500">{errors.siteName}</p>}
             </div>
 
@@ -290,7 +290,7 @@ export const AdminSettings = () => {
               <input type="email" value={settingsForm.supportEmail} onChange={e => {
                 setSettingsForm({ ...settingsForm, supportEmail: e.target.value });
                 if (errors.supportEmail) setErrors({ ...errors, supportEmail: undefined });
-              }} className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-1 transition-colors ${errors.supportEmail ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} />
+              }} className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-1 transition-colors ${errors.supportEmail ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} />
               {errors.supportEmail && <p className="mt-1 text-xs text-red-500">{errors.supportEmail}</p>}
             </div>
 
@@ -299,7 +299,7 @@ export const AdminSettings = () => {
               <input type="text" value={settingsForm.supportPhone} onChange={e => {
                 setSettingsForm({ ...settingsForm, supportPhone: e.target.value });
                 if (errors.supportPhone) setErrors({ ...errors, supportPhone: undefined });
-              }} className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-1 transition-colors ${errors.supportPhone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} />
+              }} className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-1 transition-colors ${errors.supportPhone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} />
               {errors.supportPhone && <p className="mt-1 text-xs text-red-500">{errors.supportPhone}</p>}
             </div>
 
@@ -308,7 +308,7 @@ export const AdminSettings = () => {
               <input type="text" value={settingsForm.currency} onChange={e => {
                 setSettingsForm({ ...settingsForm, currency: e.target.value });
                 if (errors.currency) setErrors({ ...errors, currency: undefined });
-              }} className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-1 transition-colors ${errors.currency ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="e.g. INR, USD" />
+              }} className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-1 transition-colors ${errors.currency ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="e.g. INR, USD" />
               {errors.currency && <p className="mt-1 text-xs text-red-500">{errors.currency}</p>}
             </div>
 
@@ -318,7 +318,7 @@ export const AdminSettings = () => {
                 id="maintenanceMode"
                 checked={settingsForm.maintenanceMode}
                 onChange={e => setSettingsForm({ ...settingsForm, maintenanceMode: e.target.checked })}
-                className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
               />
               <label htmlFor="maintenanceMode" className="text-sm font-medium text-gray-700 cursor-pointer">
                 Enable Maintenance Mode
@@ -329,7 +329,7 @@ export const AdminSettings = () => {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center justify-center gap-2 bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-900 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-900 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isSaving ? 'Saving...' : 'Save Settings'}
@@ -349,7 +349,7 @@ export const AdminSettings = () => {
                 step="0.01"
                 value={taxSettingsForm.taxPercentage}
                 onChange={e => setTaxSettingsForm({ ...taxSettingsForm, taxPercentage: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
                 placeholder="e.g. 18"
               />
             </div>
@@ -360,7 +360,7 @@ export const AdminSettings = () => {
                 id="taxEnabled"
                 checked={taxSettingsForm.taxEnabled}
                 onChange={e => setTaxSettingsForm({ ...taxSettingsForm, taxEnabled: e.target.checked })}
-                className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
               />
               <label htmlFor="taxEnabled" className="text-sm font-medium text-gray-700 cursor-pointer">
                 Enable Taxes
@@ -373,7 +373,7 @@ export const AdminSettings = () => {
                 id="taxIncludedInPrice"
                 checked={taxSettingsForm.taxIncludedInPrice}
                 onChange={e => setTaxSettingsForm({ ...taxSettingsForm, taxIncludedInPrice: e.target.checked })}
-                className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
               />
               <label htmlFor="taxIncludedInPrice" className="text-sm font-medium text-gray-700 cursor-pointer">
                 Prices Include Tax
@@ -385,7 +385,7 @@ export const AdminSettings = () => {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center justify-center gap-2 bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-900 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-900 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isSaving ? 'Saving...' : 'Save Tax Settings'}
@@ -404,7 +404,7 @@ export const AdminSettings = () => {
                 step="0.01"
                 value={shippingSettingsForm.shippingCharge}
                 onChange={e => setShippingSettingsForm({ ...shippingSettingsForm, shippingCharge: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
                 placeholder="e.g. 50"
               />
             </div>
@@ -415,7 +415,7 @@ export const AdminSettings = () => {
                 id="freeShippingEnabled"
                 checked={shippingSettingsForm.freeShippingEnabled}
                 onChange={e => setShippingSettingsForm({ ...shippingSettingsForm, freeShippingEnabled: e.target.checked })}
-                className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
               />
               <label htmlFor="freeShippingEnabled" className="text-sm font-medium text-gray-700 cursor-pointer">
                 Enable Free Shipping
@@ -431,7 +431,7 @@ export const AdminSettings = () => {
                   step="0.01"
                   value={shippingSettingsForm.freeShippingMinOrderAmount}
                   onChange={e => setShippingSettingsForm({ ...shippingSettingsForm, freeShippingMinOrderAmount: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-colors"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
                   placeholder="e.g. 999"
                 />
                 <p className="text-xs text-gray-500 mt-1">Orders above this amount will qualify for free shipping.</p>
@@ -446,7 +446,7 @@ export const AdminSettings = () => {
                 step="1"
                 value={shippingSettingsForm.estimatedDeliveryDays}
                 onChange={e => setShippingSettingsForm({ ...shippingSettingsForm, estimatedDeliveryDays: parseInt(e.target.value) || 1 })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
                 placeholder="e.g. 5"
               />
             </div>
@@ -455,7 +455,7 @@ export const AdminSettings = () => {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center justify-center gap-2 bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-900 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-900 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isSaving ? 'Saving...' : 'Save Shipping Settings'}
@@ -474,7 +474,7 @@ export const AdminSettings = () => {
                   id="cashOnDeliveryEnabled"
                   checked={paymentSettingsForm.cashOnDeliveryEnabled}
                   onChange={e => setPaymentSettingsForm({ ...paymentSettingsForm, cashOnDeliveryEnabled: e.target.checked })}
-                  className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                 />
                 <label htmlFor="cashOnDeliveryEnabled" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Enable Cash On Delivery
@@ -491,7 +491,7 @@ export const AdminSettings = () => {
                   id="razorpayEnabled"
                   checked={paymentSettingsForm.razorpayEnabled}
                   onChange={e => setPaymentSettingsForm({ ...paymentSettingsForm, razorpayEnabled: e.target.checked })}
-                  className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                 />
                 <label htmlFor="razorpayEnabled" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Enable Razorpay Gateway
@@ -506,7 +506,7 @@ export const AdminSettings = () => {
                       type="text"
 
                       onChange={e => setPaymentSettingsForm({ ...paymentSettingsForm, razorpayKeyId: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-colors"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
                       placeholder="Enter your razorpay key id"
                     />
                   </div>
@@ -517,7 +517,7 @@ export const AdminSettings = () => {
                       type="password"
                       value={paymentSettingsForm.razorpayKeySecret}
                       onChange={e => setPaymentSettingsForm({ ...paymentSettingsForm, razorpayKeySecret: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-colors"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
                       placeholder="Leave blank to keep existing secret"
                     />
                   </div>
@@ -533,7 +533,7 @@ export const AdminSettings = () => {
                   id="autoCapturePayment"
                   checked={paymentSettingsForm.autoCapturePayment}
                   onChange={e => setPaymentSettingsForm({ ...paymentSettingsForm, autoCapturePayment: e.target.checked })}
-                  className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                 />
                 <label htmlFor="autoCapturePayment" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Auto Capture Payment
@@ -545,7 +545,7 @@ export const AdminSettings = () => {
                   id="refundEnabled"
                   checked={paymentSettingsForm.refundEnabled}
                   onChange={e => setPaymentSettingsForm({ ...paymentSettingsForm, refundEnabled: e.target.checked })}
-                  className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black"
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                 />
                 <label htmlFor="refundEnabled" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Enable Automated Refunds
@@ -557,7 +557,7 @@ export const AdminSettings = () => {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center justify-center gap-2 bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-900 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-900 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isSaving ? 'Saving...' : 'Save Payment Settings'}

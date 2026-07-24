@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAppSelector } from '../../app/hooks';
-import { selectIsStoreManager } from '../../features/auth/authSlice';
+import { selectIsStoreManager, selectCurrentUser } from '../../features/auth/authSlice';
 import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import AdminModal from '../../components/common/AdminModal';
@@ -21,6 +21,7 @@ interface FormErrors {
 
 export const AdminProducts = () => {
   const isStoreManager = useAppSelector(selectIsStoreManager);
+  const currentUser = useAppSelector(selectCurrentUser);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -55,7 +56,11 @@ export const AdminProducts = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const res = await adminProductApi.getProducts({ page: currentPage, limit: itemsPerPage, search: searchQuery });
+        const params: any = { page: currentPage, limit: itemsPerPage, search: searchQuery };
+        if (isStoreManager && currentUser) {
+          params.createdBy = currentUser.id || currentUser._id;
+        }
+        const res = await adminProductApi.getProducts(params);
         const fetchedProducts = res.products || [];
         
         // Fetch variants for all products to get their prices
@@ -300,6 +305,16 @@ export const AdminProducts = () => {
         }
       }
       
+      // Ensure price fields are sent in the main product form data
+      if (productForm.price) {
+        formData.append('price', productForm.price);
+        formData.append('salePrice', productForm.price);
+      }
+      if (productForm.mrp) {
+        formData.append('mrp', productForm.mrp);
+        formData.append('costPrice', productForm.mrp);
+      }
+      
       let productId = (selectedProduct as any)?._id || selectedProduct?.id;
       
       if (modalMode === 'add') {
@@ -310,6 +325,12 @@ export const AdminProducts = () => {
       }
       
       if (productId) {
+        let existingVariants: any[] = [];
+        try {
+           const vRes = await adminProductApi.getVariants(productId);
+           existingVariants = Array.isArray(vRes.data) ? vRes.data : (Array.isArray(vRes) ? vRes : []);
+        } catch(e) {}
+
         for (const v of variants) {
           if (!v.color) continue;
           
@@ -331,12 +352,22 @@ export const AdminProducts = () => {
                 images: v.images.split(',').map(i => i.trim()).filter(i => i),
                 status: 'active'
               };
+              
+              const existingVariant = existingVariants.find(ev => 
+                 ev.attributes?.color?.toLowerCase() === v.color.toLowerCase() && 
+                 ev.attributes?.size === s.size
+              );
+
               try {
-                await adminProductApi.createVariant(productId, variantData);
+                if (existingVariant) {
+                  await adminProductApi.updateVariant(existingVariant._id || existingVariant.id, variantData);
+                } else {
+                  await adminProductApi.createVariant(productId, variantData);
+                }
               } catch (err: any) {
                 const msg = err.response?.data?.message || err.message;
-                if (modalMode === 'add' || !msg?.includes('already exists')) {
-                  toast.error(`Variant error: ${msg}`);
+                if (modalMode === 'add' || (!msg?.includes('already exists') && !msg?.includes('duplicate'))) {
+                  toast.error(`Variant error for ${v.color} ${s.size}: ${msg}`);
                 }
               }
             }
@@ -348,7 +379,11 @@ export const AdminProducts = () => {
       setIsModalOpen(false);
       
       // Refresh products (same logic as fetchProducts)
-      const refreshRes = await adminProductApi.getProducts({ page: currentPage, limit: itemsPerPage, search: searchQuery });
+      const refreshParams: any = { page: currentPage, limit: itemsPerPage, search: searchQuery };
+      if (isStoreManager && currentUser) {
+        refreshParams.createdBy = currentUser.id || currentUser._id;
+      }
+      const refreshRes = await adminProductApi.getProducts(refreshParams);
       const fetchedProducts = refreshRes.products || [];
       const productsWithVariants = await Promise.all(
         fetchedProducts.map(async (p: any) => {
@@ -390,7 +425,7 @@ export const AdminProducts = () => {
         headerAction={
           <button 
             onClick={() => openModal('add')}
-            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
           >
             <Plus size={18} />
             <span className="text-sm font-medium">Add Product</span>
@@ -405,10 +440,10 @@ export const AdminProducts = () => {
               placeholder="Search products..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm"
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm"
             />
           </div>
-          <button className="flex items-center gap-2 text-gray-600 hover:text-black border border-gray-200 px-3 py-2 rounded-lg text-sm">
+          <button className="flex items-center gap-2 text-gray-600 hover:text-primary border border-gray-200 px-3 py-2 rounded-lg text-sm">
             <Filter size={16} />
             Filter
           </button>
@@ -455,7 +490,7 @@ export const AdminProducts = () => {
                       <div className="flex justify-end gap-2">
                         <button 
                           onClick={() => openModal('edit', product)}
-                          className="p-1.5 text-gray-400 hover:text-black transition-colors" 
+                          className="p-1.5 text-gray-400 hover:text-primary transition-colors" 
                           title="Edit"
                         >
                           <Edit2 size={16} />
@@ -496,7 +531,7 @@ export const AdminProducts = () => {
       >
         {isFetchingVariants ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin mb-4"></div>
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
             <p className="text-gray-500 font-medium">Loading product variants...</p>
           </div>
         ) : (
@@ -540,7 +575,7 @@ export const AdminProducts = () => {
                   if (errors.image) setErrors({ ...errors, image: undefined });
                 }
                 e.target.value = ''; 
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.image ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'} text-sm`} />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.image ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'} text-sm`} />
             </div>
             {errors.image && <p className="mt-1 text-xs text-red-500">{errors.image}</p>}
           </div>
@@ -549,14 +584,14 @@ export const AdminProducts = () => {
             <input type="text" value={productForm.name} onChange={e => {
               setProductForm({...productForm, name: e.target.value});
               if (errors.name) setErrors({...errors, name: undefined});
-            }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="E.g., Classic White Tee" />
+            }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="E.g., Classic White Tee" />
             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select value={productForm.categoryId} onChange={e => setProductForm({...productForm, categoryId: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white">
+              <select value={productForm.categoryId} onChange={e => setProductForm({...productForm, categoryId: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
                 <option value="">Select Category</option>
                 {categories.map(c => (
                   <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>
@@ -565,7 +600,7 @@ export const AdminProducts = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-              <select value={productForm.brandId} onChange={e => setProductForm({...productForm, brandId: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white">
+              <select value={productForm.brandId} onChange={e => setProductForm({...productForm, brandId: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
                 <option value="">Select Brand</option>
                 {brands.map(b => (
                   <option key={b.id || b._id} value={b.id || b._id}>{b.name}</option>
@@ -575,12 +610,8 @@ export const AdminProducts = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Short Description</label>
-            <input type="text" value={productForm.shortDescription} onChange={e => setProductForm({...productForm, shortDescription: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="A short catchphrase..." />
-          </div>
-          <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-medium text-gray-700">Full Description</label>
+              <label className="block text-sm font-medium text-gray-700">Short Description</label>
               {(() => {
                 const selectedCat = categories.find(c => (c.id || c._id) === productForm.categoryId);
                 let categorySuggestions = selectedCat?.suggestions || [];
@@ -600,11 +631,11 @@ export const AdminProducts = () => {
                         onChange={e => {
                           const val = e.target.value;
                           if (val) {
-                            setProductForm(prev => ({ ...prev, description: val }));
+                            setProductForm(prev => ({ ...prev, shortDescription: val }));
                             e.target.selectedIndex = 0; // Reset so they can select again
                           }
                         }}
-                        className="text-xs border border-gray-300 rounded focus:outline-none focus:border-black py-0.5 px-1 bg-white"
+                        className="text-xs border border-gray-300 rounded focus:outline-none focus:border-primary py-0.5 px-1 bg-white"
                         defaultValue=""
                       >
                         <option value="" disabled>Select a suggestion...</option>
@@ -620,16 +651,20 @@ export const AdminProducts = () => {
                 return null;
               })()}
             </div>
-            <textarea value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black h-24" placeholder="Detailed product description..."></textarea>
+            <input type="text" value={productForm.shortDescription} onChange={e => setProductForm({...productForm, shortDescription: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="A short catchphrase..." />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Full Description</label>
+            <textarea value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary h-24" placeholder="Detailed product description..."></textarea>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
-              <input type="text" value={productForm.tags} onChange={e => setProductForm({...productForm, tags: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="shirt, cotton, formal" />
+              <input type="text" value={productForm.tags} onChange={e => setProductForm({...productForm, tags: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="shirt, cotton, formal" />
             </div>
             <div className="flex items-center mt-6">
-              <input type="checkbox" id="isFeatured" checked={productForm.isFeatured} onChange={e => setProductForm({...productForm, isFeatured: e.target.checked})} className="w-4 h-4 text-black border-gray-300 rounded focus:ring-black" />
+              <input type="checkbox" id="isFeatured" checked={productForm.isFeatured} onChange={e => setProductForm({...productForm, isFeatured: e.target.checked})} className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" />
               <label htmlFor="isFeatured" className="ml-2 block text-sm text-gray-900">Is Featured Product?</label>
             </div>
           </div>
@@ -639,16 +674,16 @@ export const AdminProducts = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">SEO Title</label>
-                <input type="text" value={productForm.seoTitle} onChange={e => setProductForm({...productForm, seoTitle: e.target.value})} className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="SEO Title" />
+                <input type="text" value={productForm.seoTitle} onChange={e => setProductForm({...productForm, seoTitle: e.target.value})} className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="SEO Title" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">SEO Keywords</label>
-                <input type="text" value={productForm.seoKeywords} onChange={e => setProductForm({...productForm, seoKeywords: e.target.value})} className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black" placeholder="keyword1, keyword2" />
+                <input type="text" value={productForm.seoKeywords} onChange={e => setProductForm({...productForm, seoKeywords: e.target.value})} className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="keyword1, keyword2" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">SEO Description</label>
-              <textarea value={productForm.seoDescription} onChange={e => setProductForm({...productForm, seoDescription: e.target.value})} className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black h-16" placeholder="SEO meta description..."></textarea>
+              <textarea value={productForm.seoDescription} onChange={e => setProductForm({...productForm, seoDescription: e.target.value})} className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary h-16" placeholder="SEO meta description..."></textarea>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
@@ -657,7 +692,7 @@ export const AdminProducts = () => {
               <input type="number" value={productForm.mrp} onChange={e => {
                 setProductForm({...productForm, mrp: e.target.value});
                 if (errors.mrp) setErrors({...errors, mrp: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.mrp ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="1299" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.mrp ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="1299" />
               {errors.mrp && <p className="mt-1 text-xs text-red-500">{errors.mrp}</p>}
             </div>
             <div>
@@ -665,12 +700,12 @@ export const AdminProducts = () => {
               <input type="number" value={productForm.price} onChange={e => {
                 setProductForm({...productForm, price: e.target.value});
                 if (errors.price) setErrors({...errors, price: undefined});
-              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.price ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-black focus:ring-black'}`} placeholder="999" />
+              }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.price ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`} placeholder="999" />
               {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select value={productForm.status} onChange={e => setProductForm({...productForm, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white">
+              <select value={productForm.status} onChange={e => setProductForm({...productForm, status: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
                 <option value="draft">Draft</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -703,7 +738,7 @@ export const AdminProducts = () => {
                         const newVariants = [...variants];
                         newVariants[index].color = e.target.value;
                         setVariants(newVariants);
-                      }} placeholder="E.g., Black" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-black" />
+                      }} placeholder="E.g., Black" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-primary" />
                     </div>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {[
@@ -720,7 +755,7 @@ export const AdminProducts = () => {
                             newVariants[index].color = c.name;
                             setVariants(newVariants);
                           }}
-                          className={`w-5 h-5 rounded-full shadow-sm hover:scale-110 transition-transform ${v.color.toLowerCase() === c.name.toLowerCase() ? 'ring-2 ring-offset-1 ring-black border-transparent' : 'border border-gray-300'}`}
+                          className={`w-5 h-5 rounded-full shadow-sm hover:scale-110 transition-transform ${v.color.toLowerCase() === c.name.toLowerCase() ? 'ring-2 ring-offset-1 ring-primary border-transparent' : 'border border-gray-300'}`}
                           style={{ backgroundColor: c.hex }}
                           title={c.name}
                         />
@@ -733,7 +768,7 @@ export const AdminProducts = () => {
                       const newVariants = [...variants];
                       newVariants[index].images = e.target.value;
                       setVariants(newVariants);
-                    }} placeholder="URL1, URL2" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-black" />
+                    }} placeholder="URL1, URL2" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-primary" />
                   </div>
                 </div>
                 <label className="block text-xs font-medium text-gray-700 mb-2">Size Inventory</label>
@@ -768,7 +803,7 @@ export const AdminProducts = () => {
 
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
             <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-            <LoadingButton type="submit" isLoading={loading} className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors">Save Product</LoadingButton>
+            <LoadingButton type="submit" isLoading={loading} className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors">Save Product</LoadingButton>
           </div>
         </form>
         )}

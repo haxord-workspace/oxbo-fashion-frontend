@@ -65,7 +65,7 @@ const AdminLayout: React.FC = () => {
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+          className="fixed inset-0 z-40 bg-primary bg-opacity-50 lg:hidden"
           onClick={toggleSidebar}
         />
       )}
@@ -77,10 +77,10 @@ const AdminLayout: React.FC = () => {
         <div className="flex items-center justify-between h-20 px-6 border-b border-gray-100">
           <Link to="/admin/dashboard" className="flex-1 flex justify-center">
             <h1 className="text-2xl font-black tracking-tighter uppercase italic" style={{ fontFamily: 'Impact, sans-serif' }}>
-              Oxbo<span className="font-normal text-[#e35a39] ml-1 text-xl">Admin</span>
+              <span className="font-normal text-primary ml-1 text-xl">Oxbo Admin</span>
             </h1>
           </Link>
-          <button onClick={toggleSidebar} className="lg:hidden text-gray-500 hover:text-black">
+          <button onClick={toggleSidebar} className="lg:hidden text-gray-500 hover:text-primary">
             <X size={24} />
           </button>
         </div>
@@ -90,7 +90,7 @@ const AdminLayout: React.FC = () => {
             {navItems
               .filter(item => {
                 if (isStoreManager) {
-                  return !['Stores', 'Users', 'Settings', 'Banners', 'Coupons', 'Notifications'].includes(item.name);
+                  return !['Stores', 'Users', 'Settings', 'Banners', 'Coupons'].includes(item.name);
                 }
                 return true;
               })
@@ -104,11 +104,11 @@ const AdminLayout: React.FC = () => {
                     onClick={() => setSidebarOpen(false)}
                     className={`flex items-center px-3 py-2.5 rounded-lg transition-colors group ${
                       isActive 
-                        ? 'bg-black text-white' 
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-black'
+                        ? 'bg-primary text-white' 
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-primary'
                     }`}
                   >
-                    <Icon size={20} className={`mr-3 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-black'}`} />
+                    <Icon size={20} className={`mr-3 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-primary'}`} />
                     <span className="text-sm font-medium">{item.name}</span>
                   </Link>
                 </li>
@@ -133,7 +133,7 @@ const AdminLayout: React.FC = () => {
         {/* Top Header */}
         <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 z-30">
           <div className="flex items-center lg:hidden">
-            <button onClick={toggleSidebar} className="p-2 -ml-2 text-gray-600 hover:text-black rounded-md">
+            <button onClick={toggleSidebar} className="p-2 -ml-2 text-gray-600 hover:text-primary rounded-md">
               <Menu size={24} />
             </button>
           </div>
@@ -143,7 +143,7 @@ const AdminLayout: React.FC = () => {
                 <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
                 <p className="text-xs text-gray-500 capitalize">{user?.role || 'Admin'}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-black flex items-center justify-center text-white font-bold uppercase">
+              <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-bold uppercase">
                 {user?.firstName?.charAt(0) || 'A'}
               </div>
             </div>

@@ -36,7 +36,7 @@ export const AdminPagination: React.FC<AdminPaginationProps> = ({
           onClick={() => onPageChange(i)}
           className={`relative inline-flex items-center px-4 py-2 text-sm font-medium border ${
             currentPage === i
-              ? 'z-10 bg-black text-white border-black'
+              ? 'z-10 bg-primary text-white border-primary'
               : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
           }`}
         >

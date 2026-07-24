@@ -20,8 +20,11 @@ export const AdminUsers = () => {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+
+  // ... (keeping other states as they were)
   const [customerStats, setCustomerStats] = useState<{
     totalCustomers: number;
     activeCustomers: number;
@@ -82,6 +85,13 @@ export const AdminUsers = () => {
   const itemsPerPage = 10;
   const [totalUsers, setTotalUsers] = useState(0);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -89,8 +99,9 @@ export const AdminUsers = () => {
         page: currentPage,
         limit: itemsPerPage,
       };
-      if (searchQuery) {
-        params.search = searchQuery;
+      if (debouncedSearchQuery) {
+        params.search = debouncedSearchQuery;
+        params.limit = 1000; // Fetch more to allow frontend filtering if backend ignores search
       }
       if (roleFilter) {
         params.role = roleFilter;
@@ -99,14 +110,27 @@ export const AdminUsers = () => {
         params.status = statusFilter;
       }
       const data = await adminUserApi.getAllUsers(params);
-      setUsers(data.users);
-      setTotalUsers(data.total);
+      
+      let fetchedUsers = data.users;
+      // Frontend filtering fallback in case backend ignores the search parameter
+      if (debouncedSearchQuery) {
+        const query = debouncedSearchQuery.toLowerCase();
+        fetchedUsers = fetchedUsers.filter((u: User) => 
+          (u.firstName && u.firstName.toLowerCase().includes(query)) ||
+          (u.lastName && u.lastName.toLowerCase().includes(query)) ||
+          (u.email && u.email.toLowerCase().includes(query)) ||
+          (u.phone && String(u.phone).includes(query))
+        );
+      }
+      
+      setUsers(fetchedUsers);
+      setTotalUsers(debouncedSearchQuery ? fetchedUsers.length : data.total);
     } catch (err: any) {
       toast.error(err.message || 'Failed to fetch users');
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, itemsPerPage, searchQuery, roleFilter, statusFilter]);
+  }, [currentPage, itemsPerPage, debouncedSearchQuery, roleFilter, statusFilter]);
 
   useEffect(() => {
     fetchUsers();
@@ -131,7 +155,7 @@ export const AdminUsers = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, roleFilter, statusFilter]);
+  }, [debouncedSearchQuery, roleFilter, statusFilter]);
 
   const getRoleBadge = (user: User) => {
     const roleName = user.roleId?.name || user.role || 'user';
@@ -378,23 +402,23 @@ export const AdminUsers = () => {
               placeholder="Search users..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm"
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm"
             />
           </div>
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm bg-white"
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-white"
           >
             <option value="">All Roles</option>
             <option value="CUSTOMER">Customer</option>
-            <option value="6a4cb6298643931db473ae84">Store Manager</option>
-            <option value="6a4c9d66477aee2f5fa8c820">Super Admin</option>
+            <option value="Store Manager">Store Manager</option>
+            <option value="Super Admin">Super Admin</option>
           </select>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm bg-white"
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-white"
           >
             <option value="">All Status</option>
             <option value="active">Active</option>
@@ -416,7 +440,7 @@ export const AdminUsers = () => {
           )}
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm font-medium flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-gray-900 transition-colors text-sm font-medium flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Add User
@@ -433,7 +457,7 @@ export const AdminUsers = () => {
                   type="checkbox" 
                   checked={users.length > 0 && selectedUserIds.length === users.length}
                   onChange={handleToggleSelectAll}
-                  className="rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                  className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                 />
               </th>
               <th className="pb-3 font-medium px-4">User</th>
@@ -461,7 +485,7 @@ export const AdminUsers = () => {
                       type="checkbox" 
                       checked={selectedUserIds.includes(user._id || user.id || '')}
                       onChange={() => handleToggleSelect(user._id || user.id || '')}
-                      className="rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                      className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                     />
                   </td>
                   <td className="py-4 px-4 flex items-center gap-3">
@@ -530,7 +554,7 @@ export const AdminUsers = () => {
                       </button>
                       <button
                         onClick={() => setUserToEdit(user)}
-                        className="p-1.5 text-gray-400 hover:text-black transition-colors" title="Edit">
+                        className="p-1.5 text-gray-400 hover:text-primary transition-colors" title="Edit">
                         <Edit2 size={16} />
                       </button>
                       <button
@@ -567,7 +591,7 @@ export const AdminUsers = () => {
 
       {/* Delete Confirmation Modal */}
       {userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
               <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -598,7 +622,7 @@ export const AdminUsers = () => {
 
       {/* Edit User Modal */}
       {userToEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">Edit User</h3>
@@ -623,7 +647,7 @@ export const AdminUsers = () => {
                       setUserToEdit({ ...userToEdit, firstName: e.target.value });
                       if (editErrors.firstName) setEditErrors({ ...editErrors, firstName: undefined });
                     }}
-                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${editErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${editErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-primary'
                       }`}
                   />
                   {editErrors.firstName && <p className="mt-1 text-xs text-red-500">{editErrors.firstName}</p>}
@@ -637,7 +661,7 @@ export const AdminUsers = () => {
                       setUserToEdit({ ...userToEdit, lastName: e.target.value });
                       if (editErrors.lastName) setEditErrors({ ...editErrors, lastName: undefined });
                     }}
-                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${editErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${editErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-primary'
                       }`}
                   />
                   {editErrors.lastName && <p className="mt-1 text-xs text-red-500">{editErrors.lastName}</p>}
@@ -653,7 +677,7 @@ export const AdminUsers = () => {
                     setUserToEdit({ ...userToEdit, email: e.target.value });
                     if (editErrors.email) setEditErrors({ ...editErrors, email: undefined });
                   }}
-                  className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${editErrors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                  className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${editErrors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-primary'
                     }`}
                 />
                 {editErrors.email && <p className="mt-1 text-xs text-red-500">{editErrors.email}</p>}
@@ -674,7 +698,7 @@ export const AdminUsers = () => {
                         setUserToEdit({ ...userToEdit, roleId: { _id: val, name: 'Super Admin' }, role: undefined });
                       }
                     }}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors bg-white"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white"
                   >
                     <option value="CUSTOMER">Customer</option>
                     <option value="6a4cb6298643931db473ae84">Store Manager</option>
@@ -686,7 +710,7 @@ export const AdminUsers = () => {
                   <select
                     value={userToEdit.isActive !== false ? 'active' : 'inactive'}
                     onChange={e => setUserToEdit({ ...userToEdit, isActive: e.target.value === 'active' })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors bg-white"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -709,7 +733,7 @@ export const AdminUsers = () => {
                 <button
                   type="submit"
                   disabled={isEditing}
-                  className="flex-1 px-4 py-2.5 text-white bg-black hover:bg-gray-900 rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
+                  className="flex-1 px-4 py-2.5 text-white bg-primary hover:bg-gray-900 rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
                 >
                   {isEditing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
                 </button>
@@ -721,7 +745,7 @@ export const AdminUsers = () => {
 
       {/* View User Modal */}
       {isViewing && userToView && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">User Details</h3>
@@ -853,7 +877,7 @@ export const AdminUsers = () => {
 
       {/* Create User Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">Add New User</h3>
@@ -907,7 +931,7 @@ export const AdminUsers = () => {
                       setNewUser({ ...newUser, firstName: e.target.value });
                       if (createErrors.firstName) setCreateErrors({ ...createErrors, firstName: undefined });
                     }}
-                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${createErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${createErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-primary'
                       }`}
                   />
                   {createErrors.firstName && <p className="mt-1 text-xs text-red-500">{createErrors.firstName}</p>}
@@ -921,7 +945,7 @@ export const AdminUsers = () => {
                       setNewUser({ ...newUser, lastName: e.target.value });
                       if (createErrors.lastName) setCreateErrors({ ...createErrors, lastName: undefined });
                     }}
-                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${createErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                    className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${createErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-primary'
                       }`}
                   />
                   {createErrors.lastName && <p className="mt-1 text-xs text-red-500">{createErrors.lastName}</p>}
@@ -937,7 +961,7 @@ export const AdminUsers = () => {
                     setNewUser({ ...newUser, email: e.target.value });
                     if (createErrors.email) setCreateErrors({ ...createErrors, email: undefined });
                   }}
-                  className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${createErrors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                  className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${createErrors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-primary'
                     }`}
                 />
                 {createErrors.email && <p className="mt-1 text-xs text-red-500">{createErrors.email}</p>}
@@ -953,7 +977,7 @@ export const AdminUsers = () => {
                       setNewUser({ ...newUser, password: e.target.value });
                       if (createErrors.password) setCreateErrors({ ...createErrors, password: undefined });
                     }}
-                    className={`w-full px-4 py-2 pr-10 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${createErrors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                    className={`w-full px-4 py-2 pr-10 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${createErrors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-primary'
                       }`}
                   />
                   <button
@@ -972,7 +996,7 @@ export const AdminUsers = () => {
                 <select
                   value={newUser.role || 'CUSTOMER'}
                   onChange={e => setNewUser({ ...newUser, role: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors bg-white"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white"
                 >
                   <option value="CUSTOMER">Customer</option>
                   <option value="6a4cb6298643931db473ae84">Store Manager</option>
@@ -998,7 +1022,7 @@ export const AdminUsers = () => {
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="flex-1 px-4 py-2.5 text-white bg-black hover:bg-gray-900 rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
+                  className="flex-1 px-4 py-2.5 text-white bg-primary hover:bg-gray-900 rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
                 >
                   {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create User'}
                 </button>
@@ -1021,7 +1045,7 @@ export const AdminUsers = () => {
       )}
 
       {isNotificationModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">Send Notification</h3>
@@ -1046,7 +1070,7 @@ export const AdminUsers = () => {
                     setNotificationForm({ ...notificationForm, title: e.target.value });
                     if (notificationErrors.title) setNotificationErrors({ ...notificationErrors, title: undefined });
                   }}
-                  className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${notificationErrors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                  className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${notificationErrors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-primary'
                     }`}
                 />
                 {notificationErrors.title && <p className="mt-1 text-xs text-red-500">{notificationErrors.title}</p>}
@@ -1061,7 +1085,7 @@ export const AdminUsers = () => {
                     if (notificationErrors.message) setNotificationErrors({ ...notificationErrors, message: undefined });
                   }}
                   rows={3}
-                  className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${notificationErrors.message ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-black focus:ring-black'
+                  className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-1 transition-colors ${notificationErrors.message ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-primary focus:ring-primary'
                     }`}
                 />
                 {notificationErrors.message && <p className="mt-1 text-xs text-red-500">{notificationErrors.message}</p>}
@@ -1073,7 +1097,7 @@ export const AdminUsers = () => {
                   <select
                     value={notificationForm.type}
                     onChange={e => setNotificationForm({ ...notificationForm, type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors bg-white text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white text-sm"
                   >
                     <option value="system">System</option>
                     <option value="promotional">Promotional</option>
@@ -1085,7 +1109,7 @@ export const AdminUsers = () => {
                   <select
                     value={notificationForm.channel}
                     onChange={e => setNotificationForm({ ...notificationForm, channel: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors bg-white text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white text-sm"
                   >
                     <option value="email">Email</option>
                     <option value="push">Push</option>
@@ -1097,7 +1121,7 @@ export const AdminUsers = () => {
                   <select
                     value={notificationForm.priority}
                     onChange={e => setNotificationForm({ ...notificationForm, priority: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors bg-white text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white text-sm"
                   >
                     <option value="low">Low</option>
                     <option value="normal">Normal</option>
@@ -1122,7 +1146,7 @@ export const AdminUsers = () => {
                 <button
                   type="submit"
                   disabled={isSendingNotification}
-                  className="flex-1 px-4 py-2.5 text-white bg-black hover:bg-gray-900 rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
+                  className="flex-1 px-4 py-2.5 text-white bg-primary hover:bg-gray-900 rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
                 >
                   {isSendingNotification ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send'}
                 </button>

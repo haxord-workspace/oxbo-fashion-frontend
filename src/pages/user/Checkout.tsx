@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Edit2, Trash2 } from 'lucide-react';
 import { LoadingButton } from '../../components/common/LoadingButton';
 import toast from 'react-hot-toast';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
@@ -25,10 +25,13 @@ const Checkout: React.FC = () => {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [isDeletingAddress, setIsDeletingAddress] = useState<string | null>(null);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
   const [addressForm, setAddressForm] = useState<UserAddress>({
     type: 'home', fullName: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', country: 'India', postalCode: '', isDefault: true
   });
+  const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
   
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setAddressForm({ ...addressForm, [e.target.name]: e.target.value });
@@ -121,19 +124,72 @@ const Checkout: React.FC = () => {
     
     setIsSavingAddress(true);
     try {
-      const response: any = await userAddressesApi.addAddress(addressForm);
-      const newAddress = response.data?.data || response.data || response;
-      setAddresses([...addresses, newAddress]);
-      setSelectedAddressId(newAddress._id);
-      setIsAddingAddress(false);
-      setAddressForm({ type: 'home', fullName: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', country: 'India', postalCode: '', isDefault: true });
-      toast.success('Address saved successfully');
-      return newAddress._id;
+      if (editingAddressId) {
+        const response: any = await userAddressesApi.updateAddress(editingAddressId, addressForm);
+        const updatedAddress = response.data?.data || response.data || response;
+        setAddresses(addresses.map(a => a._id === editingAddressId ? updatedAddress : a));
+        setSelectedAddressId(updatedAddress._id);
+        setIsAddingAddress(false);
+        setEditingAddressId(null);
+        setAddressForm({ type: 'home', fullName: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', country: 'India', postalCode: '', isDefault: true });
+        toast.success('Address updated successfully');
+        return updatedAddress._id;
+      } else {
+        const response: any = await userAddressesApi.addAddress(addressForm);
+        const newAddress = response.data?.data || response.data || response;
+        setAddresses([...addresses, newAddress]);
+        setSelectedAddressId(newAddress._id);
+        setIsAddingAddress(false);
+        setAddressForm({ type: 'home', fullName: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', country: 'India', postalCode: '', isDefault: true });
+        toast.success('Address saved successfully');
+        return newAddress._id;
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to save address');
       return null;
     } finally {
       setIsSavingAddress(false);
+    }
+  };
+
+  const handleEditAddress = (address: UserAddress) => {
+    setAddressForm({
+      type: address.type,
+      fullName: address.fullName,
+      phone: address.phone,
+      addressLine1: address.addressLine1,
+      addressLine2: address.addressLine2 || '',
+      city: address.city,
+      state: address.state,
+      country: address.country || 'India',
+      postalCode: address.postalCode,
+      isDefault: address.isDefault || false
+    });
+    setEditingAddressId(address._id || null);
+    setIsAddingAddress(true);
+  };
+
+  const confirmDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAddressToDelete(id);
+  };
+
+  const handleDeleteAddress = async () => {
+    if (!addressToDelete) return;
+    const id = addressToDelete;
+    setIsDeletingAddress(id);
+    try {
+      await userAddressesApi.deleteAddress(id);
+      setAddresses(addresses.filter(a => a._id !== id));
+      if (selectedAddressId === id) {
+        setSelectedAddressId(addresses.find(a => a._id !== id)?._id || null);
+      }
+      toast.success('Address deleted successfully');
+      setAddressToDelete(null);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to delete address');
+    } finally {
+      setIsDeletingAddress(null);
     }
   };
 
@@ -161,39 +217,50 @@ const Checkout: React.FC = () => {
           return;
         }
 
-        // 1. Call placeholder API to get Razorpay order_id
-        const orderRes: any = await userOrdersApi.createRazorpayOrder({ amount: total, shippingAddressId: finalAddressId }).catch(err => {
-          console.warn('Fallback due to missing razorpay backend create:', err);
-          return { data: { id: 'order_dummy_id', amount: total * 100 } };
+        // 1. Create the order in the database first (as PENDING)
+        const dbOrderRes: any = await userOrdersApi.createOrder({
+          shippingAddressId: finalAddressId,
+          paymentReference: 'PENDING_RAZORPAY',
+          notes: ''
         });
         
-        const rzpOrderId = orderRes?.data?.id || orderRes?.id || 'dummy_order_id';
+        const orderData = dbOrderRes?.data?.data || dbOrderRes?.data || dbOrderRes;
+        const myOrderId = orderData?._id || orderData?.id;
 
-        // 2. Initialize Razorpay options
+        if (!myOrderId) {
+          toast.error('Failed to create order. Please try again.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // 2. Get Razorpay Order ID from backend
+        const orderRes: any = await userOrdersApi.createRazorpayOrder({ orderId: myOrderId });
+        const rzpOrderId = orderRes?.data?.razorpayOrder?.id || orderRes?.data?.id || orderRes?.id || orderRes?.razorpayOrderId;
+        
+        if (!rzpOrderId) {
+          toast.error('Failed to initialize payment gateway.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // 3. Initialize Razorpay options
         const options = {
-          key: 'rzp_test_placeholder', // REPLACE with your actual Razorpay Key_ID from backend or env
-          amount: total * 100, // paise
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_TFnF0Gb7WxO1Os', // Your public key
+          amount: total * 100, // grandTotalInPaise
           currency: 'INR',
-          name: 'Oxbo Fashion',
-          description: 'Test Transaction',
-          order_id: rzpOrderId,
+          name: "Oxbo Men's Wear",
+          description: 'Payment for your order',
+          order_id: rzpOrderId, // The ID you got from Step 2
           handler: async function (response: any) {
             try {
-              // 3. Verify payment signature on backend
+              // 4. Verify payment signature on backend
               await userOrdersApi.verifyRazorpayPayment({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature
-              }).catch(err => console.warn('Fallback verify:', err));
-              
-              // 4. Finally create the order in our system if successful
-              await userOrdersApi.createOrder({
-                shippingAddressId: finalAddressId,
-                paymentReference: response.razorpay_payment_id,
-                notes: ''
               });
-
-              toast.success('Payment successful & Order placed!');
+              
+              toast.success('Payment successful!');
               navigate('/orders');
             } catch (err: any) {
               toast.error(err.response?.data?.message || 'Payment verification failed');
@@ -256,7 +323,7 @@ const Checkout: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
           <button 
             onClick={() => navigate(-1)} 
-            className="flex items-center text-sm font-medium text-gray-500 hover:text-black transition-colors"
+            className="flex items-center text-sm font-medium text-gray-500 hover:text-primary transition-colors"
           >
             <ChevronLeft size={16} className="mr-1" />
             Back to Cart
@@ -275,7 +342,11 @@ const Checkout: React.FC = () => {
               <h2 className="text-lg font-bold uppercase tracking-wider mb-6 pb-2 border-b border-gray-100 flex justify-between items-center">
                 Shipping Address
                 {!isAddingAddress && addresses.length > 0 && (
-                  <button type="button" onClick={() => setIsAddingAddress(true)} className="text-sm text-blue-600 font-medium hover:underline">
+                  <button type="button" onClick={() => {
+                    setAddressForm({ type: 'home', fullName: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', country: 'India', postalCode: '', isDefault: true });
+                    setEditingAddressId(null);
+                    setIsAddingAddress(true);
+                  }} className="text-sm text-blue-600 font-medium hover:underline">
                     + Add New
                   </button>
                 )}
@@ -331,19 +402,23 @@ const Checkout: React.FC = () => {
                   </div>
                   <div className="mt-6 flex justify-end gap-3">
                     {addresses.length > 0 && (
-                      <button type="button" onClick={() => setIsAddingAddress(false)} className="px-6 py-3 border border-gray-300 text-sm font-bold uppercase hover:bg-gray-50 transition-colors">
+                      <button type="button" onClick={() => {
+                        setIsAddingAddress(false);
+                        setEditingAddressId(null);
+                        setAddressForm({ type: 'home', fullName: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', country: 'India', postalCode: '', isDefault: true });
+                      }} className="px-6 py-3 border border-gray-300 text-sm font-bold uppercase hover:bg-gray-50 transition-colors">
                         Cancel
                       </button>
                     )}
-                    <button type="button" onClick={handleSaveAddress} disabled={isSavingAddress} className="px-6 py-3 bg-black text-white text-sm font-bold uppercase hover:bg-gray-900 transition-colors">
-                      {isSavingAddress ? 'Saving...' : 'Save Address'}
+                    <button type="button" onClick={handleSaveAddress} disabled={isSavingAddress} className="px-6 py-3 bg-primary text-white text-sm font-bold uppercase hover:bg-gray-900 transition-colors">
+                      {isSavingAddress ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {addresses.map((address) => (
-                    <label key={address._id} className={`block border ${selectedAddressId === address._id ? 'border-black bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors relative`}>
+                    <label key={address._id} className={`block border ${selectedAddressId === address._id ? 'border-primary bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors relative`}>
                       <div className="flex items-start">
                         <input 
                           type="radio" 
@@ -351,12 +426,36 @@ const Checkout: React.FC = () => {
                           value={address._id} 
                           checked={selectedAddressId === address._id} 
                           onChange={() => setSelectedAddressId(address._id || null)}
-                          className="mt-1 h-4 w-4 text-black focus:ring-black border-gray-300"
+                          className="mt-1 h-4 w-4 text-primary focus:ring-primary border-gray-300"
                         />
                         <div className="ml-3 flex-1">
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-gray-900">{address.fullName}</span>
-                            <span className="px-2 py-1 bg-gray-200 text-[10px] font-bold uppercase tracking-wider rounded-sm">{address.type}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-1 bg-gray-200 text-[10px] font-bold uppercase tracking-wider rounded-sm">{address.type}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditAddress(address);
+                                }}
+                                className="text-gray-500 hover:text-primary transition-colors p-1"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  if (address._id) {
+                                    confirmDelete(address._id, e);
+                                  }
+                                }}
+                                disabled={isDeletingAddress === address._id}
+                                className={`text-gray-500 hover:text-red-500 transition-colors p-1 ${isDeletingAddress === address._id ? 'opacity-50' : ''}`}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
                           <p className="text-gray-600 text-sm mt-1">{address.addressLine1} {address.addressLine2 ? `, ${address.addressLine2}` : ''}</p>
                           <p className="text-gray-600 text-sm">{address.city}, {address.state}, {address.postalCode}</p>
@@ -373,7 +472,7 @@ const Checkout: React.FC = () => {
             <div>
               <h2 className="text-lg font-bold uppercase tracking-wider mb-6 pb-2 border-b border-gray-100">Payment Method</h2>
               <div className="space-y-4">
-                <label className={`block border ${paymentMethod === 'razorpay' ? 'border-black bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors`}>
+                <label className={`block border ${paymentMethod === 'razorpay' ? 'border-primary bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors`}>
                   <div className="flex items-center">
                     <input 
                       type="radio" 
@@ -381,7 +480,7 @@ const Checkout: React.FC = () => {
                       value="razorpay" 
                       checked={paymentMethod === 'razorpay'} 
                       onChange={() => setPaymentMethod('razorpay')}
-                      className="h-4 w-4 text-black focus:ring-black border-gray-300"
+                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
                     />
                     <span className="ml-3 text-sm font-medium uppercase tracking-wide">Razorpay (Online Payment)</span>
                   </div>
@@ -392,7 +491,7 @@ const Checkout: React.FC = () => {
                   )}
                 </label>
 
-                <label className={`block border ${paymentMethod === 'cod' ? 'border-black bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors`}>
+                <label className={`block border ${paymentMethod === 'cod' ? 'border-primary bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors`}>
                   <div className="flex items-center">
                     <input 
                       type="radio" 
@@ -400,7 +499,7 @@ const Checkout: React.FC = () => {
                       value="cod" 
                       checked={paymentMethod === 'cod'} 
                       onChange={() => setPaymentMethod('cod')}
-                      className="h-4 w-4 text-black focus:ring-black border-gray-300"
+                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
                     />
                     <span className="ml-3 text-sm font-medium uppercase tracking-wide">Cash on Delivery (COD)</span>
                   </div>
@@ -442,7 +541,7 @@ const Checkout: React.FC = () => {
                     onChange={(e) => setCouponInput(e.target.value)}
                     disabled={!!couponCode}
                     placeholder="Enter code" 
-                    className="flex-1 border rounded-none px-4 py-2 text-sm focus:outline-none border-gray-300 focus:border-black"
+                    className="flex-1 border rounded-none px-4 py-2 text-sm focus:outline-none border-gray-300 focus:border-primary"
                   />
                   {couponCode ? (
                     <button type="button" onClick={handleRemoveCoupon} className="bg-red-500 text-white px-4 py-2 text-xs font-bold uppercase hover:bg-red-600 transition-colors">
@@ -453,7 +552,7 @@ const Checkout: React.FC = () => {
                       type="button" 
                       onClick={handleApplyCoupon} 
                       disabled={isLoading}
-                      className={`text-white px-4 py-2 text-xs font-bold uppercase transition-colors ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-black hover:bg-gray-800'}`}
+                      className={`text-white px-4 py-2 text-xs font-bold uppercase transition-colors ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-gray-800'}`}
                     >
                       {isLoading ? 'Applying' : 'Apply'}
                     </button>
@@ -488,7 +587,7 @@ const Checkout: React.FC = () => {
               <LoadingButton 
                 type="submit"
                 isLoading={isSubmitting}
-                className="w-full bg-black text-white py-4 mt-8 text-sm font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                className="w-full bg-primary text-white py-4 mt-8 text-sm font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               >
                 Place Order
               </LoadingButton>
@@ -500,6 +599,33 @@ const Checkout: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {addressToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !isDeletingAddress && setAddressToDelete(null)}></div>
+          <div className="relative bg-white p-6 max-w-sm w-full z-10 shadow-xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-bold uppercase mb-2">Delete Address</h3>
+            <p className="text-gray-600 text-sm mb-6">Are you sure you want to delete this address? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setAddressToDelete(null)}
+                className="px-4 py-2 border border-gray-300 text-sm font-bold uppercase hover:bg-gray-50 transition-colors"
+                disabled={!!isDeletingAddress}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDeleteAddress}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-bold uppercase hover:bg-red-700 transition-colors"
+                disabled={!!isDeletingAddress}
+              >
+                {isDeletingAddress ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

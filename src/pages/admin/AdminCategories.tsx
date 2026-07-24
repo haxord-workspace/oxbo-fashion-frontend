@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppSelector } from '../../app/hooks';
 import { selectIsStoreManager } from '../../features/auth/authSlice';
-import { Plus, Edit2, Trash2, Search, Loader2, Image as ImageIcon, Filter } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Plus, Edit2, Trash2, Search, Loader2, Image as ImageIcon, Filter, Package, FolderTree, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import { adminCategoriesApi } from '../../services/admin/admincategories.Api';
+import { adminProductApi } from '../../services/admin/adminProduct.Api';
 import { ImageCropper } from '../../components/common/ImageCropper';
 import type { Category } from '../../types';
 
@@ -16,7 +16,6 @@ interface FormErrors {
 }
 
 export const AdminCategories = () => {
-  const navigate = useNavigate();
   const isStoreManager = useAppSelector(selectIsStoreManager);
   
   // Data States
@@ -36,6 +35,17 @@ export const AdminCategories = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete'>('add');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+
+  // View Mode States
+  const [viewMode, setViewMode] = useState<'main' | 'subcategories' | 'products'>('main');
+  const [subcategoryHistory, setSubcategoryHistory] = useState<any[]>([]);
+  const [subcategories, setSubcategories] = useState<Category[]>([]);
+  const [categoryForProducts, setCategoryForProducts] = useState<any>(null);
+  const [categoryProducts, setCategoryProducts] = useState<any[]>([]);
+
+  // Empty State Modal
+  const [isEmptyModalOpen, setIsEmptyModalOpen] = useState(false);
+  const [emptyModalContent, setEmptyModalContent] = useState('');
 
   // Form States
   const [categoryForm, setCategoryForm] = useState<{
@@ -90,16 +100,96 @@ export const AdminCategories = () => {
     }
   }, []);
 
+  const handleViewSubcategories = async (category: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsLoading(true);
+    try {
+      const data = await adminCategoriesApi.getCategoryChildren(category._id || category.id);
+      if (!data.categories || data.categories.length === 0) {
+         setEmptyModalContent(`No subcategories found for ${category.name}`);
+         setIsEmptyModalOpen(true);
+      } else {
+         setSubcategories(data.categories);
+         setSubcategoryHistory([category]);
+         setViewMode('subcategories');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to fetch subcategories');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewNestedSubcategories = async (category: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsLoading(true);
+    try {
+      const data = await adminCategoriesApi.getCategoryChildren(category._id || category.id);
+      if (!data.categories || data.categories.length === 0) {
+         setEmptyModalContent(`No subcategories found for ${category.name}`);
+         setIsEmptyModalOpen(true);
+      } else {
+         setSubcategories(data.categories);
+         setSubcategoryHistory(prev => [...prev, category]);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to fetch subcategories');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBack = async () => {
+    if (viewMode === 'products') {
+      setViewMode(subcategoryHistory.length > 0 ? 'subcategories' : 'main');
+    } else if (viewMode === 'subcategories') {
+      const newHistory = [...subcategoryHistory];
+      newHistory.pop();
+      if (newHistory.length === 0) {
+        setViewMode('main');
+        setSubcategoryHistory([]);
+      } else {
+        setSubcategoryHistory(newHistory);
+        const prevCategory = newHistory[newHistory.length - 1];
+        setIsLoading(true);
+        try {
+          const data = await adminCategoriesApi.getCategoryChildren(prevCategory._id || prevCategory.id);
+          setSubcategories(data.categories || []);
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to fetch subcategories');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    }
+  };
+
+  const handleViewProducts = async (category: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsLoading(true);
+    try {
+      const data = await adminProductApi.getProducts({ category: category._id || category.id });
+      if (!data.products || data.products.length === 0) {
+         setEmptyModalContent(`No products found in ${category.name}`);
+         setIsEmptyModalOpen(true);
+      } else {
+         setCategoryProducts(data.products);
+         setCategoryForProducts(category);
+         setViewMode('products');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to fetch products');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCategories();
     fetchCategoryTree();
   }, [fetchCategories, fetchCategoryTree]);
 
   // Reset to first page when searching or filtering
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
-
   const openModal = (mode: 'add' | 'edit' | 'delete', category: any = null) => {
     setModalMode(mode);
     setSelectedCategory(category);
@@ -174,12 +264,7 @@ export const AdminCategories = () => {
       if (modalMode === 'add') {
         const response = await adminCategoriesApi.createCategory(formData);
         toast.success(response.message || 'Category created successfully');
-        if (response.category) {
-          setCategories([response.category, ...categories]);
-          setTotalCategories(prev => prev + 1);
-        } else {
-          fetchCategories();
-        }
+        fetchCategories(); // Always fetch to maintain correct pagination size
       } else if (modalMode === 'edit' && selectedCategory) {
         const categoryId = selectedCategory._id || selectedCategory.id || '';
         const response = await adminCategoriesApi.updateCategory(categoryId, formData);
@@ -216,18 +301,13 @@ export const AdminCategories = () => {
     try {
       const response = await adminCategoriesApi.deleteCategory(categoryId);
       toast.success(response.message || 'Category deleted successfully');
-      setCategories(categories.filter(c => (c._id || c.id) !== categoryId));
-      setTotalCategories(prev => prev - 1);
+      fetchCategories(); // Re-fetch to get correct page sizing
       setIsModalOpen(false);
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete category');
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleRowClick = (id: string) => {
-    navigate(`/admin/categories/${id}`);
   };
 
   const renderCategoryOptions = (cats: any[], depth = 0): React.ReactNode => {
@@ -250,134 +330,222 @@ export const AdminCategories = () => {
   return (
     <>
       <PageWrapper 
-        title="Categories"
+        title={
+          <div className="flex items-center gap-3">
+            {viewMode !== 'main' && (
+              <button onClick={handleBack} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center border border-gray-200">
+                <ArrowLeft size={18} className="text-gray-700" />
+              </button>
+            )}
+            <span>
+              {viewMode === 'main' ? 'Categories' 
+               : viewMode === 'subcategories' ? `${subcategoryHistory[subcategoryHistory.length - 1]?.name} - Subcategories` 
+               : `Products in ${categoryForProducts?.name}`}
+            </span>
+          </div>
+        }
         headerAction={
-          <button 
-            onClick={() => openModal('add')}
-            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            <Plus size={18} />
-            <span className="text-sm font-medium">Add Category</span>
-          </button>
+          viewMode === 'main' && (
+            <button 
+              onClick={() => openModal('add')}
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              <Plus size={18} />
+              <span className="text-sm font-medium">Add Category</span>
+            </button>
+          )
         }
       >
-        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search categories..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-colors text-sm"
-            />
+        {viewMode === 'main' && (
+          <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full sm:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search categories..." 
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/5 focus:border-primary transition-colors text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Filter size={18} className="text-gray-500" />
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value as any);
+                  setCurrentPage(1);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/5 focus:border-primary transition-colors text-sm bg-white"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Filter size={18} className="text-gray-500" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-colors text-sm bg-white"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-gray-200 text-sm text-gray-500 uppercase tracking-wider">
-                <th className="pb-3 font-medium px-4">Image</th>
-                <th className="pb-3 font-medium px-4">Category Name</th>
-                <th className="pb-3 font-medium px-4">Sort Order</th>
-                <th className="pb-3 font-medium px-4">Status</th>
-                <th className="pb-3 font-medium px-4 text-right">Actions</th>
-              </tr>
+              {viewMode === 'products' ? (
+                <tr className="border-b border-gray-200 text-sm text-gray-500 uppercase tracking-wider">
+                  <th className="pb-3 font-medium px-4">Image</th>
+                  <th className="pb-3 font-medium px-4">Product Name</th>
+                  <th className="pb-3 font-medium px-4 text-center">Price</th>
+                  <th className="pb-3 font-medium px-4 text-center">Stock</th>
+                  <th className="pb-3 font-medium px-4 text-right">Status</th>
+                </tr>
+              ) : (
+                <tr className="border-b border-gray-200 text-sm text-gray-500 uppercase tracking-wider">
+                  <th className="pb-3 font-medium px-4">Image</th>
+                  <th className="pb-3 font-medium px-4">Category Name</th>
+                  <th className="pb-3 font-medium px-4 text-center">Total Subcategories</th>
+                  <th className="pb-3 font-medium px-4 text-center">Total Products</th>
+                  <th className="pb-3 font-medium px-4">Sort Order</th>
+                  <th className="pb-3 font-medium px-4">Status</th>
+                  <th className="pb-3 font-medium px-4 text-right">Actions</th>
+                </tr>
+              )}
             </thead>
             <tbody className="text-sm">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-500">
+                  <td colSpan={7} className="py-12 text-center text-gray-500">
                     <div className="flex justify-center items-center">
                       <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                      Loading categories...
+                      Loading...
                     </div>
                   </td>
                 </tr>
-              ) : categories.length > 0 ? (
-                categories.map(cat => (
-                  <tr 
-                    key={cat._id || cat.id} 
-                    onClick={() => handleRowClick(cat._id || cat.id || '')}
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
-                  >
-                    <td className="py-3 px-4">
-                      {cat.image ? (
-                        <img src={cat.image} alt={cat.name} className="w-10 h-10 object-cover rounded-md bg-gray-100" />
-                      ) : (
-                        <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center text-gray-400">
-                          <ImageIcon size={18} />
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-4 px-4 font-medium text-gray-900">
-                      <div className="text-base">{cat.name}</div>
-                      <div className="mt-1.5">
-                        {cat.parentCategory ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                            Subcategory
-                          </span>
+              ) : viewMode === 'products' ? (
+                categoryProducts.length > 0 ? (
+                  categoryProducts.map(prod => (
+                    <tr key={prod._id || prod.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-4">
+                        {prod.images && prod.images.length > 0 ? (
+                          <img src={prod.images[0].url || prod.images[0]} alt={prod.name} className="w-10 h-10 object-cover rounded-md bg-gray-100" />
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
-                            Main Category
-                          </span>
+                          <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center text-gray-400">
+                            <ImageIcon size={18} />
+                          </div>
                         )}
-                      </div>
-                      {cat.description && <div className="text-xs text-gray-500 font-normal truncate max-w-[250px] mt-1.5">{cat.description}</div>}
-                    </td>
-                    <td className="py-4 px-4 text-gray-600">{cat.sortOrder || 0}</td>
-                    <td className="py-4 px-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${cat.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {cat.isActive !== false ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex justify-end gap-2">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); openModal('edit', cat); }}
-                          className="p-1.5 text-gray-400 hover:text-black transition-colors" 
-                          title="Edit"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        {!isStoreManager && (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); openModal('delete', cat); }}
-                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" 
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
+                      </td>
+                      <td className="py-4 px-4 font-medium text-gray-900">
+                        <div className="text-base truncate max-w-[300px]">{prod.name}</div>
+                      </td>
+                      <td className="py-4 px-4 text-center text-gray-600 font-medium">
+                        ${prod.price?.toFixed(2) || '0.00'}
+                      </td>
+                      <td className="py-4 px-4 text-center text-gray-600 font-medium">
+                        {prod.stock !== undefined ? prod.stock : 'N/A'}
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${prod.status === 'active' || prod.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {prod.status || (prod.isActive !== false ? 'Active' : 'Inactive')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-gray-500 border border-dashed border-gray-300 rounded-lg">
+                      No products found
                     </td>
                   </tr>
-                ))
+                )
               ) : (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-500 border border-dashed border-gray-300 rounded-lg">
-                    No categories found
-                  </td>
-                </tr>
+                (viewMode === 'main' ? categories : subcategories).length > 0 ? (
+                  (viewMode === 'main' ? categories : subcategories).map(cat => (
+                    <tr 
+                      key={cat._id || cat.id} 
+                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="py-3 px-4">
+                        {cat.image ? (
+                          <img src={cat.image} alt={cat.name} className="w-10 h-10 object-cover rounded-md bg-gray-100" />
+                        ) : (
+                          <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center text-gray-400">
+                            <ImageIcon size={18} />
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 px-4 font-medium text-gray-900">
+                        <div className="text-base">{cat.name}</div>
+                        <div className="mt-1.5">
+                          {cat.parentCategory ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                              Subcategory
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                              Main Category
+                            </span>
+                          )}
+                        </div>
+                        {cat.description && <div className="text-xs text-gray-500 font-normal truncate max-w-[250px] mt-1.5">{cat.description}</div>}
+                      </td>
+                      <td className="py-4 px-4 text-center text-gray-600 font-medium">{cat.subCategoryCount !== undefined ? cat.subCategoryCount : (cat.totalSubCategories || 0)}</td>
+                      <td className="py-4 px-4 text-center text-gray-600 font-medium">{cat.productCount !== undefined ? cat.productCount : (cat.totalProducts || 0)}</td>
+                      <td className="py-4 px-4 text-gray-600">{cat.sortOrder || 0}</td>
+                      <td className="py-4 px-4">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${cat.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {cat.isActive !== false ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={(e) => handleViewProducts(cat, e)}
+                            className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors" 
+                            title="View Products"
+                          >
+                            <Package size={16} />
+                          </button>
+                          <button 
+                            onClick={(e) => viewMode === 'main' ? handleViewSubcategories(cat, e) : handleViewNestedSubcategories(cat, e)}
+                            className="p-1.5 text-gray-400 hover:text-purple-500 transition-colors" 
+                            title="View Subcategories"
+                          >
+                            <FolderTree size={16} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); openModal('edit', cat); }}
+                            className="p-1.5 text-gray-400 hover:text-primary transition-colors" 
+                            title="Edit"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          {!isStoreManager && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); openModal('delete', cat); }}
+                              className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" 
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-gray-500 border border-dashed border-gray-300 rounded-lg">
+                      No categories found
+                    </td>
+                  </tr>
+                )
               )}
             </tbody>
           </table>
         </div>
         
-        {totalCategories > 0 && (
+        {viewMode === 'main' && totalCategories > 0 && (
           <div className="mt-6">
             <AdminPagination 
               currentPage={currentPage}
@@ -458,7 +626,7 @@ export const AdminCategories = () => {
                   setCategoryForm({ ...categoryForm, name: e.target.value });
                   if (errors.name) setErrors({...errors, name: undefined});
                 }}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 transition-shadow ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-black'}`}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 transition-shadow ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-primary'}`}
                 placeholder="E.g., Summer Collection"
               />
               {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
@@ -468,7 +636,7 @@ export const AdminCategories = () => {
               <select
                 value={categoryForm.parentCategory}
                 onChange={e => setCategoryForm({ ...categoryForm, parentCategory: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black bg-white transition-shadow"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary bg-white transition-shadow"
               >
                 <option value="">None (Root Category)</option>
                 {categoryTree.length > 0
@@ -488,7 +656,7 @@ export const AdminCategories = () => {
             <textarea
               value={categoryForm.description}
               onChange={e => setCategoryForm({ ...categoryForm, description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black min-h-[80px] resize-none transition-shadow"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary min-h-[80px] resize-none transition-shadow"
               placeholder="Brief description of this category..."
             />
           </div>
@@ -500,7 +668,7 @@ export const AdminCategories = () => {
                 type="number"
                 value={categoryForm.sortOrder}
                 onChange={e => setCategoryForm({ ...categoryForm, sortOrder: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition-shadow"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-shadow"
               />
             </div>
             <div>
@@ -508,7 +676,7 @@ export const AdminCategories = () => {
               <select
                 value={categoryForm.isActive ? 'active' : 'inactive'}
                 onChange={e => setCategoryForm({ ...categoryForm, isActive: e.target.value === 'active' })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black bg-white transition-shadow"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary bg-white transition-shadow"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -522,7 +690,7 @@ export const AdminCategories = () => {
               <button
                 type="button"
                 onClick={() => setCategoryForm({ ...categoryForm, suggestions: [...categoryForm.suggestions, { title: '', description: '' }] })}
-                className="text-xs flex items-center gap-1 text-black font-medium hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                className="text-xs flex items-center gap-1 text-primary font-medium hover:bg-gray-100 px-2 py-1 rounded transition-colors"
               >
                 <Plus size={14} /> Add Suggestion
               </button>
@@ -539,7 +707,7 @@ export const AdminCategories = () => {
                         newSuggestions[index].title = e.target.value;
                         setCategoryForm({ ...categoryForm, suggestions: newSuggestions });
                       }}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                       placeholder="Suggestion Title"
                     />
                     <input
@@ -550,7 +718,7 @@ export const AdminCategories = () => {
                         newSuggestions[index].description = e.target.value;
                         setCategoryForm({ ...categoryForm, suggestions: newSuggestions });
                       }}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                       placeholder="Suggestion Description"
                     />
                   </div>
@@ -585,7 +753,7 @@ export const AdminCategories = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 min-w-[130px] justify-center"
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 min-w-[130px] justify-center"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Category'}
             </button>
@@ -606,6 +774,25 @@ export const AdminCategories = () => {
           aspectRatio={1}
         />
       )}
+
+      <AdminModal
+        isOpen={isEmptyModalOpen}
+        onClose={() => setIsEmptyModalOpen(false)}
+        title="Notice"
+        maxWidth="max-w-md"
+      >
+        <div className="py-6 text-center text-gray-600">
+           {emptyModalContent}
+        </div>
+        <div className="flex justify-end pt-4 border-t border-gray-100 mt-4">
+           <button 
+             onClick={() => setIsEmptyModalOpen(false)}
+             className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors"
+           >
+             Close
+           </button>
+        </div>
+      </AdminModal>
     </>
   );
 };

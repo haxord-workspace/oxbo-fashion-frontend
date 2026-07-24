@@ -10,7 +10,7 @@ import MobileBottomNav from './MobileBottomNav';
 
 const MainLayout: React.FC = () => {
   return (
-    <div className="flex flex-col min-h-screen bg-white overflow-x-hidden pb-[60px] sm:pb-0">
+    <div className="flex flex-col min-h-screen bg-white pb-[60px] sm:pb-0">
       <AnnouncementBar />
       <Navbar />
       <CategoryNav />

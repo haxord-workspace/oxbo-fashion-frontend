@@ -233,7 +233,7 @@ export const AdminInventory = () => {
             <select
               value={storeFilter}
               onChange={(e) => setStoreFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-black bg-white shrink-0"
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-primary bg-white shrink-0"
             >
               <option value="">All Stores</option>
               {stores.map(store => (
@@ -244,7 +244,7 @@ export const AdminInventory = () => {
             </select>
             <button 
               onClick={openUpdateModal}
-              className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors shrink-0"
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors shrink-0"
             >
               <span className="text-sm font-medium">Update Stock</span>
             </button>
@@ -312,7 +312,7 @@ export const AdminInventory = () => {
                           e.stopPropagation();
                           openIndividualUpdateModal(item);
                         }}
-                        className="text-gray-500 hover:text-black transition-colors p-1"
+                        className="text-gray-500 hover:text-primary transition-colors p-1"
                         title="Edit / Adjust Stock"
                       >
                         <Edit size={16} />
@@ -391,7 +391,7 @@ export const AdminInventory = () => {
             <select 
               value={stockForm.storeId} 
               onChange={e => setStockForm({...stockForm, storeId: e.target.value})} 
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-sm bg-white disabled:bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm bg-white disabled:bg-gray-100"
               disabled={isLoadingOptions}
             >
               <option value="">{isLoadingOptions ? 'Loading stores...' : 'Select a store'}</option>
@@ -406,7 +406,7 @@ export const AdminInventory = () => {
             <select 
               value={stockForm.variantId} 
               onChange={e => setStockForm({...stockForm, variantId: e.target.value})} 
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-sm bg-white disabled:bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm bg-white disabled:bg-gray-100"
               disabled={isLoadingOptions}
             >
               <option value="">{isLoadingOptions ? 'Loading variants...' : 'Select a variant'}</option>
@@ -424,7 +424,7 @@ export const AdminInventory = () => {
               type="number" 
               value={stockForm.quantity || ''} 
               onChange={e => setStockForm({...stockForm, quantity: Number(e.target.value)})} 
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm"
               placeholder="e.g. 10 or -5"
             />
           </div>
@@ -435,7 +435,7 @@ export const AdminInventory = () => {
               <textarea 
                 value={stockForm.remarks} 
                 onChange={e => setStockForm({...stockForm, remarks: e.target.value})} 
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black text-sm resize-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm resize-none"
                 placeholder="e.g. Initial stock shipment"
                 rows={2}
               />
@@ -444,7 +444,7 @@ export const AdminInventory = () => {
 
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
             <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-            <LoadingButton type="submit" isLoading={isUpdating} disabled={isLoadingOptions} className={`px-4 py-2 text-white rounded-md transition-colors bg-black hover:bg-gray-800 disabled:bg-gray-400`}>
+            <LoadingButton type="submit" isLoading={isUpdating} disabled={isLoadingOptions} className={`px-4 py-2 text-white rounded-md transition-colors bg-primary hover:bg-gray-800 disabled:bg-gray-400`}>
               Confirm {stockForm.action.charAt(0).toUpperCase() + stockForm.action.slice(1)}
             </LoadingButton>
           </div>
