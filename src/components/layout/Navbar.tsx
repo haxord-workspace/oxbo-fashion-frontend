@@ -53,9 +53,11 @@ const Navbar: React.FC = () => {
         {/* Center: Logo */}
         <div className="flex-1 text-center flex justify-center">
           <Link to="/" className="inline-block">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase italic text-primary" style={{ fontFamily: 'Impact, sans-serif' }}>
-              Oxbo<span className="font-normal text-xl ml-1">✧</span>
-            </h1>
+            <img
+              src="/images/OxboLogo.png"
+              alt="Oxbo"
+              className="h-10 sm:h-12 w-10 sm:w-12 rounded-xl object-cover"
+            />
           </Link>
         </div>
 

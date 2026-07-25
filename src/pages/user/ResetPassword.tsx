@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../../services/authApi';
 import toast from 'react-hot-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface FormErrors {
   email?: string;
@@ -18,6 +18,8 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -136,13 +138,13 @@ const ResetPassword = () => {
               {errors.otp && <p className="mt-1 text-xs text-red-500">{errors.otp}</p>}
             </div>
 
-            <div>
+            <div className="relative">
               <label htmlFor="new-password" className="sr-only">New Password</label>
               <input
                 id="new-password"
                 name="newPassword"
-                type="password"
-                className={`relative block w-full appearance-none rounded-none border px-3 py-3 text-primary placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                type={showNewPassword ? 'text' : 'password'}
+                className={`relative block w-full appearance-none rounded-none border px-3 py-3 pr-10 text-primary placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
                   errors.newPassword ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
                 }`}
                 placeholder="NEW PASSWORD"
@@ -152,16 +154,23 @@ const ResetPassword = () => {
                   if (errors.newPassword) setErrors({ ...errors, newPassword: undefined });
                 }}
               />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center z-10 text-gray-400 hover:text-gray-600 focus:outline-none"
+              >
+                {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
               {errors.newPassword && <p className="mt-1 text-xs text-red-500">{errors.newPassword}</p>}
             </div>
 
-            <div>
+            <div className="relative">
               <label htmlFor="confirm-password" className="sr-only">Confirm Password</label>
               <input
                 id="confirm-password"
                 name="confirmPassword"
-                type="password"
-                className={`relative block w-full appearance-none rounded-none border px-3 py-3 text-primary placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                type={showConfirmPassword ? 'text' : 'password'}
+                className={`relative block w-full appearance-none rounded-none border px-3 py-3 pr-10 text-primary placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
                   errors.confirmPassword ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
                 }`}
                 placeholder="CONFIRM PASSWORD"
@@ -171,6 +180,13 @@ const ResetPassword = () => {
                   if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined });
                 }}
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center z-10 text-gray-400 hover:text-gray-600 focus:outline-none"
+              >
+                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
               {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword}</p>}
             </div>
           </div>

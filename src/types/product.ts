@@ -23,6 +23,8 @@ export interface Product {
   gallery?: string[];
   category: string;
   subCategory?: string;
+  brand?: string;
+  brandId?: { _id?: string; name?: string; slug?: string };
   storeId?: string; // For multi-store
   variants?: ProductVariant[];
 }

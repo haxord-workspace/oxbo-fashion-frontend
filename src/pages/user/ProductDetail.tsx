@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star } from 'lucide-react';
+import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star, Share2 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { addToCartAsync } from '../../features/cart/cartSlice';
 import { toggleCart } from '../../features/ui/uiSlice';
@@ -32,6 +32,7 @@ const ProductDetail: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomStyle, setZoomStyle] = useState({});
@@ -230,6 +231,22 @@ const ProductDetail: React.FC = () => {
     navigate('/checkout');
   };
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = product?.name || 'Check out this product';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+      } catch {
+        // user cancelled — ignore
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }
+  };
+
   const handleToggleWishlist = () => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -361,15 +378,42 @@ const ProductDetail: React.FC = () => {
 
         {/* Right Column: Details */}
         <div className="w-full lg:w-2/5 flex flex-col relative">
-          <button
-            onClick={handleToggleWishlist}
-            className="absolute top-0 right-0 p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors z-10"
-            title="Toggle Wishlist"
-          >
-            <Heart size={20} strokeWidth={1.5} className={isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-500'} />
-          </button>
+          {/* Wishlist + Share buttons */}
+          <div className="absolute top-0 right-0 flex items-center gap-2 z-10">
+            <div className="relative">
+              <button
+                onClick={handleShare}
+                className="p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
+                title="Share this product"
+              >
+                <Share2 size={20} strokeWidth={1.5} className="text-gray-500" />
+              </button>
+              {shareCopied && (
+                <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] whitespace-nowrap bg-gray-800 text-white px-2 py-0.5 rounded">
+                  Copied!
+                </span>
+              )}
+            </div>
+            <button
+              onClick={handleToggleWishlist}
+              className="p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
+              title="Toggle Wishlist"
+            >
+              <Heart size={20} strokeWidth={1.5} className={isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-500'} />
+            </button>
+          </div>
 
-          <p className="text-sm text-gray-500 uppercase tracking-widest mb-2 pr-12">{product.category}</p>
+          <p className="text-sm text-gray-500 uppercase tracking-widest mb-1 pr-12">
+            {(product as any).categoryId?.name || product.category || ''}
+          </p>
+          {(() => {
+            const brandName = (product as any).brandId?.name || product.brand || (product as any).brand;
+            return brandName ? (
+              <p className="text-xs tracking-widest mb-2 pr-12">
+                <span className="font-semibold text-primary uppercase">{brandName}</span>
+              </p>
+            ) : null;
+          })()}
           <h1 className="text-3xl sm:text-4xl font-bold uppercase tracking-wide mb-4 break-words pr-12">{product.name}</h1>
 
           <div className="flex items-center gap-3 mb-6">

@@ -70,5 +70,15 @@ export const adminProductApi = {
   getVariants: async (productId: string): Promise<any> => {
     const response = await api.get(`/products/${productId}/variants`);
     return response.data;
+  },
+
+  deleteProduct: async (productId: string): Promise<any> => {
+    const response = await api.delete(`/products/${productId}`);
+    return response.data;
+  },
+
+  deleteVariant: async (variantId: string): Promise<any> => {
+    const response = await api.delete(`/variants/${variantId}`);
+    return response.data;
   }
 };

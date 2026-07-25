@@ -23,7 +23,7 @@ export const AdminProducts = () => {
   const isStoreManager = useAppSelector(selectIsStoreManager);
   const currentUser = useAppSelector(selectCurrentUser);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete'>('add');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<any[]>([]);
@@ -139,8 +139,35 @@ export const AdminProducts = () => {
   ]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isFetchingVariants, setIsFetchingVariants] = useState(false);
+  const [existingVariants, setExistingVariants] = useState<any[]>([]);
 
-  const openModal = async (mode: 'add' | 'edit', product: any = null) => {
+  const handleRemoveVariantBlock = async (index: number) => {
+    const variantToRemove = variants[index];
+    if (variantToRemove.color && selectedProduct && modalMode === 'edit') {
+      const matchingVariants = existingVariants.filter(ev => ev.attributes?.color?.toLowerCase() === variantToRemove.color.toLowerCase());
+      
+      if (matchingVariants.length > 0) {
+        try {
+          setIsFetchingVariants(true);
+          await Promise.all(matchingVariants.map(v => adminProductApi.deleteVariant(v._id || v.id)));
+          toast.success(`Removed variants for color ${variantToRemove.color}`);
+          setExistingVariants(existingVariants.filter(ev => ev.attributes?.color?.toLowerCase() !== variantToRemove.color.toLowerCase()));
+        } catch (err: any) {
+          toast.error("Failed to delete variants from server");
+          setIsFetchingVariants(false);
+          return;
+        } finally {
+          setIsFetchingVariants(false);
+        }
+      }
+    }
+    
+    const newVariants = [...variants];
+    newVariants.splice(index, 1);
+    setVariants(newVariants);
+  };
+
+  const openModal = async (mode: 'add' | 'edit' | 'delete', product: any = null) => {
     setModalMode(mode);
     setSelectedProduct(product);
     if (mode === 'edit' && product) {
@@ -152,6 +179,7 @@ export const AdminProducts = () => {
         if (productId) {
           const res = await adminProductApi.getVariants(productId);
           fetchedVariants = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+          setExistingVariants(fetchedVariants);
         }
       } catch (error) {
         console.error("Failed to fetch variants", error);
@@ -411,6 +439,67 @@ export const AdminProducts = () => {
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!selectedProduct) return;
+    const productId = selectedProduct._id || selectedProduct.id;
+    try {
+      setLoading(true);
+      await adminProductApi.deleteProduct(productId);
+      toast.success('Product deleted successfully');
+      
+      // Refresh products
+      const refreshParams: any = { page: currentPage, limit: itemsPerPage, search: searchQuery };
+      if (isStoreManager && currentUser) {
+        refreshParams.createdBy = currentUser.id || currentUser._id;
+      }
+      const refreshRes = await adminProductApi.getProducts(refreshParams);
+      const fetchedProducts = refreshRes.products || [];
+      const productsWithVariants = await Promise.all(
+        fetchedProducts.map(async (p: any) => {
+          try {
+            const vRes = await adminProductApi.getVariants(p._id || p.id);
+            const vars = Array.isArray(vRes.data) ? vRes.data : (Array.isArray(vRes) ? vRes : []);
+            if (vars.length > 0) {
+              p.price = vars[0].salePrice || vars[0].price;
+              p.mrp = vars[0].costPrice;
+            }
+            return p;
+          } catch (err) {
+            return p;
+          }
+        })
+      );
+      setProducts(productsWithVariants);
+      setTotalItems(refreshRes.total || 0);
+      setIsModalOpen(false);
+    } catch (error: any) {
+      console.error("Failed to delete product", error);
+      toast.error(error.response?.data?.message || error.message || "Failed to delete product");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (product: any) => {
+    try {
+      const currentStatus = product.status?.toLowerCase() === 'active' || product.isActive ? 'active' : 'inactive';
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      
+      await adminProductApi.updateProductStatus(product._id || product.id, newStatus);
+      toast.success(`Product marked as ${newStatus}`);
+      
+      setProducts(products.map(p => {
+        if ((p._id || p.id) === (product._id || product.id)) {
+          return { ...p, status: newStatus, isActive: newStatus === 'active' };
+        }
+        return p;
+      }));
+    } catch (error: any) {
+      console.error("Failed to update status", error);
+      toast.error(error.response?.data?.message || "Failed to update status");
+    }
+  };
+
   const currentProducts = products;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
@@ -482,9 +571,13 @@ export const AdminProducts = () => {
                       ) : 'N/A'}
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${product.status?.toLowerCase() === 'active' || product.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      <button 
+                        onClick={() => handleToggleStatus(product)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${product.status?.toLowerCase() === 'active' || product.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        title="Click to toggle status"
+                      >
                         {product.status ? product.status.charAt(0).toUpperCase() + product.status.slice(1) : (product.isActive ? 'Active' : 'Inactive')}
-                      </span>
+                      </button>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex justify-end gap-2">
@@ -496,7 +589,7 @@ export const AdminProducts = () => {
                           <Edit2 size={16} />
                         </button>
                         {!isStoreManager && (
-                          <button className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                          <button onClick={() => openModal('delete', product)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
                             <Trash2 size={16} />
                           </button>
                         )}
@@ -527,9 +620,24 @@ export const AdminProducts = () => {
       <AdminModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={modalMode === 'add' ? 'Add New Product' : 'Edit Product'}
+        title={modalMode === 'add' ? 'Add New Product' : modalMode === 'edit' ? 'Edit Product' : 'Delete Product'}
       >
-        {isFetchingVariants ? (
+        {modalMode === 'delete' ? (
+          <div className="space-y-4">
+            <p className="text-gray-600 leading-relaxed">
+              Are you sure you want to delete <span className="font-semibold text-gray-900">{selectedProduct?.name}</span>?
+              This action cannot be undone.
+            </p>
+            <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
+              <button type="button" onClick={() => setIsModalOpen(false)} disabled={loading} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                Cancel
+              </button>
+              <LoadingButton onClick={handleDeleteProduct} isLoading={loading} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50">
+                Delete Product
+              </LoadingButton>
+            </div>
+          </div>
+        ) : isFetchingVariants ? (
           <div className="flex flex-col items-center justify-center py-12">
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
             <p className="text-gray-500 font-medium">Loading product variants...</p>
@@ -718,7 +826,17 @@ export const AdminProducts = () => {
             <h4 className="text-sm font-bold mb-3 uppercase">Variants & Inventory</h4>
 
             {variants.map((v, index) => (
-              <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+              <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4 relative">
+                {variants.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveVariantBlock(index)}
+                    className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                    title="Remove Variant"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
                 <div className="grid grid-cols-2 gap-4 mb-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Color Name</label>

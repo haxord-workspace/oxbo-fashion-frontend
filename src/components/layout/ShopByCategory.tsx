@@ -12,16 +12,24 @@ interface Category {
 const ShopByCategory: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     const fetchCategories = async () => {
       setIsLoading(true);
       try {
-        const response = await axiosInstance.get('/categories');
-        const data = response.data?.data?.categories || response.data?.data || response.data;
+        const response = await axiosInstance.get(`/categories?limit=4&page=${page}`);
+        const data = response.data?.data?.categories || response.data?.categories || response.data?.data || response.data;
+        const total = response.data?.data?.total || response.data?.total || 0;
+        
         if (Array.isArray(data)) {
           setCategories(data);
+          if (total) {
+            setHasMore(page * 4 < total);
+          } else {
+            setHasMore(data.length === 4);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch categories:', error);
@@ -30,21 +38,21 @@ const ShopByCategory: React.FC = () => {
       }
     };
     fetchCategories();
-  }, []);
+  }, [page]);
 
   const nextSlide = () => {
-    if (currentIndex + 4 < categories.length) {
-      setCurrentIndex((prev) => prev + 1);
+    if (hasMore) {
+      setPage((prev) => prev + 1);
     }
   };
 
   const prevSlide = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
+    if (page > 1) {
+      setPage((prev) => prev - 1);
     }
   };
 
-  const visibleCategories = categories.slice(currentIndex, currentIndex + 4);
+  const visibleCategories = categories;
 
   if (isLoading && categories.length === 0) {
     return (
@@ -83,7 +91,7 @@ const ShopByCategory: React.FC = () => {
           <div className="flex gap-2">
             <button 
               onClick={prevSlide}
-              disabled={currentIndex === 0}
+              disabled={page === 1}
               className="p-2 md:p-3 rounded-full border border-gray-300 hover:bg-black hover:text-white disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-black disabled:cursor-not-allowed transition-all"
               aria-label="Previous categories"
             >
@@ -93,7 +101,7 @@ const ShopByCategory: React.FC = () => {
             </button>
             <button 
               onClick={nextSlide}
-              disabled={currentIndex + 4 >= categories.length}
+              disabled={!hasMore}
               className="p-2 md:p-3 rounded-full border border-gray-300 hover:bg-black hover:text-white disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-black disabled:cursor-not-allowed transition-all"
               aria-label="Next categories"
             >

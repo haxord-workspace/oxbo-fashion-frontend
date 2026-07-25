@@ -22,7 +22,7 @@ const Home: React.FC = () => {
       <BannerDisplay position="Home-Middle" />
 
       {/* Product Grid Section */}
-      <ProductGrid />
+      <ProductGrid pageSize={8} showPagination={false} />
 
       {/* Reviews Section */}
       <Reviews />
