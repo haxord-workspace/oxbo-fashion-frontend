@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.git
+*.log
+build_output.txt
+products_dump.json
+variants_dump.json
