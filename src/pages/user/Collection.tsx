@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { Filter, X } from 'lucide-react';
 import InfiniteProductGrid from '../../components/layout/InfiniteProductGrid';
 import BannerDisplay from '../../components/layout/BannerDisplay';
-import axiosInstance from '../../services/axiosInstance';
+import api from '../../services/api';
 
 const Collection: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -21,7 +21,7 @@ const Collection: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axiosInstance.get('/categories');
+        const response = await api.get('/categories');
         const data = response.data?.data?.categories || response.data?.data || response.data;
         if (Array.isArray(data)) {
           setCategories(data);

@@ -141,18 +141,21 @@ export const selectUserRole = (state: RootState) => {
   let role = 'user';
   if (user.role && typeof user.role === 'string') role = user.role;
   else if (user.roleId?.name) role = user.roleId.name;
-  
-  const roleStr = String(role).toLowerCase();
-  const emailStr = String(user.email || '').toLowerCase();
 
-  if (roleStr === 'admin' || roleStr.includes('admin') || emailStr.includes('admin')) {
+  // Only ever derived from the backend-supplied role name/id above - never
+  // from the user's own email string. An admin/store gate based on whether
+  // the email contains "admin"/"manager"/"store" is bypassable by anyone
+  // who signs up with a matching email address.
+  const roleStr = String(role).toLowerCase();
+
+  if (roleStr === 'admin' || roleStr.includes('admin')) {
     return 'admin';
   }
-  
-  if (roleStr === 'storemanager' || roleStr.includes('manager') || roleStr.includes('store') || emailStr.includes('manager') || emailStr.includes('store')) {
+
+  if (roleStr === 'storemanager' || roleStr.includes('manager') || roleStr.includes('store')) {
     return 'storemanager';
   }
-  
+
   return role;
 };
 export const selectIsAdmin = (state: RootState) => selectUserRole(state) === 'admin';
