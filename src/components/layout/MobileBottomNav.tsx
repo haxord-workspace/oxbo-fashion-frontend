@@ -22,7 +22,15 @@ const MobileBottomNav: React.FC = () => {
       try {
         const response = await userNotificationsApi.getUnreadNotifications();
         if (isMounted) {
-          setUnreadCount(response.count || response.unreadCount || response || 0);
+          let count = 0;
+          if (Array.isArray(response?.data)) {
+            count = response.data.length;
+          } else if (Array.isArray(response)) {
+            count = response.length;
+          } else {
+            count = response?.count || response?.unreadCount || 0;
+          }
+          setUnreadCount(count);
         }
       } catch (error) {
         console.error('Failed to fetch unread notifications count', error);

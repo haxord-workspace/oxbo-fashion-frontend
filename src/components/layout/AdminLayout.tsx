@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { logout, selectCurrentUser, selectIsStoreManager } from '../../features/auth/authSlice';
+import { logout, selectCurrentUser, selectIsStoreManager, selectIsAuthenticated } from '../../features/auth/authSlice';
 import { authApi } from '../../services/authApi';
+import { userNotificationsApi } from '../../services/user/notifications.Api';
 import toast from 'react-hot-toast';
 import {
   LayoutDashboard,
@@ -48,6 +49,33 @@ const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const user = useAppSelector(selectCurrentUser);
   const isStoreManager = useAppSelector(selectIsStoreManager);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUnreadCount = async () => {
+      if (!isAuthenticated) return;
+      try {
+        const response = await userNotificationsApi.getUnreadNotifications();
+        if (isMounted) {
+          let count = 0;
+          if (Array.isArray(response?.data)) {
+            count = response.data.length;
+          } else if (Array.isArray(response)) {
+            count = response.length;
+          } else {
+            count = response?.count || response?.unreadCount || 0;
+          }
+          setUnreadCount(count);
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread notifications count', error);
+      }
+    };
+    
+    fetchUnreadCount();
+  }, [isAuthenticated, location.pathname]);
 
   const handleLogout = async () => {
     try {
@@ -148,6 +176,11 @@ const AdminLayout: React.FC = () => {
                 title="Notifications"
               >
                 <Bell size={22} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
