@@ -245,8 +245,11 @@ const cartSlice = createSlice({
 export const { addItemLocal } = cartSlice.actions;
 
 // Selectors
-export const selectCartCount = (state: RootState) => 
-  state.cart.items.reduce((count, item) => count + (item.quantity || 0), 0);
+// Only show cart count when the user is authenticated — never show a badge for guests
+export const selectCartCount = (state: RootState) => {
+  if (!state.auth?.user) return 0;
+  return state.cart.items.reduce((count, item) => count + (item.quantity || 0), 0);
+};
 
 export const selectCartTotal = (state: RootState) => {
   const subtotal = state.cart.items.reduce((total, item) => {

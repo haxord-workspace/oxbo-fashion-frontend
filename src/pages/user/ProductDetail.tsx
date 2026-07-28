@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star, Share2 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { addToCartAsync } from '../../features/cart/cartSlice';
@@ -17,6 +17,7 @@ const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -72,18 +73,6 @@ const ProductDetail: React.FC = () => {
         
         setProduct(actualProduct);
         setRelatedProducts(relatedList.filter((p: any) => p.id !== id && p._id !== id).slice(0, 4));
-        
-        // Setup initial defaults
-        if (actualProduct.variants && actualProduct.variants.length > 0) {
-          const firstColor = actualProduct.variants[0].attributes?.color || actualProduct.variants[0].color;
-          if (firstColor) setSelectedColor(firstColor);
-          
-          if (actualProduct.variants[0].attributes?.size || actualProduct.variants[0].size) {
-            setSelectedSize(actualProduct.variants[0].attributes?.size || actualProduct.variants[0].size);
-          } else if (actualProduct.variants[0].sizes && actualProduct.variants[0].sizes.length > 0) {
-            setSelectedSize(actualProduct.variants[0].sizes[0].size);
-          }
-        }
       } catch (err) {
         console.error('Failed to fetch product details', err);
       } finally {
@@ -165,17 +154,28 @@ const ProductDetail: React.FC = () => {
     }
   }, [selectedColor, availableSizes, selectedSize]);
 
-  // Reset state when product changes
+  // Set default color + size whenever the product loads/changes
   useEffect(() => {
     window.scrollTo(0, 0);
     setSelectedImage(0);
     setQuantity(1);
-    setSelectedColor(product?.variants?.[0]?.color || '');
+    if (product?.variants && product.variants.length > 0) {
+      const firstVariant = product.variants[0];
+      // Support both flat (attributes.color) and legacy (color) structures
+      const firstColor = firstVariant.attributes?.color || firstVariant.color || '';
+      setSelectedColor(firstColor);
+      // Support both flat (attributes.size / size) and nested (sizes[]) structures
+      if (firstVariant.attributes?.size || firstVariant.size) {
+        setSelectedSize(firstVariant.attributes?.size || firstVariant.size || '');
+      } else if (firstVariant.sizes && firstVariant.sizes.length > 0) {
+        setSelectedSize(firstVariant.sizes[0].size || '');
+      }
+    }
   }, [id, product]);
 
   const handleAddToCart = () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
     if (!product) return;
@@ -204,7 +204,7 @@ const ProductDetail: React.FC = () => {
 
   const handleBuyNow = () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
     if (!product) return;
@@ -249,7 +249,7 @@ const ProductDetail: React.FC = () => {
 
   const handleToggleWishlist = () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
     if (!product) return;
@@ -423,10 +423,6 @@ const ProductDetail: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-[#e35a39] mb-8 font-medium">
-            <span className="animate-pulse">⚡</span>
-            <span>{Math.floor(Math.random() * 50) + 10} shoppers viewing this right now</span>
-          </div>
 
           <div className="text-sm text-gray-700 mb-6 flex flex-wrap gap-4">
             <span>Description: <span className="font-semibold">{product.description}</span></span>

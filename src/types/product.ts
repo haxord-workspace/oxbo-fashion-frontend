@@ -1,14 +1,23 @@
 export interface ProductVariant {
   _id?: string;
   id?: string;
-  color: string;
-  images: string[];
+  color?: string;
+  size?: string;
+  status?: string;
+  images?: string[];
   price?: number;
   salePrice?: number;
-  sizes: {
+  sizes?: {
     size: string;
     stock: number;
+    variantId?: string;
   }[];
+  /** Flat API response format: { color, size } nested under attributes */
+  attributes?: {
+    color?: string;
+    size?: string;
+    [key: string]: string | undefined;
+  };
 }
 
 export interface Product {

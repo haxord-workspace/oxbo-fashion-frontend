@@ -1,40 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
-import axiosInstance from '../../services/axiosInstance';
-
-interface Category {
-  _id: string;
-  name: string;
-  slug?: string;
-}
 
 const CategoryNav: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await axiosInstance.get('/categories');
-        const data = response.data?.data?.categories || response.data?.data || response.data;
-        if (Array.isArray(data)) {
-          setCategories(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch categories:', error);
-      }
-    };
-    fetchCategories();
-  }, []);
-
   const navItems = [
     { name: 'HOME', path: '/' },
     { name: 'FLASH SALE ⚡', path: '/collections/flash-sale' },
     { name: 'NEW DROPS', path: '/collections/new-drops' },
     { name: 'ALL DROPS', path: '/collections/all-drops' },
-    ...categories.map(c => ({
-      name: c.name,
-      path: `/collections/${c.slug || c.name.toLowerCase().replace(/\s+/g, '-')}?category=${c._id}`
-    }))
+    { name: 'BELTS', path: '/collections/belts' },
+    { name: 'JEAN CHAINS', path: '/collections/jean-chains' },
+    { name: 'BRACELET', path: '/collections/bracelet' },
+    { name: 'ACCESSORIES', path: '/collections/accessories' },
+    { name: 'TOPS', path: '/collections/tops' },
+    { name: 'WIDE', path: '/collections/wide' },
+    { name: 'STRAIGHT', path: '/collections/straight' },
+    { name: 'BOOTCUT', path: '/collections/bootcut' },
+    { name: 'BAGGY', path: '/collections/baggy' },
+    { name: 'DENIMS', path: '/collections/denims' },
   ];
 
   return (

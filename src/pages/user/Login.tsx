@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { login, setAuthLoading, setAuthError } from '../../features/auth/authSlice';
+import { login, setAuthLoading, setAuthError, selectAuthInitialized } from '../../features/auth/authSlice';
 import { authApi } from '../../services/authApi';
 import toast from 'react-hot-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -19,13 +19,19 @@ const Login: React.FC = () => {
   
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isLoading, user, token } = useAppSelector(state => state.auth);
+  const location = useLocation();
+  const { isLoading, user } = useAppSelector(state => state.auth);
+  const isInitialized = useAppSelector(selectAuthInitialized);
 
+  // The page the user was on before being redirected to login
+  const from = (location.state as any)?.from || '/';
+
+  // Only redirect once auth is confirmed — prevents false redirect on refresh
   useEffect(() => {
-    if (user || token) {
-      navigate('/');
+    if (isInitialized && user) {
+      navigate(from, { replace: true });
     }
-  }, [user, token, navigate]);
+  }, [isInitialized, user, navigate, from]);
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -76,7 +82,7 @@ const Login: React.FC = () => {
       
       dispatch(login(response));
       toast.success(response.message || 'Welcome back!');
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to login';
       dispatch(setAuthError(errorMessage));

@@ -80,5 +80,17 @@ export const adminProductApi = {
   deleteVariant: async (variantId: string): Promise<any> => {
     const response = await api.delete(`/variants/${variantId}`);
     return response.data;
+  },
+
+  getBulkUploadTemplate: async (): Promise<Blob> => {
+    const response = await api.get('/products/bulk-upload/template', { responseType: 'blob' });
+    return response.data;
+  },
+
+  uploadBulkProducts: async (data: FormData): Promise<any> => {
+    const response = await api.post('/products/bulk-upload', data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
   }
 };

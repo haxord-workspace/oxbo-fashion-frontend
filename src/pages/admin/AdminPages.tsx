@@ -12,3 +12,4 @@ export * from './AdminSettings';
 export * from './AdminStores';
 export * from './AdminBrands';
 export * from './AdminNotifications';
+export * from './AdminBulkUpload';

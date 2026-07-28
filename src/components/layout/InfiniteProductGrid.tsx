@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
   addToWishlistAsync,
@@ -19,6 +19,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const productId = product.id || (product as any)._id;
   const isWishlisted = useAppSelector((state) => selectIsWishlisted(state, productId));
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
@@ -27,8 +28,8 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const prod = product as any;
   if (prod.thumbnail) {
     images = [prod.thumbnail, ...(prod.gallery || [])];
-  } else if (product.variants && product.variants.length > 0 && product.variants[0].images?.length > 0) {
-    images = product.variants[0].images;
+  } else if (product.variants && product.variants.length > 0 && product.variants[0].images && product.variants[0].images.length > 0) {
+    images = product.variants[0].images || [];
   } else {
     images = [product.imageUrl || '/placeholder.png'];
   }
@@ -37,7 +38,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isAuthenticated) {
-      navigate('/register');
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
     if (isWishlisted) {
@@ -142,7 +143,7 @@ interface InfiniteProductGridProps {
 
 const InfiniteProductGrid: React.FC<InfiniteProductGridProps> = ({ filters: externalFilters, onProductCount }) => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [page, setPage] = useState(1);
+  const [, setPage] = useState(1);
   const [isFetching, setIsFetching] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Bell, X, Send, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Bell, X, Send } from 'lucide-react';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import { adminNotificationApi } from '../../services/admin/adminNotification.Api';
@@ -20,30 +20,20 @@ const BulkNotificationModal = ({ onClose, onSuccess }: { onClose: () => void; on
   const [form, setForm] = useState({ ...EMPTY_BULK_FORM });
   const [isSending, setIsSending] = useState(false);
 
-  const handleUserIdChange = (index: number, value: string) => {
-    const ids = [...form.userIds];
-    ids[index] = value;
-    setForm({ ...form, userIds: ids });
-  };
 
-  const addUserId = () => setForm({ ...form, userIds: [...form.userIds, ''] });
-
-  const removeUserId = (index: number) => {
-    const ids = form.userIds.filter((_, i) => i !== index);
-    setForm({ ...form, userIds: ids.length ? ids : [''] });
-  };
 
   const handleSend = async () => {
-    const cleanedIds = form.userIds.map(id => id.trim()).filter(Boolean);
     if (!form.title.trim()) return toast.error('Title is required');
     if (!form.message.trim()) return toast.error('Message is required');
-    if (cleanedIds.length === 0) return toast.error('At least one User ID is required');
 
     setIsSending(true);
     try {
-      await adminNotificationApi.sendBulkNotification({
-        ...form,
-        userIds: cleanedIds,
+      await adminNotificationApi.sendAllNotifications({
+        title: form.title,
+        message: form.message,
+        type: form.type,
+        channel: form.channel,
+        priority: form.priority,
       });
       toast.success('Bulk notification sent successfully!');
       onSuccess();

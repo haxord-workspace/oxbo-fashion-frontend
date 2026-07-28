@@ -9,6 +9,63 @@ import { userOrdersApi } from '../../services/user/orders.Api';
 
 import { userAddressesApi } from '../../services/user/addresses.Api';
 import type { UserAddress } from '../../types/address';
+import { CustomSelect, type Option } from '../../components/common/CustomSelect';
+
+const STATE_OPTIONS: Option[] = [
+  { value: '', label: '-- Select State --' },
+  { value: 'Andhra Pradesh', label: 'Andhra Pradesh' },
+  { value: 'Arunachal Pradesh', label: 'Arunachal Pradesh' },
+  { value: 'Assam', label: 'Assam' },
+  { value: 'Bihar', label: 'Bihar' },
+  { value: 'Chhattisgarh', label: 'Chhattisgarh' },
+  { value: 'Goa', label: 'Goa' },
+  { value: 'Gujarat', label: 'Gujarat' },
+  { value: 'Haryana', label: 'Haryana' },
+  { value: 'Himachal Pradesh', label: 'Himachal Pradesh' },
+  { value: 'Jharkhand', label: 'Jharkhand' },
+  { value: 'Karnataka', label: 'Karnataka' },
+  { value: 'Kerala', label: 'Kerala' },
+  { value: 'Madhya Pradesh', label: 'Madhya Pradesh' },
+  { value: 'Maharashtra', label: 'Maharashtra' },
+  { value: 'Manipur', label: 'Manipur' },
+  { value: 'Meghalaya', label: 'Meghalaya' },
+  { value: 'Mizoram', label: 'Mizoram' },
+  { value: 'Nagaland', label: 'Nagaland' },
+  { value: 'Odisha', label: 'Odisha' },
+  { value: 'Punjab', label: 'Punjab' },
+  { value: 'Rajasthan', label: 'Rajasthan' },
+  { value: 'Sikkim', label: 'Sikkim' },
+  { value: 'Tamil Nadu', label: 'Tamil Nadu' },
+  { value: 'Telangana', label: 'Telangana' },
+  { value: 'Tripura', label: 'Tripura' },
+  { value: 'Uttar Pradesh', label: 'Uttar Pradesh' },
+  { value: 'Uttarakhand', label: 'Uttarakhand' },
+  { value: 'West Bengal', label: 'West Bengal' },
+  { value: 'union-territories-group', label: 'Union Territories', isGroup: true },
+  { value: 'Andaman and Nicobar Islands', label: 'Andaman and Nicobar Islands' },
+  { value: 'Chandigarh', label: 'Chandigarh' },
+  { value: 'Dadra and Nagar Haveli and Daman and Diu', label: 'Dadra and Nagar Haveli and Daman and Diu' },
+  { value: 'Delhi', label: 'Delhi (NCT)' },
+  { value: 'Jammu and Kashmir', label: 'Jammu and Kashmir' },
+  { value: 'Ladakh', label: 'Ladakh' },
+  { value: 'Lakshadweep', label: 'Lakshadweep' },
+  { value: 'Puducherry', label: 'Puducherry' }
+];
+
+const COUNTRY_OPTIONS: Option[] = [
+  { value: 'India', label: 'India' },
+  { value: 'United States', label: 'United States' },
+  { value: 'United Kingdom', label: 'United Kingdom' },
+  { value: 'Canada', label: 'Canada' },
+  { value: 'Australia', label: 'Australia' },
+  { value: 'Other', label: 'Other' }
+];
+
+const ADDRESS_TYPE_OPTIONS: Option[] = [
+  { value: 'home', label: 'Home' },
+  { value: 'work', label: 'Work' },
+  { value: 'other', label: 'Other' }
+];
 
 interface FormErrors {
   [key: string]: string | undefined;
@@ -106,14 +163,54 @@ const Checkout: React.FC = () => {
 
   const validateAddressForm = () => {
     const newErrors: FormErrors = {};
-    if (!addressForm.fullName.trim()) newErrors.fullName = 'Full Name is required';
-    if (!addressForm.phone.trim()) newErrors.phone = 'Phone is required';
-    else if (!/^\+?\d{10,15}$/.test(addressForm.phone)) newErrors.phone = 'Invalid Phone Number';
-    if (!addressForm.addressLine1.trim()) newErrors.addressLine1 = 'Address Line 1 is required';
-    if (!addressForm.city.trim()) newErrors.city = 'City is required';
-    if (!addressForm.state.trim()) newErrors.state = 'State is required';
-    if (!addressForm.postalCode.trim()) newErrors.postalCode = 'PIN/ZIP Code is required';
-    
+
+    // Full Name — at least 3 characters
+    if (!addressForm.fullName.trim()) {
+      newErrors.fullName = 'Full Name is required';
+    } else if (addressForm.fullName.trim().length < 3) {
+      newErrors.fullName = 'Full Name must be at least 3 characters';
+    }
+
+    // Phone — 10 digits (India), optionally prefixed with +91
+    if (!addressForm.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else {
+      const digitsOnly = addressForm.phone.replace(/^\+91/, '').replace(/\s/g, '');
+      if (!/^[6-9]\d{9}$/.test(digitsOnly)) {
+        newErrors.phone = 'Enter a valid 10-digit Indian mobile number';
+      }
+    }
+
+    // Address Line 1
+    if (!addressForm.addressLine1.trim()) {
+      newErrors.addressLine1 = 'Address Line 1 is required';
+    } else if (addressForm.addressLine1.trim().length < 5) {
+      newErrors.addressLine1 = 'Address Line 1 must be at least 5 characters';
+    }
+
+    // City
+    if (!addressForm.city.trim()) {
+      newErrors.city = 'City is required';
+    } else if (!/^[a-zA-Z\s\-\.]+$/.test(addressForm.city.trim())) {
+      newErrors.city = 'City must contain only letters';
+    }
+
+    // State
+    if (!addressForm.state.trim()) {
+      newErrors.state = 'State is required';
+    } else if (!/^[a-zA-Z\s\-\.]+$/.test(addressForm.state.trim())) {
+      newErrors.state = 'State must contain only letters';
+    }
+
+    // PIN / ZIP Code — 6 digits for India, 5-10 digits otherwise
+    if (!addressForm.postalCode.trim()) {
+      newErrors.postalCode = 'PIN/ZIP Code is required';
+    } else if (addressForm.country === 'India' && !/^[1-9]\d{5}$/.test(addressForm.postalCode.trim())) {
+      newErrors.postalCode = 'Enter a valid 6-digit Indian PIN code';
+    } else if (addressForm.country !== 'India' && !/^\d{4,10}$/.test(addressForm.postalCode.trim())) {
+      newErrors.postalCode = 'Enter a valid postal code (4–10 digits)';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -320,21 +417,22 @@ const Checkout: React.FC = () => {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="flex items-center text-sm font-medium text-gray-500 hover:text-primary transition-colors"
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex items-center justify-between">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center text-xs sm:text-sm font-medium text-gray-500 hover:text-primary transition-colors"
           >
             <ChevronLeft size={16} className="mr-1" />
-            Back to Cart
+            <span className="hidden xs:inline">Back to Cart</span>
+            <span className="xs:hidden">Back</span>
           </button>
-          <h1 className="text-xl font-bold tracking-widest uppercase">Checkout</h1>
-          <div className="w-20" /> {/* Spacer for centering */}
+          <h1 className="text-base sm:text-xl font-bold tracking-widest uppercase">Checkout</h1>
+          <div className="w-12 sm:w-20" /> {/* Spacer for centering */}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-12 lg:gap-24" noValidate>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-12">
+        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-8 lg:gap-24" noValidate>
           
           {/* Left Column - Shipping & Payment */}
           <div className="flex-1">
@@ -355,66 +453,151 @@ const Checkout: React.FC = () => {
               {isLoadingAddresses ? (
                 <div className="py-8 text-center text-gray-500">Loading addresses...</div>
               ) : isAddingAddress ? (
-                <div className="bg-gray-50 p-6 border border-gray-200">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 sm:p-6 border border-gray-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+
+                    {/* Full Name */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 uppercase mb-2">Full Name</label>
-                      <input type="text" name="fullName" value={addressForm.fullName} onChange={handleAddressChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.fullName ? 'border-red-500' : 'border-gray-300'}`} />
+                      <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">Full Name</label>
+                      <input
+                        type="text" name="fullName" value={addressForm.fullName}
+                        onChange={handleAddressChange}
+                        className={`w-full border rounded-none px-3 py-2.5 text-base sm:text-sm focus:outline-none transition-colors ${errors.fullName ? 'border-red-500' : 'border-gray-300'}`}
+                      />
                       {errors.fullName && <p className="mt-1 text-xs text-red-500">{errors.fullName}</p>}
                     </div>
+
+                    {/* Phone */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 uppercase mb-2">Phone</label>
-                      <input type="tel" name="phone" value={addressForm.phone} onChange={handleAddressChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.phone ? 'border-red-500' : 'border-gray-300'}`} />
+                      <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">Phone</label>
+                      <input
+                        type="tel" name="phone" value={addressForm.phone}
+                        onChange={handleAddressChange}
+                        placeholder="+91 9876543210"
+                        className={`w-full border rounded-none px-3 py-2.5 text-base sm:text-sm focus:outline-none transition-colors ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                      />
                       {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
                     </div>
+
+                    {/* Address Line 1 */}
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-medium text-gray-700 uppercase mb-2">Address Line 1</label>
-                      <input type="text" name="addressLine1" value={addressForm.addressLine1} onChange={handleAddressChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.addressLine1 ? 'border-red-500' : 'border-gray-300'}`} placeholder="Flat, House no., Building" />
+                      <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">Address Line 1</label>
+                      <input
+                        type="text" name="addressLine1" value={addressForm.addressLine1}
+                        onChange={handleAddressChange}
+                        placeholder="Flat, House no., Building"
+                        className={`w-full border rounded-none px-3 py-2.5 text-base sm:text-sm focus:outline-none transition-colors ${errors.addressLine1 ? 'border-red-500' : 'border-gray-300'}`}
+                      />
                       {errors.addressLine1 && <p className="mt-1 text-xs text-red-500">{errors.addressLine1}</p>}
                     </div>
+
+                    {/* Address Line 2 */}
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-medium text-gray-700 uppercase mb-2">Address Line 2 (Optional)</label>
-                      <input type="text" name="addressLine2" value={addressForm.addressLine2} onChange={handleAddressChange} className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none" placeholder="Area, Colony, Street" />
+                      <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">Address Line 2 <span className="normal-case text-gray-400">(optional)</span></label>
+                      <input
+                        type="text" name="addressLine2" value={addressForm.addressLine2}
+                        onChange={handleAddressChange}
+                        placeholder="Area, Colony, Street"
+                        className="w-full border border-gray-300 rounded-none px-3 py-2.5 text-base sm:text-sm focus:outline-none"
+                      />
                     </div>
+
+                    {/* PIN / ZIP Code */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 uppercase mb-2">PIN/ZIP Code</label>
-                      <input type="text" name="postalCode" value={addressForm.postalCode} onChange={handleAddressChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.postalCode ? 'border-red-500' : 'border-gray-300'}`} />
+                      <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">PIN / ZIP Code</label>
+                      <input
+                        type="tel" name="postalCode" value={addressForm.postalCode}
+                        onChange={handleAddressChange}
+                        inputMode="numeric"
+                        maxLength={6}
+                        className={`w-full border rounded-none px-3 py-2.5 text-base sm:text-sm focus:outline-none transition-colors ${errors.postalCode ? 'border-red-500' : 'border-gray-300'}`}
+                      />
                       {errors.postalCode && <p className="mt-1 text-xs text-red-500">{errors.postalCode}</p>}
                     </div>
+
+                    {/* City */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 uppercase mb-2">City</label>
-                      <input type="text" name="city" value={addressForm.city} onChange={handleAddressChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.city ? 'border-red-500' : 'border-gray-300'}`} />
+                      <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">City</label>
+                      <input
+                        type="text" name="city" value={addressForm.city}
+                        onChange={handleAddressChange}
+                        className={`w-full border rounded-none px-3 py-2.5 text-base sm:text-sm focus:outline-none transition-colors ${errors.city ? 'border-red-500' : 'border-gray-300'}`}
+                      />
                       {errors.city && <p className="mt-1 text-xs text-red-500">{errors.city}</p>}
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 uppercase mb-2">State</label>
-                      <input type="text" name="state" value={addressForm.state} onChange={handleAddressChange} className={`w-full border rounded-none px-4 py-3 text-sm focus:outline-none transition-colors ${errors.state ? 'border-red-500' : 'border-gray-300'}`} />
+
+                    {/* State */}
+                    <div className="relative z-[60]">
+                      <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">State</label>
+                      {addressForm.country === 'India' ? (
+                        <CustomSelect
+                          name="state"
+                          value={addressForm.state}
+                          onChange={handleAddressChange as any}
+                          options={STATE_OPTIONS}
+                          error={!!errors.state}
+                        />
+                      ) : (
+                        <input
+                          type="text" name="state" value={addressForm.state}
+                          onChange={handleAddressChange}
+                          placeholder="Enter state / province"
+                          className={`w-full border rounded-none px-3 py-2.5 text-base sm:text-sm focus:outline-none transition-colors ${errors.state ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                      )}
                       {errors.state && <p className="mt-1 text-xs text-red-500">{errors.state}</p>}
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 uppercase mb-2">Address Type</label>
-                      <select name="type" value={addressForm.type} onChange={handleAddressChange as any} className="w-full border border-gray-300 rounded-none px-4 py-3 text-sm focus:outline-none bg-white">
-                        <option value="home">Home</option>
-                        <option value="work">Work</option>
-                        <option value="other">Other</option>
-                      </select>
+
+                    {/* Address Type */}
+                    <div className="relative z-[50]">
+                      <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">Address Type</label>
+                      <CustomSelect
+                        name="type"
+                        value={addressForm.type}
+                        onChange={handleAddressChange as any}
+                        options={ADDRESS_TYPE_OPTIONS}
+                      />
                     </div>
+
+                    {/* Country */}
+                    <div className="relative z-[40]">
+                      <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">Country</label>
+                      <CustomSelect
+                        name="country"
+                        value={addressForm.country}
+                        onChange={handleAddressChange as any}
+                        options={COUNTRY_OPTIONS}
+                      />
+                    </div>
+
                   </div>
-                  <div className="mt-6 flex justify-end gap-3">
+
+                  {/* Save / Cancel Buttons */}
+                  <div className="mt-5 sm:mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
                     {addresses.length > 0 && (
-                      <button type="button" onClick={() => {
-                        setIsAddingAddress(false);
-                        setEditingAddressId(null);
-                        setAddressForm({ type: 'home', fullName: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', country: 'India', postalCode: '', isDefault: true });
-                      }} className="px-6 py-3 border border-gray-300 text-sm font-bold uppercase hover:bg-gray-50 transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingAddress(false);
+                          setEditingAddressId(null);
+                          setAddressForm({ type: 'home', fullName: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', country: 'India', postalCode: '', isDefault: true });
+                        }}
+                        className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-sm font-bold uppercase hover:bg-gray-50 transition-colors"
+                      >
                         Cancel
                       </button>
                     )}
-                    <button type="button" onClick={handleSaveAddress} disabled={isSavingAddress} className="px-6 py-3 bg-primary text-white text-sm font-bold uppercase hover:bg-gray-900 transition-colors">
+                    <button
+                      type="button"
+                      onClick={handleSaveAddress}
+                      disabled={isSavingAddress}
+                      className="w-full sm:w-auto px-6 py-3 bg-primary text-white text-sm font-bold uppercase hover:bg-gray-900 transition-colors"
+                    >
                       {isSavingAddress ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}
                     </button>
                   </div>
                 </div>
+
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {addresses.map((address) => (
@@ -510,7 +693,7 @@ const Checkout: React.FC = () => {
 
           {/* Right Column - Order Summary */}
           <div className="w-full lg:w-[400px]">
-            <div className="bg-gray-50 p-6 md:p-8 sticky top-32">
+            <div className="bg-gray-50 p-5 sm:p-6 md:p-8 lg:sticky lg:top-24">
               <h2 className="text-lg font-bold uppercase tracking-wider mb-6">Order Summary</h2>
               
               <div className="space-y-6 mb-6">

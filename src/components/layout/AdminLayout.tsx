@@ -20,12 +20,14 @@ import {
   X,
   Store,
   Award,
-  Bell
+  Bell,
+  Upload
 } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Products', path: '/admin/products', icon: Package },
+  { name: 'Bulk Upload', path: '/admin/bulk-upload', icon: Upload },
   { name: 'Categories', path: '/admin/categories', icon: Tags },
   { name: 'Brands', path: '/admin/brands', icon: Award },
   { name: 'Orders', path: '/admin/orders', icon: ShoppingCart },
@@ -139,6 +141,14 @@ const AdminLayout: React.FC = () => {
           </div>
           <div className="flex-1 flex justify-end">
             <div className="flex items-center space-x-3">
+              {/* Notification Bell Icon */}
+              <Link
+                to="/admin/notifications"
+                className="relative p-2 rounded-full text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                title="Notifications"
+              >
+                <Bell size={22} />
+              </Link>
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
                 <p className="text-xs text-gray-500 capitalize">{user?.role || 'Admin'}</p>

@@ -23,11 +23,37 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-api.interceptors.request.use(async (config) => {
-  let token: string | undefined | null = Cookies.get('accessToken') || localStorage.getItem('accessToken');
-  const refreshToken = Cookies.get('refreshToken') || localStorage.getItem('refreshToken');
+// Routes that require authentication — a fully-failed refresh here means redirect to login
+const PROTECTED_PATH_PREFIXES = [
+  '/profile',
+  '/orders',
+  '/checkout',
+  '/cart',
+  '/wishlist',
+  '/notifications',
+  '/admin',
+];
 
-  // If no access token but we have a refresh token, try to refresh before sending the request
+const isOnProtectedPage = () => {
+  const path = window.location.pathname;
+  return PROTECTED_PATH_PREFIXES.some((prefix) => path.startsWith(prefix));
+};
+
+const clearAuthTokens = () => {
+  Cookies.remove('accessToken');
+  Cookies.remove('refreshToken');
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+};
+
+// ─── Request Interceptor ────────────────────────────────────────────────────
+api.interceptors.request.use(async (config) => {
+  let token: string | undefined | null =
+    Cookies.get('accessToken') || localStorage.getItem('accessToken');
+  const refreshToken =
+    Cookies.get('refreshToken') || localStorage.getItem('refreshToken');
+
+  // If no access token but have a refresh token, try to refresh proactively
   if (!token && refreshToken && !config.url?.includes('/auth/refresh')) {
     if (isRefreshing) {
       try {
@@ -45,11 +71,13 @@ api.interceptors.request.use(async (config) => {
           { refreshToken },
           { withCredentials: true }
         );
-        const newAccessToken = refreshResponse.data.data?.tokens?.accessToken ||
+        const newAccessToken =
+          refreshResponse.data.data?.tokens?.accessToken ||
           refreshResponse.data.data?.token ||
           refreshResponse.data.data?.accessToken ||
           refreshResponse.data.token ||
-          refreshResponse.data.accessToken || '';
+          refreshResponse.data.accessToken ||
+          '';
         if (newAccessToken) {
           Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
           localStorage.setItem('accessToken', newAccessToken);
@@ -70,50 +98,57 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// ─── Response Interceptor ───────────────────────────────────────────────────
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // If 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/refresh')
+    ) {
       originalRequest._retry = true;
 
       const isLoginPage = window.location.pathname.includes('/login');
 
       if (!isLoginPage) {
         try {
-          // IMPORTANT: use a new axios instance to avoid interceptor loops if the refresh fails.
-          // Since cookies are HttpOnly, we don't pass refreshToken in the body, but rely on the browser sending it.
+          // Attempt a silent token refresh
           const refreshResponse = await axios.post(
             `${api.defaults.baseURL}/auth/refresh`,
             {},
             { withCredentials: true }
           );
 
-          const newAccessToken = refreshResponse.data.data?.tokens?.accessToken ||
+          const newAccessToken =
+            refreshResponse.data.data?.tokens?.accessToken ||
             refreshResponse.data.data?.token ||
             refreshResponse.data.data?.accessToken ||
             refreshResponse.data.token ||
-            refreshResponse.data.accessToken || '';
-            
+            refreshResponse.data.accessToken ||
+            '';
+
           if (newAccessToken) {
-            // Some backends return the token in body even if using cookies
             Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
             localStorage.setItem('accessToken', newAccessToken);
             originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           }
 
-          // Retry original request with new token
           return api(originalRequest);
         } catch (refreshError) {
-          // If refresh fails, force logout
-          Cookies.remove('accessToken');
-          Cookies.remove('refreshToken');
-          
-          const isAdminRoute = window.location.pathname.startsWith('/admin');
-          window.location.href = isAdminRoute ? '/admin/login' : '/login';
-          
+          // Both access and refresh tokens are expired — clear everything
+          clearAuthTokens();
+
+          // Only force-redirect when the user is on a page that requires authentication.
+          // On public pages (Home, Products, Collections, etc.) we silently clear the
+          // session and let the auth slice handle the state — no unwanted redirects.
+          if (isOnProtectedPage()) {
+            const isAdminRoute = window.location.pathname.startsWith('/admin');
+            window.location.href = isAdminRoute ? '/admin/login' : '/login';
+          }
+
           return Promise.reject(refreshError);
         }
       }
