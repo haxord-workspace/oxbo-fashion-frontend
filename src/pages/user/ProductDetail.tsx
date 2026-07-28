@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star } from 'lucide-react';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star, Share2 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { addToCartAsync } from '../../features/cart/cartSlice';
 import { toggleCart } from '../../features/ui/uiSlice';
@@ -17,6 +17,7 @@ const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -32,6 +33,7 @@ const ProductDetail: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomStyle, setZoomStyle] = useState({});
@@ -71,18 +73,6 @@ const ProductDetail: React.FC = () => {
         
         setProduct(actualProduct);
         setRelatedProducts(relatedList.filter((p: any) => p.id !== id && p._id !== id).slice(0, 4));
-        
-        // Setup initial defaults
-        if (actualProduct.variants && actualProduct.variants.length > 0) {
-          const firstColor = actualProduct.variants[0].attributes?.color || actualProduct.variants[0].color;
-          if (firstColor) setSelectedColor(firstColor);
-          
-          if (actualProduct.variants[0].attributes?.size || actualProduct.variants[0].size) {
-            setSelectedSize(actualProduct.variants[0].attributes?.size || actualProduct.variants[0].size);
-          } else if (actualProduct.variants[0].sizes && actualProduct.variants[0].sizes.length > 0) {
-            setSelectedSize(actualProduct.variants[0].sizes[0].size);
-          }
-        }
       } catch (err) {
         console.error('Failed to fetch product details', err);
       } finally {
@@ -164,17 +154,28 @@ const ProductDetail: React.FC = () => {
     }
   }, [selectedColor, availableSizes, selectedSize]);
 
-  // Reset state when product changes
+  // Set default color + size whenever the product loads/changes
   useEffect(() => {
     window.scrollTo(0, 0);
     setSelectedImage(0);
     setQuantity(1);
-    setSelectedColor(product?.variants?.[0]?.color || '');
+    if (product?.variants && product.variants.length > 0) {
+      const firstVariant = product.variants[0];
+      // Support both flat (attributes.color) and legacy (color) structures
+      const firstColor = firstVariant.attributes?.color || firstVariant.color || '';
+      setSelectedColor(firstColor);
+      // Support both flat (attributes.size / size) and nested (sizes[]) structures
+      if (firstVariant.attributes?.size || firstVariant.size) {
+        setSelectedSize(firstVariant.attributes?.size || firstVariant.size || '');
+      } else if (firstVariant.sizes && firstVariant.sizes.length > 0) {
+        setSelectedSize(firstVariant.sizes[0].size || '');
+      }
+    }
   }, [id, product]);
 
   const handleAddToCart = () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
     if (!product) return;
@@ -203,7 +204,7 @@ const ProductDetail: React.FC = () => {
 
   const handleBuyNow = () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
     if (!product) return;
@@ -230,9 +231,25 @@ const ProductDetail: React.FC = () => {
     navigate('/checkout');
   };
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = product?.name || 'Check out this product';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+      } catch {
+        // user cancelled — ignore
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }
+  };
+
   const handleToggleWishlist = () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
     if (!product) return;
@@ -361,15 +378,42 @@ const ProductDetail: React.FC = () => {
 
         {/* Right Column: Details */}
         <div className="w-full lg:w-2/5 flex flex-col relative">
-          <button
-            onClick={handleToggleWishlist}
-            className="absolute top-0 right-0 p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors z-10"
-            title="Toggle Wishlist"
-          >
-            <Heart size={20} strokeWidth={1.5} className={isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-500'} />
-          </button>
+          {/* Wishlist + Share buttons */}
+          <div className="absolute top-0 right-0 flex items-center gap-2 z-10">
+            <div className="relative">
+              <button
+                onClick={handleShare}
+                className="p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
+                title="Share this product"
+              >
+                <Share2 size={20} strokeWidth={1.5} className="text-gray-500" />
+              </button>
+              {shareCopied && (
+                <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] whitespace-nowrap bg-gray-800 text-white px-2 py-0.5 rounded">
+                  Copied!
+                </span>
+              )}
+            </div>
+            <button
+              onClick={handleToggleWishlist}
+              className="p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
+              title="Toggle Wishlist"
+            >
+              <Heart size={20} strokeWidth={1.5} className={isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-500'} />
+            </button>
+          </div>
 
-          <p className="text-sm text-gray-500 uppercase tracking-widest mb-2 pr-12">{product.category}</p>
+          <p className="text-sm text-gray-500 uppercase tracking-widest mb-1 pr-12">
+            {(product as any).categoryId?.name || product.category || ''}
+          </p>
+          {(() => {
+            const brandName = (product as any).brandId?.name || product.brand || (product as any).brand;
+            return brandName ? (
+              <p className="text-xs tracking-widest mb-2 pr-12">
+                <span className="font-semibold text-primary uppercase">{brandName}</span>
+              </p>
+            ) : null;
+          })()}
           <h1 className="text-3xl sm:text-4xl font-bold uppercase tracking-wide mb-4 break-words pr-12">{product.name}</h1>
 
           <div className="flex items-center gap-3 mb-6">
@@ -379,10 +423,6 @@ const ProductDetail: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-[#e35a39] mb-8 font-medium">
-            <span className="animate-pulse">⚡</span>
-            <span>{Math.floor(Math.random() * 50) + 10} shoppers viewing this right now</span>
-          </div>
 
           <div className="text-sm text-gray-700 mb-6 flex flex-wrap gap-4">
             <span>Description: <span className="font-semibold">{product.description}</span></span>

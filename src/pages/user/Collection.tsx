@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Filter, X } from 'lucide-react';
-import ProductGrid from '../../components/layout/ProductGrid';
+import InfiniteProductGrid from '../../components/layout/InfiniteProductGrid';
 import BannerDisplay from '../../components/layout/BannerDisplay';
 import axiosInstance from '../../services/axiosInstance';
 
@@ -16,6 +16,7 @@ const Collection: React.FC = () => {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [sortOption, setSortOption] = useState<string>('Sort by: Featured');
   const [categories, setCategories] = useState<{_id: string, name: string}[]>([]);
+  const [productCount, setProductCount] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -40,32 +41,40 @@ const Collection: React.FC = () => {
 
   const title = getFormattedTitle(categoryId);
 
-  let currentFilters: any = {};
-  if (categoryId === 'flash-sale') {
-    currentFilters = { tag: 'flash-sale' };
-  } else if (categoryId === 'new-drops') {
-    currentFilters = { sort: 'createdAt', order: 'desc', limit: 20 };
-  } else if (categoryId === 'all-drops') {
-    currentFilters = {};
-  } else if (categoryQuery) {
-    currentFilters = { category: categoryQuery };
-  }
+  const currentFilters = useMemo(() => {
+    let filters: any = {};
+    if (categoryId === 'flash-sale') {
+      filters = { tag: 'flash-sale' };
+    } else if (categoryId === 'new-drops') {
+      filters = { sort: 'createdAt', order: 'desc', limit: 20 };
+    } else if (categoryId === 'all-drops') {
+      filters = {};
+    } else if (categoryQuery) {
+      filters = { category: categoryQuery };
+    }
 
-  if (selectedCategory) currentFilters.category = selectedCategory;
-  if (maxPrice < 5000) currentFilters.maxPrice = maxPrice;
-  if (selectedColor) currentFilters.color = selectedColor;
-  if (selectedSize) currentFilters.size = selectedSize;
+    if (selectedCategory) filters.category = selectedCategory;
+    if (maxPrice < 5000) filters.maxPrice = maxPrice;
+    if (selectedColor) filters.color = selectedColor;
+    if (selectedSize) filters.size = selectedSize;
 
-  if (sortOption === 'Price: Low to High') {
-    currentFilters.sort = 'price';
-    currentFilters.order = 'asc';
-  } else if (sortOption === 'Price: High to Low') {
-    currentFilters.sort = 'price';
-    currentFilters.order = 'desc';
-  } else if (sortOption === 'Newest Arrivals') {
-    currentFilters.sort = 'createdAt';
-    currentFilters.order = 'desc';
-  }
+    if (sortOption === 'Price: Low to High') {
+      filters.sort = 'price';
+      filters.order = 'asc';
+    } else if (sortOption === 'Price: High to Low') {
+      filters.sort = 'price';
+      filters.order = 'desc';
+    } else if (sortOption === 'Newest Arrivals') {
+      filters.sort = 'createdAt';
+      filters.order = 'desc';
+    }
+    return filters;
+  }, [categoryId, categoryQuery, selectedCategory, maxPrice, selectedColor, selectedSize, sortOption]);
+
+  // Reset count to null (shows "Loading...") whenever filters change
+  useEffect(() => {
+    setProductCount(null);
+  }, [currentFilters]);
 
   return (
     <div className="flex-1 bg-white min-h-screen">
@@ -253,7 +262,9 @@ const Collection: React.FC = () => {
                   >
                     <Filter size={16} /> Filters
                   </button>
-                  <span className="text-sm text-gray-500">Showing 16 products</span>
+                  <span className="text-sm text-gray-500">
+                    {productCount === null ? 'Loading...' : `Showing ${productCount} product${productCount !== 1 ? 's' : ''}`}
+                  </span>
                 </div>
 
                 <select 
@@ -268,7 +279,7 @@ const Collection: React.FC = () => {
                 </select>
               </div>
             </div>
-            <ProductGrid filters={currentFilters} />
+            <InfiniteProductGrid filters={currentFilters} onProductCount={setProductCount} />
           </div>
         </div>
       </div>

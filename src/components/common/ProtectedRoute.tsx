@@ -1,7 +1,8 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAppSelector } from '../../app/hooks';
-import { selectIsAuthenticated, selectUserRole } from '../../features/auth/authSlice';
+import { selectIsAuthenticated, selectUserRole, selectAuthInitialized } from '../../features/auth/authSlice';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   allowedRoles?: ('user' | 'admin' | 'storemanager')[];
@@ -9,8 +10,18 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const isInitialized = useAppSelector(selectAuthInitialized);
   const location = useLocation();
   const userRole = useAppSelector(selectUserRole);
+
+  // Wait for auth to be verified before making any redirect decisions
+  if (!isInitialized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     // If trying to access admin route, redirect to admin login

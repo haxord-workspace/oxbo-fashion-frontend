@@ -18,6 +18,14 @@ export interface SendBulkNotificationPayload {
   priority: string;
 }
 
+export interface SendAllNotificationPayload {
+  title: string;
+  message: string;
+  type: string;
+  channel: string;
+  priority: string;
+}
+
 export const adminNotificationApi = {
   sendNotification: async (data: SendNotificationPayload) => {
     try {
@@ -38,6 +46,14 @@ export const adminNotificationApi = {
   getAllNotifications: async (params?: { page?: number; limit?: number }) => {
     try {
       const response = await api.get('/admin/notifications', { params });
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  },
+  sendAllNotifications: async (data: SendAllNotificationPayload) => {
+    try {
+      const response = await api.post('/admin/notifications/send-all', data);
       return response.data;
     } catch (error: any) {
       throw error.response?.data || error;

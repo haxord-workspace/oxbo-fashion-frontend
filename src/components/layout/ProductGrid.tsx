@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { addToWishlistAsync, removeFromWishlistAsync, selectIsWishlisted } from '../../features/wishlist/wishlistSlice';
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
@@ -11,6 +11,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const productId = product.id || (product as any)._id;
   const isWishlisted = useAppSelector(state => selectIsWishlisted(state, productId));
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
@@ -20,8 +21,8 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const prod = product as any;
   if (prod.thumbnail) {
     images = [prod.thumbnail, ...(prod.gallery || [])];
-  } else if (product.variants && product.variants.length > 0 && product.variants[0].images?.length > 0) {
-    images = product.variants[0].images;
+  } else if (product.variants && product.variants.length > 0 && product.variants[0].images && product.variants[0].images.length > 0) {
+    images = product.variants[0].images || [];
   } else {
     images = [product.imageUrl || '/placeholder.png'];
   }
@@ -30,7 +31,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isAuthenticated) {
-      navigate('/register');
+      navigate('/login', { state: { from: location.pathname } });
       return;
     }
     if (isWishlisted) {
@@ -131,11 +132,17 @@ const ProductSkeleton: React.FC = () => {
   );
 };
 
-const ProductGrid: React.FC<{ filters?: any }> = ({ filters: externalFilters }) => {
+const ProductGrid: React.FC<{ filters?: any; onProductCount?: (count: number) => void; pageSize?: number; showPagination?: boolean }> = ({ filters: externalFilters, onProductCount, pageSize, showPagination = true }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filtersString = JSON.stringify(externalFilters);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtersString]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -187,6 +194,7 @@ const ProductGrid: React.FC<{ filters?: any }> = ({ filters: externalFilters }) 
         }
         
         setProducts(finalProducts);
+        onProductCount?.(finalProducts.length);
       } catch (error) {
         console.error('Failed to fetch products', error);
       } finally {
@@ -197,20 +205,67 @@ const ProductGrid: React.FC<{ filters?: any }> = ({ filters: externalFilters }) 
     fetchProducts();
   }, [filtersString]);
 
+  // Pagination logic
+  const totalPages = pageSize ? Math.ceil(products.length / pageSize) : 1;
+  const displayedProducts = pageSize
+    ? products.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : products;
+
   return (
     <section className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-12 md:gap-x-4 md:gap-y-16">
         {isLoading 
-          ? Array.from({ length: 8 }).map((_, idx) => (
+          ? Array.from({ length: pageSize ?? 8 }).map((_, idx) => (
               <ProductSkeleton key={idx} />
             ))
-          : products.map(product => (
+          : displayedProducts.map(product => (
               <ProductCard key={product.id || (product as any)._id} product={product} />
             ))
         }
       </div>
+
+      {/* Pagination controls — only shown when showPagination is true, pageSize is set and there are multiple pages */}
+      {!isLoading && showPagination && pageSize && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-12">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="flex items-center gap-1.5 px-5 py-2.5 border border-gray-300 text-sm font-semibold uppercase tracking-wider text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft size={16} /> Prev
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: totalPages }).map((_, idx) => {
+              const page = idx + 1;
+              return (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-9 h-9 text-sm font-semibold border transition-colors ${
+                    currentPage === page
+                      ? 'bg-primary text-white border-primary'
+                      : 'border-gray-300 text-primary hover:bg-primary hover:text-white hover:border-primary'
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="flex items-center gap-1.5 px-5 py-2.5 border border-gray-300 text-sm font-semibold uppercase tracking-wider text-primary hover:bg-primary hover:text-white hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Next <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
     </section>
   );
 };
 
 export default ProductGrid;
+

@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { User } from '../../types';
 import type { RootState } from '../../app/store';
-// import Cookies from 'js-cookie';
+import Cookies from 'js-cookie';
 import { authApi, type AuthResponse } from '../../services/authApi';
 
 interface AuthState {
@@ -27,8 +27,8 @@ export const initializeAuth = createAsyncThunk(
     try {
       // Just try to fetch the profile. If the HttpOnly cookies are present, this will succeed.
       const response = await authApi.getProfile();
- 
-      return response.user;
+      // Handle both { user: {...} } and direct user object responses
+      return (response as any).user || response;
     } catch (err: any) {
       // If it fails, they are not authenticated (e.g., cookies expired or missing)
       return null;
@@ -69,6 +69,8 @@ const authSlice = createSlice({
       state.token = null;
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      Cookies.remove('accessToken');
+      Cookies.remove('refreshToken');
     },
     fetchCurrentUser(state, action: PayloadAction<User>) {
       state.user = action.payload;
@@ -90,6 +92,7 @@ const authSlice = createSlice({
     builder
       .addCase(initializeAuth.pending, (state) => {
         state.isLoading = true;
+        state.isInitialized = false; // Force the app to wait for auth check on reload
       })
       .addCase(initializeAuth.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -121,19 +124,33 @@ export const selectUserRole = (state: RootState) => {
   const user = state.auth?.user as any;
   if (!user) return 'user';
   
-  const storeManagerRoleId = import.meta.env.VITE_STORE_MANAGER_ROLE_ID;
-  const userRoleId = user.roleId?._id || user.roleId?.id || user.roleId || user.role;
-  if (storeManagerRoleId && String(userRoleId) === String(storeManagerRoleId)) {
-    return 'storemanager';
-  }
+  const superAdminRoleId = import.meta.env.VITE_SUPER_ADMIN_ROLE_ID;
+  const storeAdminRoleId = import.meta.env.VITE_STORE_ADMIN_ROLE_ID;
+  
+  // Check all possible role ID locations
+  const possibleIds = [
+    String(user.roleId?._id),
+    String(user.roleId?.id),
+    String(user.roleId),
+    String(user.role)
+  ];
+  
+  if (possibleIds.includes(String(superAdminRoleId))) return 'admin';
+  if (possibleIds.includes(String(storeAdminRoleId))) return 'storemanager';
   
   let role = 'user';
-  if (user.role) role = user.role;
+  if (user.role && typeof user.role === 'string') role = user.role;
   else if (user.roleId?.name) role = user.roleId.name;
   
   const roleStr = String(role).toLowerCase();
-  if (roleStr === 'admin' || roleStr.includes('admin') || (user.email && user.email.toLowerCase().includes('admin'))) {
+  const emailStr = String(user.email || '').toLowerCase();
+
+  if (roleStr === 'admin' || roleStr.includes('admin') || emailStr.includes('admin')) {
     return 'admin';
+  }
+  
+  if (roleStr === 'storemanager' || roleStr.includes('manager') || roleStr.includes('store') || emailStr.includes('manager') || emailStr.includes('store')) {
+    return 'storemanager';
   }
   
   return role;

@@ -23,16 +23,20 @@ const AdminLogin: React.FC = () => {
 
   useEffect(() => {
     if (token) {
-      const storeManagerRoleId = import.meta.env.VITE_STORE_MANAGER_ROLE_ID;
+      const superAdminRoleId = import.meta.env.VITE_SUPER_ADMIN_ROLE_ID;
+      const storeAdminRoleId = import.meta.env.VITE_STORE_ADMIN_ROLE_ID;
       const userRoleId = (user as any)?.roleId?._id || (user as any)?.roleId?.id || (user as any)?.roleId || (user as any)?.role;
-      const isStoreManager = storeManagerRoleId && String(userRoleId) === String(storeManagerRoleId);
-
+      
+      const isStoreManager = String(userRoleId) === String(storeAdminRoleId);
+      
       const roleStr = String(user?.role || '').toLowerCase();
       const isAdmin = 
+        String(userRoleId) === String(superAdminRoleId) ||
         roleStr === 'admin' || 
         roleStr.includes('admin') ||
         (user as any)?.roleId?.name?.toLowerCase().includes('admin') ||
         (user?.email && user.email.toLowerCase().includes('admin'));
+        
       if (isAdmin || isStoreManager) {
         navigate('/admin/dashboard');
       } else {
@@ -68,12 +72,15 @@ const AdminLogin: React.FC = () => {
     try {
       const response = await authApi.login(email, password);
       
-      const storeManagerRoleId = import.meta.env.VITE_STORE_MANAGER_ROLE_ID;
+      const superAdminRoleId = import.meta.env.VITE_SUPER_ADMIN_ROLE_ID;
+      const storeAdminRoleId = import.meta.env.VITE_STORE_ADMIN_ROLE_ID;
       const userRoleId = (response.user as any).roleId?._id || (response.user as any).roleId?.id || (response.user as any).roleId || response.user.role;
-      const isStoreManager = storeManagerRoleId && String(userRoleId) === String(storeManagerRoleId);
+      
+      const isStoreManager = String(userRoleId) === String(storeAdminRoleId);
 
       const roleStr = String(response.user.role || '').toLowerCase();
       const isAdmin = 
+        String(userRoleId) === String(superAdminRoleId) ||
         roleStr === 'admin' || 
         roleStr.includes('admin') ||
         (response.user as any).roleId?.name?.toLowerCase().includes('admin') ||
@@ -154,7 +161,7 @@ const AdminLogin: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center z-10 text-gray-400 hover:text-gray-600 focus:outline-none"
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>

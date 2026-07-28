@@ -218,7 +218,7 @@ export const AdminUsers = () => {
       if (!userId) return;
       const response = await adminUserApi.updateUser(userId, userToEdit);
       toast.success(response.message || 'User updated successfully');
-      setUsers(users.map(u => (u._id || u.id) === userId ? { ...u, ...userToEdit } : u));
+      fetchUsers();
       setUserToEdit(null);
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to update user');
@@ -252,15 +252,16 @@ export const AdminUsers = () => {
 
     try {
       const payload: any = { ...newUser };
-      if (payload.role === '6a4cb6298643931db473ae84') {
-        payload.roleId = payload.role;
+      if (String(payload.role) === String(import.meta.env.VITE_STORE_ADMIN_ROLE_ID)) {
+        payload.roleId = Number(import.meta.env.VITE_STORE_ADMIN_ROLE_ID);
         payload.roleName = 'Store Manager';
         delete payload.role;
-      } else if (payload.role === '6a4c9d66477aee2f5fa8c820') {
-        payload.roleId = payload.role;
+      } else if (String(payload.role) === String(import.meta.env.VITE_SUPER_ADMIN_ROLE_ID)) {
+        payload.roleId = Number(import.meta.env.VITE_SUPER_ADMIN_ROLE_ID);
         payload.roleName = 'Super Admin';
         delete payload.role;
       } else {
+        payload.roleId = Number(import.meta.env.VITE_USER_ROLE_ID || 3);
         payload.role = 'CUSTOMER';
         payload.roleName = 'CUSTOMER';
       }
@@ -687,22 +688,28 @@ export const AdminUsers = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                   <select
-                    value={userToEdit.roleId?._id || userToEdit.role || 'CUSTOMER'}
+                    value={
+                      (userToEdit.roleId as any)?.id || 
+                      userToEdit.roleId?._id || 
+                      userToEdit.roleId || 
+                      userToEdit.role || 
+                      'CUSTOMER'
+                    }
                     onChange={e => {
                       const val = e.target.value;
                       if (val === 'CUSTOMER') {
-                        setUserToEdit({ ...userToEdit, role: 'CUSTOMER', roleId: null as any });
-                      } else if (val === '6a4cb6298643931db473ae84') {
-                        setUserToEdit({ ...userToEdit, roleId: { _id: val, name: 'Store Manager' }, role: undefined });
-                      } else if (val === '6a4c9d66477aee2f5fa8c820') {
-                        setUserToEdit({ ...userToEdit, roleId: { _id: val, name: 'Super Admin' }, role: undefined });
+                        setUserToEdit({ ...userToEdit, role: 'CUSTOMER', roleId: Number(import.meta.env.VITE_USER_ROLE_ID || 3) as any });
+                      } else if (String(val) === String(import.meta.env.VITE_STORE_ADMIN_ROLE_ID)) {
+                        setUserToEdit({ ...userToEdit, roleId: Number(val) as any, role: undefined });
+                      } else if (String(val) === String(import.meta.env.VITE_SUPER_ADMIN_ROLE_ID)) {
+                        setUserToEdit({ ...userToEdit, roleId: Number(val) as any, role: undefined });
                       }
                     }}
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white"
                   >
                     <option value="CUSTOMER">Customer</option>
-                    <option value="6a4cb6298643931db473ae84">Store Manager</option>
-                    <option value="6a4c9d66477aee2f5fa8c820">Super Admin</option>
+                    <option value={import.meta.env.VITE_STORE_ADMIN_ROLE_ID}>Store Manager</option>
+                    <option value={import.meta.env.VITE_SUPER_ADMIN_ROLE_ID}>Super Admin</option>
                   </select>
                 </div>
                 <div>
@@ -999,8 +1006,8 @@ export const AdminUsers = () => {
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white"
                 >
                   <option value="CUSTOMER">Customer</option>
-                  <option value="6a4cb6298643931db473ae84">Store Manager</option>
-                  <option value="6a4c9d66477aee2f5fa8c820">Super Admin</option>
+                  <option value={import.meta.env.VITE_STORE_ADMIN_ROLE_ID}>Store Manager</option>
+                  <option value={import.meta.env.VITE_SUPER_ADMIN_ROLE_ID}>Super Admin</option>
                 </select>
               </div>
 

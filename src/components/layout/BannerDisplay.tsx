@@ -13,6 +13,7 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [itemsPerView, setItemsPerView] = useState(1);
 
   useEffect(() => {
     const fetchBanners = async () => {
@@ -56,28 +57,63 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
     fetchBanners();
   }, [position]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (position !== 'Carousel') {
+        setItemsPerView(1);
+        return;
+      }
+      if (window.innerWidth >= 1280) {
+        setItemsPerView(4);
+      } else if (window.innerWidth >= 1024) {
+        setItemsPerView(3);
+      } else if (window.innerWidth >= 768) {
+        setItemsPerView(2);
+      } else {
+        setItemsPerView(1);
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [position]);
+
+  const maxIndex = Math.max(0, banners.length - itemsPerView);
+
   // Autoplay logic
   useEffect(() => {
-    if (banners.length <= 1) return;
+    if (banners.length <= itemsPerView) return;
     
     const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % banners.length);
+      setCurrentIndex((prevIndex) => (prevIndex >= maxIndex ? 0 : prevIndex + 1));
     }, 5000); // 5 seconds autoplay
     
     return () => clearInterval(interval);
-  }, [banners.length]);
+  }, [banners.length, itemsPerView, maxIndex]);
 
   const goToNext = () => {
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % banners.length);
+    setCurrentIndex((prevIndex) => (prevIndex >= maxIndex ? 0 : prevIndex + 1));
   };
 
   const goToPrev = () => {
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + banners.length) % banners.length);
+    setCurrentIndex((prevIndex) => (prevIndex <= 0 ? maxIndex : prevIndex - 1));
   };
 
   const heightClass = position === 'Carousel' 
-    ? 'h-[50vh] md:h-[70vh] lg:h-[85vh]' 
+    ? 'h-[50vh] sm:h-[55vh] md:h-[60vh] lg:h-[65vh]' 
     : 'h-56 md:h-[350px] lg:h-[450px]';
+
+  const isCarousel = position === 'Carousel';
+  const isDesktop = itemsPerView > 1;
+  const isMarquee = isCarousel && isDesktop;
+  
+  // For continuous marquee, duplicate banners to ensure seamless loop
+  const displayBanners = isMarquee 
+    ? [...banners, ...banners, ...banners, ...banners] 
+    : banners;
+  
+  const translationPercent = (banners.length * 100) / itemsPerView;
 
   if (isLoading) {
     return (
@@ -94,12 +130,26 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
   return (
     <div className={`w-full mb-4 ${className}`}>
       <div className={`relative w-full ${heightClass} overflow-hidden group bg-gray-100`}>
+        {isMarquee && (
+          <style>{`
+            @keyframes continuousMarquee {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-${translationPercent}%); }
+            }
+            .animate-marquee {
+              animation: continuousMarquee ${banners.length * 6}s linear infinite;
+            }
+            .animate-marquee:hover {
+              animation-play-state: paused;
+            }
+          `}</style>
+        )}
         {/* Slides Container */}
         <div 
-          className="flex w-full h-full transition-transform duration-700 ease-in-out" 
-          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+          className={`flex w-full h-full ${isMarquee ? 'animate-marquee' : 'transition-transform duration-700 ease-in-out'}`} 
+          style={!isMarquee ? { transform: `translateX(-${currentIndex * 100}%)` } : {}}
         >
-          {banners.map((banner) => {
+          {displayBanners.map((banner, index) => {
             const bannerImage = typeof banner.image === 'string' ? banner.image : '';
             
             const slideContent = (
@@ -114,31 +164,31 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
             );
 
             // Need flex-shrink-0 block to behave correctly in flex row
-            const slideWrapperClasses = "w-full h-full flex-shrink-0 block";
+            const slideWrapperClasses = "h-full flex-shrink-0 block px-1 md:px-2";
 
             if (banner.redirectUrl) {
               const isExternal = banner.redirectUrl.startsWith('http');
               return isExternal ? (
-                <a key={banner._id || banner.id} href={banner.redirectUrl} target="_blank" rel="noopener noreferrer" className={slideWrapperClasses}>
+                <a key={`${banner._id || banner.id}-${index}`} href={banner.redirectUrl} target="_blank" rel="noopener noreferrer" className={slideWrapperClasses} style={{ width: `${100 / itemsPerView}%` }}>
                   {slideContent}
                 </a>
               ) : (
-                <Link key={banner._id || banner.id} to={banner.redirectUrl} className={slideWrapperClasses}>
+                <Link key={`${banner._id || banner.id}-${index}`} to={banner.redirectUrl} className={slideWrapperClasses} style={{ width: `${100 / itemsPerView}%` }}>
                   {slideContent}
                 </Link>
               );
             }
 
             return (
-              <div key={banner._id || banner.id} className={slideWrapperClasses}>
+              <div key={`${banner._id || banner.id}-${index}`} className={slideWrapperClasses} style={{ width: `${100 / itemsPerView}%` }}>
                 {slideContent}
               </div>
             );
           })}
         </div>
 
-        {/* Navigation Arrows (only show if multiple banners) */}
-        {banners.length > 1 && (
+        {/* Navigation Arrows (only show if multiple banners and not marquee) */}
+        {banners.length > 1 && !isMarquee && (
           <>
             <button 
               onClick={goToPrev}
@@ -157,7 +207,7 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
             
             {/* Pagination Dots */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
-              {banners.map((_, idx) => (
+              {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentIndex(idx)}

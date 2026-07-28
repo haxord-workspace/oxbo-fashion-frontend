@@ -41,6 +41,7 @@ import {
   AdminStores,
   AdminBrands,
   AdminNotifications,
+  AdminBulkUpload,
 } from './pages/admin/AdminPages';
 import CartPage from './pages/user/CartPage';
 
@@ -101,6 +102,7 @@ const AppContent: React.FC = () => {
             <Route index element={<AdminDashboard />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="products" element={<AdminProducts />} />
+            <Route path="bulk-upload" element={<AdminBulkUpload />} />
             <Route path="categories" element={<AdminCategories />} />
             <Route path="categories/:categoryId" element={<AdminCategoryDetails />} />
             <Route path="brands" element={<AdminBrands />} />

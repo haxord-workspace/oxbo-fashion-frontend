@@ -20,7 +20,7 @@ export const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [storeFilter, setStoreFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // State for Orders
   const [orders, setOrders] = useState<any[]>([]);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -58,15 +58,15 @@ export const AdminOrders = () => {
       setIsFetchingStock(true);
       const newStockLevels: Record<string, number> = {};
       const items = orderToAssign.orderedItems || orderToAssign.items || orderToAssign.products || [];
-      
+
       try {
         await Promise.all(items.map(async (item: any) => {
           const variantId = item.variantId || item.variant?._id || item.variant?.id || item.variant;
           const productId = item.productId || item.product?._id || item.product?.id || item.product;
-          
+
           if (!variantId && !productId) return;
           const key = variantId || productId;
-          
+
           try {
             const params: any = {
               'filters[storeId]': selectedStoreId,
@@ -78,10 +78,10 @@ export const AdminOrders = () => {
             } else if (productId && typeof productId === 'string') {
               params['filters[productId]'] = productId;
             }
-            
+
             const res = await adminInventoryApi.getTransactions(params);
             const latestTx = res.data?.[0] || (res.data?.data && res.data.data[0]);
-            
+
             if (latestTx && latestTx.currentQuantity !== undefined) {
               newStockLevels[key as string] = latestTx.currentQuantity;
             } else {
@@ -98,7 +98,7 @@ export const AdminOrders = () => {
         setIsFetchingStock(false);
       }
     };
-    
+
     fetchStockLevels();
   }, [selectedStoreId, isStoreModalOpen, orderToAssign]);
 
@@ -154,7 +154,7 @@ export const AdminOrders = () => {
     setSelectedProduct(item);
     setIsProductDetailsOpen(true);
     setFullProductDetails(null);
-    
+
     const productId = item.productId || item.product?._id || item.product?.id || (typeof item.product === 'string' ? item.product : null) || item._id;
     if (productId && typeof productId === 'string') {
       setIsFetchingProduct(true);
@@ -212,12 +212,12 @@ export const AdminOrders = () => {
     setAssignStoreError('');
     try {
       const response = await adminOrderApi.assignStore(orderToAssign._id || orderToAssign.id, selectedStoreId);
-      
+
       if (response && response.success === false) {
         setAssignStoreError(response.message || 'Failed to assign store');
         return;
       }
-      
+
       setIsStoreModalOpen(false);
       toast.success(response.message || 'Store assigned to order successfully');
       fetchOrders();
@@ -289,9 +289,9 @@ export const AdminOrders = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input 
-            type="text" 
-            placeholder="Search orders..." 
+          <input
+            type="text"
+            placeholder="Search orders..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm"
@@ -300,7 +300,7 @@ export const AdminOrders = () => {
         <div className="flex items-center gap-2">
           <Filter size={16} className="text-gray-500" />
           {isAdmin && (
-            <select 
+            <select
               value={storeFilter}
               onChange={(e) => setStoreFilter(e.target.value)}
               className="border border-gray-200 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-primary cursor-pointer"
@@ -311,7 +311,7 @@ export const AdminOrders = () => {
               ))}
             </select>
           )}
-          <select 
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="border border-gray-200 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-primary cursor-pointer"
@@ -322,7 +322,7 @@ export const AdminOrders = () => {
           </select>
         </div>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -352,7 +352,7 @@ export const AdminOrders = () => {
             ) : (
               orders.map(order => (
                 <tr key={order._id || order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                  
+
                   <td className="py-4 px-4">
                     <p className="font-medium text-gray-900">{order.userId ? `${order.userId.firstName} ${order.userId.lastName}` : order.customer?.name || 'Guest'}</p>
                     <p className="text-xs text-gray-500">{order.userId?.email || order.customer?.email || 'N/A'}</p>
@@ -376,23 +376,39 @@ export const AdminOrders = () => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="space-y-1">
-                      {(order.orderedItems || order.items || order.products || []).map((item: any, i: number) => (
-                        <div 
-                          key={i} 
-                          onClick={() => openProductDetails(item)}
-                          className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors"
-                        >
-                          {item.image || item.imageUrl || item.product?.image || item.product?.images?.[0] ? (
-                            <img src={item.image || item.imageUrl || item.product?.image || item.product?.images?.[0]} alt="product" className="w-6 h-6 object-cover rounded border border-gray-100" />
-                          ) : (
-                            <div className="w-6 h-6 bg-gray-50 rounded border border-gray-100 flex items-center justify-center text-[8px] text-gray-400">IMG</div>
-                          )}
-                          <span className="truncate max-w-[120px] font-medium text-gray-700" title={item.productName || item.name || item.product?.name || 'Item'}>
-                            {item.productName || item.name || item.product?.name || 'Item'}
-                          </span>
-                          <span className="text-gray-400">x{item.quantity || item.qty || 1}</span>
-                        </div>
-                      ))}
+                      {(order.orderedItems || order.items || order.products || []).map((item: any, i: number) => {
+                        const imgSrc =
+                          item.image ||
+                          item.imageUrl ||
+                          item.thumbnail ||
+                          item.photo ||
+                          item.productId?.images?.[0] ||
+                          item.productId?.image ||
+                          item.productId?.thumbnail ||
+                          item.variantId?.images?.[0] ||
+                          item.variantId?.image ||
+                          item.product?.images?.[0] ||
+                          item.product?.image ||
+                          item.product?.thumbnail ||
+                          item.variant?.images?.[0] ||
+                          item.variant?.image ||
+                          null;
+                        return (
+                          <div
+                            key={i}
+                            onClick={() => openProductDetails(item)}
+                            className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors"
+                          >
+                            {imgSrc && (
+                              <img src={imgSrc} alt="thumbnail" className="w-6 h-6 object-cover rounded" />
+                            )}
+                            <span className="truncate max-w-[120px] font-medium text-gray-700" title={item.productName || item.name || item.productId?.name || item.product?.name || 'Item'}>
+                              {item.productName || item.name || item.productId?.name || item.product?.name || 'Item'}
+                            </span>
+                            <span className="text-gray-400">x{item.quantity || item.qty || 1}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </td>
                   <td className="py-4 px-4 font-medium">Rs. {(order.grandTotal || order.totalAmount || order.total || 0).toLocaleString('en-IN')}</td>
@@ -401,11 +417,11 @@ export const AdminOrders = () => {
                       value={order.status || 'Pending'}
                       onChange={(e) => handleStatusChange(order._id || order.id, e.target.value)}
                       className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-1 focus:ring-primary outline-none
-                      ${order.status === 'Delivered' ? 'bg-green-100 text-green-700' : 
-                        ['Processing', 'Confirmed', 'Packed'].includes(order.status) ? 'bg-blue-100 text-blue-700' :
-                        ['Shipped', 'Out for Delivery'].includes(order.status) ? 'bg-purple-100 text-purple-700' :
-                        order.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-800'}`}
+                      ${order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
+                          ['Processing', 'Confirmed', 'Packed'].includes(order.status) ? 'bg-blue-100 text-blue-700' :
+                            ['Shipped', 'Out for Delivery'].includes(order.status) ? 'bg-purple-100 text-purple-700' :
+                              order.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+                                'bg-yellow-100 text-yellow-800'}`}
                     >
                       {ORDER_STATUSES.filter(s => s !== 'All').map(status => (
                         <option key={status} value={status} className="bg-white text-primary">{status}</option>
@@ -438,9 +454,9 @@ export const AdminOrders = () => {
           </tbody>
         </table>
       </div>
-      
+
       {totalOrders > 0 && (
-        <AdminPagination 
+        <AdminPagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
@@ -462,9 +478,9 @@ export const AdminOrders = () => {
           )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Select Store</label>
-            <select 
-              value={selectedStoreId} 
-              onChange={e => setSelectedStoreId(e.target.value)} 
+            <select
+              value={selectedStoreId}
+              onChange={e => setSelectedStoreId(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
               required
             >
@@ -476,7 +492,7 @@ export const AdminOrders = () => {
               ))}
             </select>
           </div>
-          
+
           {selectedStoreId && orderToAssign && (
             <div className="mt-4 p-3 bg-gray-50 rounded-md border border-gray-200">
               <h4 className="text-sm font-semibold text-gray-800 mb-2">Stock in Selected Store</h4>
@@ -485,39 +501,39 @@ export const AdminOrders = () => {
               ) : (
                 <ul className="space-y-1">
                   {(orderToAssign.orderedItems || orderToAssign.items || orderToAssign.products || []).map((item: any, i: number) => {
-                     const variantId = item.variantId || item.variant?._id || item.variant?.id || item.variant;
-                     const productId = item.productId || item.product?._id || item.product?.id || item.product;
-                     const key = variantId || productId;
-                     const stock = storeStockLevels[key as string];
-                     const orderedQty = item.quantity || item.qty || 1;
-                     const name = item.productName || item.name || item.product?.name || 'Item';
-                     const hasEnough = stock !== undefined && stock >= orderedQty;
-                     
-                     return (
-                       <li key={i} className="flex justify-between items-center text-xs border-b border-gray-100 pb-1 last:border-0 last:pb-0">
-                         <span className="text-gray-600 truncate pr-2" title={name}>{name} (Req: {orderedQty})</span>
-                         <span className={`font-medium whitespace-nowrap ${hasEnough ? 'text-green-600' : 'text-red-600'}`}>
-                           Stock: {stock !== undefined ? stock : '0'}
-                         </span>
-                       </li>
-                     );
+                    const variantId = item.variantId || item.variant?._id || item.variant?.id || item.variant;
+                    const productId = item.productId || item.product?._id || item.product?.id || item.product;
+                    const key = variantId || productId;
+                    const stock = storeStockLevels[key as string];
+                    const orderedQty = item.quantity || item.qty || 1;
+                    const name = item.productName || item.name || item.product?.name || 'Item';
+                    const hasEnough = stock !== undefined && stock >= orderedQty;
+
+                    return (
+                      <li key={i} className="flex justify-between items-center text-xs border-b border-gray-100 pb-1 last:border-0 last:pb-0">
+                        <span className="text-gray-600 truncate pr-2" title={name}>{name} (Req: {orderedQty})</span>
+                        <span className={`font-medium whitespace-nowrap ${hasEnough ? 'text-green-600' : 'text-red-600'}`}>
+                          Stock: {stock !== undefined ? stock : '0'}
+                        </span>
+                      </li>
+                    );
                   })}
                 </ul>
               )}
             </div>
           )}
-          
+
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
-            <button 
-              type="button" 
-              onClick={() => setIsStoreModalOpen(false)} 
+            <button
+              type="button"
+              onClick={() => setIsStoreModalOpen(false)}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
-            <LoadingButton 
-              type="submit" 
-              isLoading={isAssigningStore} 
+            <LoadingButton
+              type="submit"
+              isLoading={isAssigningStore}
               className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors"
             >
               {orderToAssign?.store || orderToAssign?.storeId ? 'Confirm Reassign' : 'Assign Store'}
@@ -567,7 +583,7 @@ export const AdminOrders = () => {
                   <p className="text-gray-400 italic">Not available</p>
                 )}
               </div>
-              
+
               {selectedOrder.notes && (
                 <div className="col-span-2 bg-yellow-50 p-3 rounded-md border border-yellow-100">
                   <p className="text-yellow-800 font-medium text-xs mb-1">Customer Notes</p>
@@ -623,18 +639,18 @@ export const AdminOrders = () => {
             </div>
 
             <div className="pt-4 flex justify-between items-center border-t border-gray-200">
-              <LoadingButton 
-                type="button" 
+              <LoadingButton
+                type="button"
                 isLoading={isDownloadingInvoice}
-                onClick={() => handleDownloadInvoice(selectedOrder._id || selectedOrder.id)} 
+                onClick={() => handleDownloadInvoice(selectedOrder._id || selectedOrder.id)}
                 className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-md hover:bg-emerald-100 transition-colors flex items-center gap-2 font-medium"
               >
                 <FileText size={16} />
                 Download Invoice
               </LoadingButton>
-              <button 
-                type="button" 
-                onClick={() => setIsDetailsModalOpen(false)} 
+              <button
+                type="button"
+                onClick={() => setIsDetailsModalOpen(false)}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Close
@@ -655,48 +671,49 @@ export const AdminOrders = () => {
           const name = displayProduct.name || displayProduct.productName || selectedProduct.productName || selectedProduct.name;
           const sku = displayProduct.sku || selectedProduct.sku || 'N/A';
           const price = displayProduct.price || selectedProduct.price || 0;
-          
+
           return (
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <div className="w-24 h-32 bg-gray-100 border border-gray-200 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
-                {image ? (
-                  <img src={image} className="w-full h-full object-cover" alt="Product" />
-                ) : (
-                  <span className="text-gray-400 text-xs">No Image</span>
-                )}
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <div className="w-24 h-32 bg-gray-100 border border-gray-200 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  {image ? (
+                    <img src={image} className="w-full h-full object-cover" alt="Product" />
+                  ) : (
+                    <span className="text-gray-400 text-xs">No Image</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900">{name}</h4>
+                  <p className="text-sm text-gray-600 mt-1">SKU: {sku}</p>
+                  <p className="text-sm text-gray-600">Quantity Ordered: {selectedProduct.quantity || selectedProduct.qty || 1}</p>
+                  <p className="text-sm font-medium text-gray-900 mt-2">Price: Rs. {price.toLocaleString('en-IN')}</p>
+                  {selectedProduct.color && <p className="text-sm text-gray-600">Ordered Color: {selectedProduct.color}</p>}
+                  {selectedProduct.size && <p className="text-sm text-gray-600">Ordered Size: {selectedProduct.size}</p>}
+
+                  {isFetchingProduct && <p className="text-xs text-blue-500 mt-2 animate-pulse">Loading full details...</p>}
+
+                  {!isFetchingProduct && fullProductDetails && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 font-bold uppercase mb-1">Live Product Info</p>
+                      <p className="text-xs text-gray-600 line-clamp-2" title={fullProductDetails.description}>{fullProductDetails.description}</p>
+                      <p className="text-xs text-gray-600 mt-1">Category: {fullProductDetails.category?.name || fullProductDetails.category}</p>
+                      <p className="text-xs text-gray-600">In Stock: {fullProductDetails.stock || 'Yes'}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-gray-900">{name}</h4>
-                <p className="text-sm text-gray-600 mt-1">SKU: {sku}</p>
-                <p className="text-sm text-gray-600">Quantity Ordered: {selectedProduct.quantity || selectedProduct.qty || 1}</p>
-                <p className="text-sm font-medium text-gray-900 mt-2">Price: Rs. {price.toLocaleString('en-IN')}</p>
-                {selectedProduct.color && <p className="text-sm text-gray-600">Ordered Color: {selectedProduct.color}</p>}
-                {selectedProduct.size && <p className="text-sm text-gray-600">Ordered Size: {selectedProduct.size}</p>}
-                
-                {isFetchingProduct && <p className="text-xs text-blue-500 mt-2 animate-pulse">Loading full details...</p>}
-                
-                {!isFetchingProduct && fullProductDetails && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-xs text-gray-500 font-bold uppercase mb-1">Live Product Info</p>
-                    <p className="text-xs text-gray-600 line-clamp-2" title={fullProductDetails.description}>{fullProductDetails.description}</p>
-                    <p className="text-xs text-gray-600 mt-1">Category: {fullProductDetails.category?.name || fullProductDetails.category}</p>
-                    <p className="text-xs text-gray-600">In Stock: {fullProductDetails.stock || 'Yes'}</p>
-                  </div>
-                )}
+              <div className="pt-4 flex justify-end border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setIsProductDetailsOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
               </div>
             </div>
-            <div className="pt-4 flex justify-end border-t border-gray-200">
-              <button 
-                type="button" 
-                onClick={() => setIsProductDetailsOpen(false)} 
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )})()}
+          )
+        })()}
       </AdminModal>
 
       <AdminModal
@@ -710,13 +727,13 @@ export const AdminOrders = () => {
               {trackingError}
             </div>
           )}
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Courier Name</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={trackingForm.courierName}
-              onChange={e => setTrackingForm({...trackingForm, courierName: e.target.value})}
+              onChange={e => setTrackingForm({ ...trackingForm, courierName: e.target.value })}
               placeholder="e.g. BlueDart"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
               required
@@ -725,10 +742,10 @@ export const AdminOrders = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Tracking Number</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={trackingForm.trackingNumber}
-              onChange={e => setTrackingForm({...trackingForm, trackingNumber: e.target.value})}
+              onChange={e => setTrackingForm({ ...trackingForm, trackingNumber: e.target.value })}
               placeholder="e.g. AWB987654321IN"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
               required
@@ -737,26 +754,26 @@ export const AdminOrders = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Delivery Date & Time</label>
-            <input 
-              type="datetime-local" 
+            <input
+              type="datetime-local"
               value={trackingForm.estimatedDeliveryDate}
-              onChange={e => setTrackingForm({...trackingForm, estimatedDeliveryDate: e.target.value})}
+              onChange={e => setTrackingForm({ ...trackingForm, estimatedDeliveryDate: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
               required
             />
           </div>
-          
+
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
-            <button 
-              type="button" 
-              onClick={() => setIsTrackingModalOpen(false)} 
+            <button
+              type="button"
+              onClick={() => setIsTrackingModalOpen(false)}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
-            <LoadingButton 
-              type="submit" 
-              isLoading={isUpdatingTracking} 
+            <LoadingButton
+              type="submit"
+              isLoading={isUpdatingTracking}
               className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors"
             >
               Assign Courier

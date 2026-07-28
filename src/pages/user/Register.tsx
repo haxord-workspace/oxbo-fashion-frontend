@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { register as registerAction, setAuthLoading, setAuthError } from '../../features/auth/authSlice';
+import { register as registerAction, setAuthLoading, setAuthError, selectAuthInitialized } from '../../features/auth/authSlice';
 import { authApi } from '../../services/authApi';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -30,13 +30,15 @@ const Register: React.FC = () => {
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isLoading, user, token } = useAppSelector(state => state.auth);
+  const { isLoading, user } = useAppSelector(state => state.auth);
+  const isInitialized = useAppSelector(selectAuthInitialized);
 
+  // Only redirect once auth is confirmed — prevents false redirect on refresh
   useEffect(() => {
-    if (user || token) {
+    if (isInitialized && user) {
       navigate('/');
     }
-  }, [user, token, navigate]);
+  }, [isInitialized, user, navigate]);
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -222,7 +224,7 @@ const Register: React.FC = () => {
               />
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-primary"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center z-10 text-gray-500 hover:text-primary"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -248,7 +250,7 @@ const Register: React.FC = () => {
               />
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-primary"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center z-10 text-gray-500 hover:text-primary"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               >
                 {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}

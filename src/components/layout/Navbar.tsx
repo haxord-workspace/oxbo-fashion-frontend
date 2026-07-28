@@ -21,8 +21,15 @@ const Navbar: React.FC = () => {
       try {
         const response = await userNotificationsApi.getUnreadNotifications();
         if (isMounted) {
-          // If the API returns the number directly or in a specific field:
-          setUnreadCount(response.count || response.unreadCount || response || 0);
+          let count = 0;
+          if (Array.isArray(response?.data)) {
+            count = response.data.length;
+          } else if (Array.isArray(response)) {
+            count = response.length;
+          } else {
+            count = response?.count || response?.unreadCount || 0;
+          }
+          setUnreadCount(count);
         }
       } catch (error) {
         console.error('Failed to fetch unread notifications count', error);
@@ -53,9 +60,11 @@ const Navbar: React.FC = () => {
         {/* Center: Logo */}
         <div className="flex-1 text-center flex justify-center">
           <Link to="/" className="inline-block">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase italic text-primary" style={{ fontFamily: 'Impact, sans-serif' }}>
-              Oxbo<span className="font-normal text-xl ml-1">✧</span>
-            </h1>
+            <img
+              src="/images/OxboLogo.png"
+              alt="Oxbo"
+              className="h-10 sm:h-12 w-10 sm:w-12 rounded-xl object-cover"
+            />
           </Link>
         </div>
 

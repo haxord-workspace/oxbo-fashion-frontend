@@ -60,9 +60,15 @@ export const AdminBanners = () => {
     setModalMode(mode);
     setSelectedBanner(banner);
     if (mode === 'edit' && banner) {
+      let formattedPosition = banner.position || 'Home-Top';
+      if (formattedPosition === 'home_top') formattedPosition = 'Home-Top';
+      if (formattedPosition === 'home_middle') formattedPosition = 'Home-Middle';
+      if (formattedPosition === 'category_top') formattedPosition = 'Category Top';
+      if (formattedPosition === 'carousel') formattedPosition = 'Carousel';
+
       setBannerForm({
         title: banner.title || '',
-        position: banner.position || 'Home-Top',
+        position: formattedPosition,
         image: banner.image || '',
         isActive: banner.isActive !== false,
         redirectUrl: banner.redirectUrl || '',

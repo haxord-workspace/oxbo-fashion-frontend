@@ -1,4 +1,5 @@
 import api from './api';
+import Cookies from 'js-cookie';
 import type { User } from '../types';
 export interface AuthResponse {
   user: User;
@@ -11,24 +12,49 @@ export const authApi = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
     const response = await api.post('/auth/login', { email, password });
    
-    const accessToken = response.headers['authorization']?.replace('Bearer ', '') || 
+    const responseData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    
+    // Deep search function to find keys no matter where they are nested
+    const findToken = (obj: any, key: string): string => {
+      if (!obj || typeof obj !== 'object') return '';
+      if (obj[key] && typeof obj[key] === 'string') return obj[key];
+      for (const k in obj) {
+        const result = findToken(obj[k], key);
+        if (result) return result;
+      }
+      return '';
+    };
+
+    const accessToken = findToken(responseData, 'accessToken') || 
+                        findToken(responseData, 'token') || 
+                        response.headers['authorization']?.replace('Bearer ', '') || 
                         response.headers['x-auth-token'] || 
                         response.headers['access-token'] || 
-                        response.data.data?.tokens?.accessToken || 
-                        response.data.data?.token ||
-                        response.data.accessToken || 
-                        response.data.token || '';
+                        '';
                         
-    const refreshToken = response.headers['x-refresh-token'] || 
+    const refreshToken = findToken(responseData, 'refreshToken') || 
+                         response.headers['x-refresh-token'] || 
                          response.headers['refresh-token'] || 
-                         response.data.data?.tokens?.refreshToken || 
-                         response.data.refreshToken || '';
+                         '';
+
+    console.log('Login Response:', responseData);
+    console.log('Extracted Access Token:', accessToken ? 'Exists' : 'Missing');
+    console.log('Extracted Refresh Token:', refreshToken ? 'Exists' : 'Missing');
+
+    if (accessToken) {
+      localStorage.setItem('accessToken', accessToken);
+      Cookies.set('accessToken', accessToken, { sameSite: 'strict' });
+    }
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+      Cookies.set('refreshToken', refreshToken, { sameSite: 'strict' });
+    }
 
     return {
-      user: response.data.data?.user || response.data.data,
+      user: responseData.data?.user || responseData.data || responseData.user,
       accessToken,
       refreshToken,
-      message: response.data.message,
+      message: responseData.message,
     };
   },
 
@@ -40,24 +66,44 @@ export const authApi = {
   register: async (data: { firstName: string; lastName: string; email: string; password: string; phone: string }): Promise<AuthResponse> => {
     const response = await api.post('/auth/register', data);
     
-    const accessToken = response.headers['authorization']?.replace('Bearer ', '') || 
+    const responseData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    
+    const findToken = (obj: any, key: string): string => {
+      if (!obj || typeof obj !== 'object') return '';
+      if (obj[key] && typeof obj[key] === 'string') return obj[key];
+      for (const k in obj) {
+        const result = findToken(obj[k], key);
+        if (result) return result;
+      }
+      return '';
+    };
+
+    const accessToken = findToken(responseData, 'accessToken') || 
+                        findToken(responseData, 'token') || 
+                        response.headers['authorization']?.replace('Bearer ', '') || 
                         response.headers['x-auth-token'] || 
                         response.headers['access-token'] || 
-                        response.data.data?.tokens?.accessToken || 
-                        response.data.data?.token ||
-                        response.data.accessToken || 
-                        response.data.token || '';
+                        '';
                         
-    const refreshToken = response.headers['x-refresh-token'] || 
+    const refreshToken = findToken(responseData, 'refreshToken') || 
+                         response.headers['x-refresh-token'] || 
                          response.headers['refresh-token'] || 
-                         response.data.data?.tokens?.refreshToken || 
-                         response.data.refreshToken || '';
+                         '';
+
+    if (accessToken) {
+      localStorage.setItem('accessToken', accessToken);
+      Cookies.set('accessToken', accessToken, { sameSite: 'strict' });
+    }
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+      Cookies.set('refreshToken', refreshToken, { sameSite: 'strict' });
+    }
 
     return {
-      user: response.data.data?.user || response.data.data,
+      user: responseData.data?.user || responseData.data || responseData.user,
       accessToken,
       refreshToken,
-      message: response.data.message,
+      message: responseData.message,
     };
   },
 

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { login, setAuthLoading, setAuthError } from '../../features/auth/authSlice';
+import { login, setAuthLoading, setAuthError, selectAuthInitialized } from '../../features/auth/authSlice';
 import { authApi } from '../../services/authApi';
 import toast from 'react-hot-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface FormErrors {
   email?: string;
@@ -14,17 +14,24 @@ interface FormErrors {
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isLoading, user, token } = useAppSelector(state => state.auth);
+  const location = useLocation();
+  const { isLoading, user } = useAppSelector(state => state.auth);
+  const isInitialized = useAppSelector(selectAuthInitialized);
 
+  // The page the user was on before being redirected to login
+  const from = (location.state as any)?.from || '/';
+
+  // Only redirect once auth is confirmed — prevents false redirect on refresh
   useEffect(() => {
-    if (user || token) {
-      navigate('/');
+    if (isInitialized && user) {
+      navigate(from, { replace: true });
     }
-  }, [user, token, navigate]);
+  }, [isInitialized, user, navigate, from]);
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -75,7 +82,7 @@ const Login: React.FC = () => {
       
       dispatch(login(response));
       toast.success(response.message || 'Welcome back!');
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to login';
       dispatch(setAuthError(errorMessage));
@@ -118,14 +125,14 @@ const Login: React.FC = () => {
               />
               {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
             </div>
-            <div>
+            <div className="relative">
               <label htmlFor="password" className="sr-only">Password</label>
               <input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                className={`relative block w-full appearance-none rounded-none border px-3 py-3 text-primary placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
+                className={`relative block w-full appearance-none rounded-none border px-3 py-3 pr-10 text-primary placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
                   errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
                 }`}
                 placeholder="PASSWORD"
@@ -135,6 +142,13 @@ const Login: React.FC = () => {
                   if (errors.password) setErrors({ ...errors, password: undefined });
                 }}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center z-10 text-gray-400 hover:text-gray-600 focus:outline-none"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
               {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
             </div>
             <div className="flex items-center justify-end mt-2">
