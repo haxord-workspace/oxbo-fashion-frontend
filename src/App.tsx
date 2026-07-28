@@ -1,112 +1,140 @@
-// src/App.tsx
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAppSelector } from "./app/hooks";
-import { selectIsAuthenticated } from "./features/auth/authSlice";
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from './app/store';
+import { useAppDispatch, useAppSelector } from './app/hooks';
+import { initializeAuth, selectAuthInitialized, selectIsAuthenticated } from './features/auth/authSlice';
+import { fetchCart } from './features/cart/cartSlice';
+import MainLayout from './components/layout/MainLayout';
+import Home from './pages/user/Home';
+import Login from './pages/user/Login';
+import Register from './pages/user/Register';
+import ProductDetail from './pages/user/ProductDetail';
+import Collection from './pages/user/Collection';
+import ForgotPassword from './pages/user/ForgotPassword';
+import ResetPassword from './pages/user/ResetPassword';
+import Contact from './pages/user/Contact';
+import Wishlist from './pages/user/Wishlist';
+import Profile from './pages/user/Profile';
+import Orders from './pages/user/Orders';
+import Checkout from './pages/user/Checkout';
+import UserNotifications from './pages/user/UserNotifications';
+import ProtectedRoute from './components/common/ProtectedRoute';
+import { Toaster } from 'react-hot-toast';
+import { Loader2 } from 'lucide-react';
 
-// Layout
-import MainLayout from "./components/layout/MainLayout";
+import AdminLayout from './components/layout/AdminLayout';
+import AdminLogin from './pages/admin/AdminLogin';
+import {
+  AdminDashboard,
+  AdminProducts,
+  AdminCategories,
+  AdminCategoryDetails,
+  AdminOrders,
+  AdminUsers,
+  AdminInventory,
+  AdminBanners,
+  AdminCoupons,
+  AdminReports,
+  AdminSettings,
+  AdminStores,
+  AdminBrands,
+  AdminNotifications,
+  AdminBulkUpload,
+} from './pages/admin/AdminPages';
+import CartPage from './pages/user/CartPage';
 
-// Pages (create these as you build)
-import HomePage from "./pages/HomePage";
-import ProductsPage from "./pages/ProductsPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
-import CartPage from "./pages/CartPage";
-import CheckoutPage from "./pages/CheckoutPage";
-import OrderSuccessPage from "./pages/OrderSuccessPage";
-import OrdersPage from "./pages/OrdersPage";
-import OrderDetailPage from "./pages/OrderDetailPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import ProfilePage from "./pages/ProfilePage";
-import NotFoundPage from "./pages/NotFoundPage";
-
-// ─── Protected Route ──────────────────────────────────────────────────────────
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+const AppContent: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const isInitialized = useAppSelector(selectAuthInitialized);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
-}
 
-// ─── Guest Route (redirect if already logged in) ──────────────────────────────
-function GuestRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  return !isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
-}
+  useEffect(() => {
+    dispatch(initializeAuth());
+  }, [dispatch]);
 
-export default function App() {
+  useEffect(() => {
+    if (isInitialized && isAuthenticated) {
+      dispatch(fetchCart());
+    }
+  }, [isInitialized, isAuthenticated, dispatch]);
+
+  if (!isInitialized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-        <Route element={<MainLayout />}>
-          {/* Public Routes */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/products" element={<ProductsPage />} />
-          <Route path="/products/:id" element={<ProductDetailPage />} />
-          <Route path="/cart" element={<CartPage />} />
+        {/* Client Routes */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Home />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
+          <Route path="products/:id" element={<ProductDetail />} />
+          <Route path="collections/:categoryId" element={<Collection />} />
+          <Route path="contact" element={<Contact />} />
 
-          {/* Auth Routes */}
-          <Route
-            path="/login"
-            element={
-              <GuestRoute>
-                <LoginPage />
-              </GuestRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <GuestRoute>
-                <RegisterPage />
-              </GuestRoute>
-            }
-          />
+          {/* Protected Client Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['user']} />}>
+            <Route path="wishlist" element={<Wishlist />} />
+            <Route path="cart" element={<CartPage />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="orders" element={<Orders />} />
+            <Route path="checkout" element={<Checkout />} />
+            <Route path="notifications" element={<UserNotifications />} />
+          </Route>
+        </Route>
 
-          {/* Protected Routes */}
-          <Route
-            path="/checkout"
-            element={
-              <ProtectedRoute>
-                <CheckoutPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/order-success/:orderId"
-            element={
-              <ProtectedRoute>
-                <OrderSuccessPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/orders"
-            element={
-              <ProtectedRoute>
-                <OrdersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/orders/:id"
-            element={
-              <ProtectedRoute>
-                <OrderDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
+        {/* Admin Public Route */}
+        <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* 404 */}
-          <Route path="*" element={<NotFoundPage />} />
+        {/* Protected Admin Routes */}
+        <Route element={<ProtectedRoute allowedRoles={['admin', 'storemanager']} />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="products" element={<AdminProducts />} />
+            <Route path="bulk-upload" element={<AdminBulkUpload />} />
+            <Route path="categories" element={<AdminCategories />} />
+            <Route path="categories/:categoryId" element={<AdminCategoryDetails />} />
+            <Route path="brands" element={<AdminBrands />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="inventory" element={<AdminInventory />} />
+            <Route path="reports" element={<AdminReports />} />
+            <Route path="notifications" element={<AdminNotifications />} />
+            
+            {/* Strictly Admin Only Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="banners" element={<AdminBanners />} />
+              <Route path="coupons" element={<AdminCoupons />} />
+              <Route path="stores" element={<AdminStores />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
+          </Route>
         </Route>
       </Routes>
-    </BrowserRouter>
+      <Toaster position="top-center" />
+    </Router>
   );
-}
+};
+
+const App: React.FC = () => {
+  return (
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <AppContent />
+      </PersistGate>
+    </Provider>
+  );
+};
+
+export default App;

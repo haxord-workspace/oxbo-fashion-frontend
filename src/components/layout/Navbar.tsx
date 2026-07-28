@@ -1,84 +1,117 @@
-// src/components/layout/Navbar.tsx
-import { Link, useNavigate } from "react-router-dom";
-import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { logout, selectCurrentUser, selectIsAuthenticated } from "../../features/auth/authSlice";
-import { selectCartCount, selectIsCartOpen } from "../../features/cart/cartSlice";
-import { toggleCart } from "../../features/ui/uiSlice";
+import React, { useState, useEffect } from 'react';
+import { Search, User, ShoppingBag, Bell } from 'lucide-react';
+import { useAppSelector, useAppDispatch } from '../../app/hooks';
+import { toggleCart, toggleMobileMenu } from '../../features/ui/uiSlice';
+import { selectCartCount } from '../../features/cart/cartSlice';
+import { selectIsAuthenticated } from '../../features/auth/authSlice';
+import { Link, useLocation } from 'react-router-dom';
+import { userNotificationsApi } from '../../services/user/notifications.Api';
 
-export default function Navbar() {
+const Navbar: React.FC = () => {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const user = useAppSelector(selectCurrentUser);
   const cartCount = useAppSelector(selectCartCount);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/");
-  };
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUnreadCount = async () => {
+      if (!isAuthenticated) return;
+      try {
+        const response = await userNotificationsApi.getUnreadNotifications();
+        if (isMounted) {
+          let count = 0;
+          if (Array.isArray(response?.data)) {
+            count = response.data.length;
+          } else if (Array.isArray(response)) {
+            count = response.length;
+          } else {
+            count = response?.count || response?.unreadCount || 0;
+          }
+          setUnreadCount(count);
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread notifications count', error);
+      }
+    };
+    
+    fetchUnreadCount();
+  }, [isAuthenticated, location.pathname]); // Re-fetch on route change as well
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="text-xl font-bold text-gray-900">
-          Oxbo Fashion
-        </Link>
+    <header className="bg-white sticky top-0 z-40">
+      <div className="flex items-center justify-between px-4 md:px-8 h-20">
+        
+        {/* Left: Mobile Menu (Custom Staggered Hamburger) */}
+        <div className="flex items-center flex-1">
+          <button 
+            onClick={() => dispatch(toggleMobileMenu())}
+            className="p-2 -ml-2 text-primary hover:opacity-70 transition-opacity"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 6H20" stroke="currentColor" strokeWidth="2" strokeLinecap="square"/>
+              <path d="M4 12H16" stroke="currentColor" strokeWidth="2" strokeLinecap="square"/>
+              <path d="M4 18H20" stroke="currentColor" strokeWidth="2" strokeLinecap="square"/>
+            </svg>
+          </button>
+        </div>
 
-        {/* Nav Links */}
-        <div className="hidden md:flex items-center gap-6">
-          <Link to="/products" className="text-sm text-gray-600 hover:text-gray-900">
-            Products
+        {/* Center: Logo */}
+        <div className="flex-1 text-center flex justify-center">
+          <Link to="/" className="inline-block">
+            <img
+              src="/images/OxboLogo.png"
+              alt="Oxbo"
+              className="h-10 sm:h-12 w-10 sm:w-12 rounded-xl object-cover"
+            />
           </Link>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-4">
-          {/* Cart Button */}
-          <button
-            onClick={() => dispatch(toggleCart())}
-            className="relative p-2 text-gray-600 hover:text-gray-900"
-            aria-label="Open cart"
+        {/* Right: Icons */}
+        <div className="flex items-center justify-end flex-1 space-x-2 sm:space-x-4">
+          <button className="p-2 text-primary hover:opacity-70 transition-opacity">
+            <Search className="w-6 h-6" strokeWidth={1.5} />
+          </button>
+          
+          <Link 
+            to={isAuthenticated ? "/profile" : "/login"} 
+            className="p-2 text-primary hover:opacity-70 transition-opacity hidden sm:block"
+            title="Account"
           >
-            🛒
+            <User className="w-6 h-6" strokeWidth={1.5} />
+          </Link>
+
+          {isAuthenticated && (
+            <Link 
+              to="/notifications" 
+              className="p-2 text-primary hover:opacity-70 transition-opacity relative hidden sm:block"
+              title="Notifications"
+            >
+              <Bell className="w-6 h-6" strokeWidth={1.5} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
+          )}
+
+          <button 
+            className="p-2 text-primary hover:opacity-70 transition-opacity relative hidden sm:block"
+            onClick={() => dispatch(toggleCart())}
+          >
+            <ShoppingBag className="w-6 h-6" strokeWidth={1.5} />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+              <span className="absolute top-1.5 right-1.5 bg-primary text-white text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
                 {cartCount}
               </span>
             )}
           </button>
-
-          {/* Auth */}
-          {isAuthenticated ? (
-            <div className="flex items-center gap-3">
-              <Link to="/orders" className="text-sm text-gray-600 hover:text-gray-900">
-                Orders
-              </Link>
-              <Link to="/profile" className="text-sm text-gray-600 hover:text-gray-900">
-                {user?.name}
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="text-sm text-red-500 hover:text-red-700"
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Link to="/login" className="text-sm text-gray-600 hover:text-gray-900">
-                Login
-              </Link>
-              <Link
-                to="/register"
-                className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Sign up
-              </Link>
-            </div>
-          )}
         </div>
-      </nav>
+      </div>
     </header>
   );
-}
+};
+
+export default Navbar;

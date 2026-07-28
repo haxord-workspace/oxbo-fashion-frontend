@@ -1,130 +1,165 @@
-// src/features/auth/authSlice.ts
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { AuthState } from "../../types";
-import { authApi } from "../../services/authApi";
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
+import type { User } from '../../types';
+import type { RootState } from '../../app/store';
+import Cookies from 'js-cookie';
+import { authApi, type AuthResponse } from '../../services/authApi';
 
-// ─── Async Thunks ─────────────────────────────────────────────────────────────
-
-export const login = createAsyncThunk(
-  "auth/login",
-  async (
-    credentials: { email: string; password: string },
-    { rejectWithValue }
-  ) => {
-    try {
-      const response = await authApi.login(credentials);
-      localStorage.setItem("token", response.token);
-      return response;
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || "Login failed");
-    }
-  }
-);
-
-export const register = createAsyncThunk(
-  "auth/register",
-  async (
-    payload: { name: string; email: string; password: string },
-    { rejectWithValue }
-  ) => {
-    try {
-      const response = await authApi.register(payload);
-      localStorage.setItem("token", response.token);
-      return response;
-    } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.message || "Registration failed"
-      );
-    }
-  }
-);
-
-export const fetchCurrentUser = createAsyncThunk(
-  "auth/fetchCurrentUser",
-  async (_, { rejectWithValue }) => {
-    try {
-      return await authApi.getMe();
-    } catch (err: any) {
-      return rejectWithValue("Session expired");
-    }
-  }
-);
-
-// ─── Slice ────────────────────────────────────────────────────────────────────
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  error: string | null;
+  isInitialized: boolean;
+}
 
 const initialState: AuthState = {
   user: null,
-  token: localStorage.getItem("token"),
+  token: localStorage.getItem('accessToken') || null,
   isLoading: false,
   error: null,
+  isInitialized: false,
 };
 
+export const initializeAuth = createAsyncThunk(
+  'auth/initialize',
+  async (_) => {
+    try {
+      // Just try to fetch the profile. If the HttpOnly cookies are present, this will succeed.
+      const response = await authApi.getProfile();
+      // Handle both { user: {...} } and direct user object responses
+      return (response as any).user || response;
+    } catch (err: any) {
+      // If it fails, they are not authenticated (e.g., cookies expired or missing)
+      return null;
+    }
+  }
+);
+
 const authSlice = createSlice({
-  name: "auth",
+  name: 'auth',
   initialState,
   reducers: {
+    login(state, action: PayloadAction<AuthResponse>) {
+      state.user = action.payload.user;
+      state.token = action.payload.accessToken || null;
+      state.isLoading = false;
+      state.error = null;
+      if (action.payload.accessToken) {
+        localStorage.setItem('accessToken', action.payload.accessToken);
+      }
+      if (action.payload.refreshToken) {
+        localStorage.setItem('refreshToken', action.payload.refreshToken);
+      }
+    },
+    register(state, action: PayloadAction<AuthResponse>) {
+      state.user = action.payload.user;
+      state.token = action.payload.accessToken || null;
+      state.isLoading = false;
+      state.error = null;
+      if (action.payload.accessToken) {
+        localStorage.setItem('accessToken', action.payload.accessToken);
+      }
+      if (action.payload.refreshToken) {
+        localStorage.setItem('refreshToken', action.payload.refreshToken);
+      }
+    },
     logout(state) {
       state.user = null;
       state.token = null;
-      localStorage.removeItem("token");
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      Cookies.remove('accessToken');
+      Cookies.remove('refreshToken');
     },
-    clearError(state) {
-      state.error = null;
+    fetchCurrentUser(state, action: PayloadAction<User>) {
+      state.user = action.payload;
     },
+    updateUser(state, action: PayloadAction<User>) {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
+    setAuthLoading(state, action: PayloadAction<boolean>) {
+      state.isLoading = action.payload;
+    },
+    setAuthError(state, action: PayloadAction<string>) {
+      state.error = action.payload;
+      state.isLoading = false;
+    }
   },
   extraReducers: (builder) => {
-    // Login
     builder
-      .addCase(login.pending, (state) => {
+      .addCase(initializeAuth.pending, (state) => {
         state.isLoading = true;
-        state.error = null;
+        state.isInitialized = false; // Force the app to wait for auth check on reload
       })
-      .addCase(login.fulfilled, (state, action) => {
+      .addCase(initializeAuth.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        state.isInitialized = true;
+        if (action.payload) {
+          state.user = action.payload;
+          state.token = localStorage.getItem('accessToken') || null;
+        } else {
+          state.user = null;
+          state.token = null;
+        }
       })
-      .addCase(login.rejected, (state, action) => {
+      .addCase(initializeAuth.rejected, (state) => {
         state.isLoading = false;
-        state.error = action.payload as string;
-      });
-
-    // Register
-    builder
-      .addCase(register.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(register.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
-      })
-      .addCase(register.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      });
-
-    // Fetch current user
-    builder
-      .addCase(fetchCurrentUser.fulfilled, (state, action) => {
-        state.user = action.payload;
-      })
-      .addCase(fetchCurrentUser.rejected, (state) => {
+        state.isInitialized = true;
         state.user = null;
         state.token = null;
+        state.error = null;
       });
   },
 });
 
-export const { logout, clearError } = authSlice.actions;
+export const { login, register, logout, fetchCurrentUser, updateUser, setAuthLoading, setAuthError } = authSlice.actions;
 
-// ─── Selectors ────────────────────────────────────────────────────────────────
-export const selectCurrentUser = (state: { auth: AuthState }) => state.auth.user;
-export const selectIsAuthenticated = (state: { auth: AuthState }) =>
-  !!state.auth.token;
-export const selectAuthLoading = (state: { auth: AuthState }) =>
-  state.auth.isLoading;
-export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
+export const selectCurrentUser = (state: RootState) => state.auth?.user;
+export const selectIsAuthenticated = (state: RootState) => !!state.auth?.user;
+export const selectAuthInitialized = (state: RootState) => state.auth?.isInitialized;
+export const selectUserRole = (state: RootState) => {
+  const user = state.auth?.user as any;
+  if (!user) return 'user';
+  
+  const superAdminRoleId = import.meta.env.VITE_SUPER_ADMIN_ROLE_ID;
+  const storeAdminRoleId = import.meta.env.VITE_STORE_ADMIN_ROLE_ID;
+  
+  // Check all possible role ID locations
+  const possibleIds = [
+    String(user.roleId?._id),
+    String(user.roleId?.id),
+    String(user.roleId),
+    String(user.role)
+  ];
+  
+  if (possibleIds.includes(String(superAdminRoleId))) return 'admin';
+  if (possibleIds.includes(String(storeAdminRoleId))) return 'storemanager';
+  
+  let role = 'user';
+  if (user.role && typeof user.role === 'string') role = user.role;
+  else if (user.roleId?.name) role = user.roleId.name;
+  
+  const roleStr = String(role).toLowerCase();
+  const emailStr = String(user.email || '').toLowerCase();
+
+  if (roleStr === 'admin' || roleStr.includes('admin') || emailStr.includes('admin')) {
+    return 'admin';
+  }
+  
+  if (roleStr === 'storemanager' || roleStr.includes('manager') || roleStr.includes('store') || emailStr.includes('manager') || emailStr.includes('store')) {
+    return 'storemanager';
+  }
+  
+  return role;
+};
+export const selectIsAdmin = (state: RootState) => selectUserRole(state) === 'admin';
+export const selectIsStoreManager = (state: RootState) => {
+  const role = selectUserRole(state);
+  const roleStr = String(role).toLowerCase();
+  return roleStr === 'storemanager' || roleStr.includes('manager') || roleStr.includes('store');
+};
 
 export default authSlice.reducer;

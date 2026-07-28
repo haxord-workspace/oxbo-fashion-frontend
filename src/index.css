@@ -3,10 +3,17 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    box-sizing: border-box;
+  html, body {
+    @apply font-sans bg-white text-black antialiased;
+    max-width: 100vw;
   }
-  body {
-    @apply text-gray-900 antialiased;
-  }
+}
+
+/* Hide scrollbar for CategoryNav */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }

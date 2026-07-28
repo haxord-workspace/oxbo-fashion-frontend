@@ -1,33 +1,139 @@
-// src/services/authApi.ts
-import axiosInstance from "./axiosInstance";
-import type { User } from "../types";
-
-interface AuthResponse {
+import api from './api';
+import Cookies from 'js-cookie';
+import type { User } from '../types';
+export interface AuthResponse {
   user: User;
-  token: string;
+  accessToken: string;
+  refreshToken: string;
+  message?: string;
 }
 
 export const authApi = {
-  login: async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
-    const { data } = await axiosInstance.post("/auth/login", credentials);
-    return data;
+  login: async (email: string, password: string): Promise<AuthResponse> => {
+    const response = await api.post('/auth/login', { email, password });
+   
+    const responseData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    
+    // Deep search function to find keys no matter where they are nested
+    const findToken = (obj: any, key: string): string => {
+      if (!obj || typeof obj !== 'object') return '';
+      if (obj[key] && typeof obj[key] === 'string') return obj[key];
+      for (const k in obj) {
+        const result = findToken(obj[k], key);
+        if (result) return result;
+      }
+      return '';
+    };
+
+    const accessToken = findToken(responseData, 'accessToken') || 
+                        findToken(responseData, 'token') || 
+                        response.headers['authorization']?.replace('Bearer ', '') || 
+                        response.headers['x-auth-token'] || 
+                        response.headers['access-token'] || 
+                        '';
+                        
+    const refreshToken = findToken(responseData, 'refreshToken') || 
+                         response.headers['x-refresh-token'] || 
+                         response.headers['refresh-token'] || 
+                         '';
+
+    console.log('Login Response:', responseData);
+    console.log('Extracted Access Token:', accessToken ? 'Exists' : 'Missing');
+    console.log('Extracted Refresh Token:', refreshToken ? 'Exists' : 'Missing');
+
+    if (accessToken) {
+      localStorage.setItem('accessToken', accessToken);
+      Cookies.set('accessToken', accessToken, { sameSite: 'strict' });
+    }
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+      Cookies.set('refreshToken', refreshToken, { sameSite: 'strict' });
+    }
+
+    return {
+      user: responseData.data?.user || responseData.data || responseData.user,
+      accessToken,
+      refreshToken,
+      message: responseData.message,
+    };
   },
 
-  register: async (payload: {
-    name: string;
-    email: string;
-    password: string;
-  }): Promise<AuthResponse> => {
-    const { data } = await axiosInstance.post("/auth/register", payload);
-    return data;
+  logout: async (): Promise<{ message?: string }> => {
+    const response = await api.post('/auth/logout');
+    return { message: response.data.message };
   },
 
-  getMe: async (): Promise<User> => {
-    const { data } = await axiosInstance.get("/auth/me");
-    return data;
+  register: async (data: { firstName: string; lastName: string; email: string; password: string; phone: string }): Promise<AuthResponse> => {
+    const response = await api.post('/auth/register', data);
+    
+    const responseData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+    
+    const findToken = (obj: any, key: string): string => {
+      if (!obj || typeof obj !== 'object') return '';
+      if (obj[key] && typeof obj[key] === 'string') return obj[key];
+      for (const k in obj) {
+        const result = findToken(obj[k], key);
+        if (result) return result;
+      }
+      return '';
+    };
+
+    const accessToken = findToken(responseData, 'accessToken') || 
+                        findToken(responseData, 'token') || 
+                        response.headers['authorization']?.replace('Bearer ', '') || 
+                        response.headers['x-auth-token'] || 
+                        response.headers['access-token'] || 
+                        '';
+                        
+    const refreshToken = findToken(responseData, 'refreshToken') || 
+                         response.headers['x-refresh-token'] || 
+                         response.headers['refresh-token'] || 
+                         '';
+
+    if (accessToken) {
+      localStorage.setItem('accessToken', accessToken);
+      Cookies.set('accessToken', accessToken, { sameSite: 'strict' });
+    }
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+      Cookies.set('refreshToken', refreshToken, { sameSite: 'strict' });
+    }
+
+    return {
+      user: responseData.data?.user || responseData.data || responseData.user,
+      accessToken,
+      refreshToken,
+      message: responseData.message,
+    };
   },
 
-  logout: async (): Promise<void> => {
-    await axiosInstance.post("/auth/logout");
+  updateProfile: async (_userId: string, data: Partial<User>): Promise<{ user: User }> => {
+    const response = await api.patch(`/auth/profile`, data);
+    return response.data.data ? { user: response.data.data.user } : response.data;
   },
+
+  getProfile: async (): Promise<{ user: User }> => {
+    const response = await api.get('/auth/profile');
+    return response.data.data ? { user: response.data.data.user || response.data.data } : response.data;
+  },
+
+  refreshToken: async (token: string): Promise<{ accessToken: string }> => {
+    const response = await api.post('/auth/refresh', { refreshToken: token });
+    const accessToken = response.data.data?.tokens?.accessToken || 
+                        response.data.data?.token || 
+                        response.data.data?.accessToken || 
+                        response.data.token || 
+                        response.data.accessToken || '';
+    return { accessToken };
+  },
+
+  requestPasswordReset: async (email: string): Promise<{ message: string }> => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  resetPassword: async (data: any): Promise<{ message: string }> => {
+    const response = await api.post('/auth/reset-password', data);
+    return response.data;
+  }
 };

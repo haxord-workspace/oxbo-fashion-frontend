@@ -1,109 +1,43 @@
-// src/features/orders/ordersSlice.ts
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { OrdersState, Address } from "../../types";
-import { ordersApi } from "../../services/ordersApi";
+import { createSlice } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
 
-// ─── Async Thunks ─────────────────────────────────────────────────────────────
+interface Order {
+  id: string;
+  total: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  date: string;
+}
 
-export const fetchOrders = createAsyncThunk(
-  "orders/fetchAll",
-  async (_, { rejectWithValue }) => {
-    try {
-      return await ordersApi.getOrders();
-    } catch (err: any) {
-      return rejectWithValue("Failed to fetch orders");
-    }
-  }
-);
-
-export const fetchOrderById = createAsyncThunk(
-  "orders/fetchById",
-  async (id: string, { rejectWithValue }) => {
-    try {
-      return await ordersApi.getOrderById(id);
-    } catch (err: any) {
-      return rejectWithValue("Order not found");
-    }
-  }
-);
-
-export const placeOrder = createAsyncThunk(
-  "orders/place",
-  async (
-    payload: {
-      shippingAddress: Address;
-      paymentMethod: "cod" | "online";
-    },
-    { rejectWithValue }
-  ) => {
-    try {
-      return await ordersApi.placeOrder(payload);
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || "Order placement failed");
-    }
-  }
-);
-
-// ─── Slice ────────────────────────────────────────────────────────────────────
+interface OrdersState {
+  items: Order[];
+  selectedOrder: Order | null;
+  isLoading: boolean;
+}
 
 const initialState: OrdersState = {
   items: [],
   selectedOrder: null,
   isLoading: false,
-  error: null,
 };
 
 const ordersSlice = createSlice({
-  name: "orders",
+  name: 'orders',
   initialState,
   reducers: {
-    clearSelectedOrder(state) {
-      state.selectedOrder = null;
+    placeOrder(state, action: PayloadAction<Order>) {
+      state.items.push(action.payload);
     },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(fetchOrders.pending, (state) => {
-        state.isLoading = true;
-      })
-      .addCase(fetchOrders.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.items = action.payload;
-      })
-      .addCase(fetchOrders.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      });
-
-    builder
-      .addCase(fetchOrderById.fulfilled, (state, action) => {
-        state.selectedOrder = action.payload;
-      });
-
-    builder
-      .addCase(placeOrder.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(placeOrder.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.items.unshift(action.payload); // New order at top
-        state.selectedOrder = action.payload;
-      })
-      .addCase(placeOrder.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      });
+    fetchOrders(state, action: PayloadAction<Order[]>) {
+      state.items = action.payload;
+    },
+    fetchOrderById(state, action: PayloadAction<Order>) {
+      state.selectedOrder = action.payload;
+    },
+    setLoading(state, action: PayloadAction<boolean>) {
+      state.isLoading = action.payload;
+    }
   },
 });
 
-export const { clearSelectedOrder } = ordersSlice.actions;
-
-// ─── Selectors ────────────────────────────────────────────────────────────────
-export const selectOrders = (state: { orders: OrdersState }) => state.orders.items;
-export const selectSelectedOrder = (state: { orders: OrdersState }) =>
-  state.orders.selectedOrder;
-export const selectOrdersLoading = (state: { orders: OrdersState }) =>
-  state.orders.isLoading;
-
+export const { placeOrder, fetchOrders, fetchOrderById, setLoading } = ordersSlice.actions;
 export default ordersSlice.reducer;

@@ -1,18 +1,30 @@
-// src/components/layout/MainLayout.tsx
-import { Outlet } from "react-router-dom";
-import Navbar from "./Navbar";
-import Footer from "./Footer";
-import ToastContainer from "../common/ToastContainer";
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import AnnouncementBar from './AnnouncementBar';
+import Navbar from './Navbar';
+import CategoryNav from './CategoryNav';
+import Footer from './Footer';
+import CartDrawer from '../../features/cart/CartDrawer';
+import MobileMenuDrawer from './MobileMenuDrawer';
+import MobileBottomNav from './MobileBottomNav';
 
-export default function MainLayout() {
+const MainLayout: React.FC = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="flex flex-col min-h-screen bg-white pb-[60px] sm:pb-0">
+      <AnnouncementBar />
       <Navbar />
-      <main className="flex-1">
+      <CategoryNav />
+      
+      <main className="flex-grow flex flex-col">
         <Outlet />
       </main>
+      
       <Footer />
-      <ToastContainer />
+      <CartDrawer />
+      <MobileMenuDrawer />
+      <MobileBottomNav />
     </div>
   );
-}
+};
+
+export default MainLayout;
