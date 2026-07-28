@@ -122,7 +122,6 @@ api.interceptors.response.use(
       !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/refresh')
     ) {
-      console.error("🚨 [Frontend Debug] 401 Unauthorized triggered by:", originalRequest.url);
       originalRequest._retry = true;
 
       const isLoginPage = window.location.pathname.includes('/login');
@@ -165,7 +164,6 @@ api.interceptors.response.use(
 
           return api(originalRequest);
         } catch (refreshError: any) {
-          console.error("🚨 [Frontend Debug] /auth/refresh FAILED! Status:", refreshError?.response?.status, "Data:", refreshError?.response?.data);
           // Both access and refresh tokens are expired — clear everything
           clearAuthTokens();
 

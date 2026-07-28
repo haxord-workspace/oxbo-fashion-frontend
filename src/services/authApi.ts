@@ -37,9 +37,6 @@ export const authApi = {
                          response.headers['refresh-token'] || 
                          '';
 
-    console.log('Login Response:', responseData);
-    console.log('Extracted Access Token:', accessToken ? 'Exists' : 'Missing');
-    console.log('Extracted Refresh Token:', refreshToken ? 'Exists' : 'Missing');
 
     if (accessToken) {
       localStorage.setItem('accessToken', accessToken);

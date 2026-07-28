@@ -29,13 +29,15 @@ const AdminLogin: React.FC = () => {
       
       const isStoreManager = String(userRoleId) === String(storeAdminRoleId);
       
+      // Derived only from backend-supplied role data - checking the user's
+      // own email string is bypassable by anyone registering an
+      // email containing "admin".
       const roleStr = String(user?.role || '').toLowerCase();
-      const isAdmin = 
+      const isAdmin =
         String(userRoleId) === String(superAdminRoleId) ||
-        roleStr === 'admin' || 
+        roleStr === 'admin' ||
         roleStr.includes('admin') ||
-        (user as any)?.roleId?.name?.toLowerCase().includes('admin') ||
-        (user?.email && user.email.toLowerCase().includes('admin'));
+        (user as any)?.roleId?.name?.toLowerCase().includes('admin');
         
       if (isAdmin || isStoreManager) {
         navigate('/admin/dashboard');
@@ -78,13 +80,15 @@ const AdminLogin: React.FC = () => {
       
       const isStoreManager = String(userRoleId) === String(storeAdminRoleId);
 
+      // Derived only from backend-supplied role data - checking the user's
+      // own email string is bypassable by anyone registering an
+      // email containing "admin".
       const roleStr = String(response.user.role || '').toLowerCase();
-      const isAdmin = 
+      const isAdmin =
         String(userRoleId) === String(superAdminRoleId) ||
-        roleStr === 'admin' || 
+        roleStr === 'admin' ||
         roleStr.includes('admin') ||
-        (response.user as any).roleId?.name?.toLowerCase().includes('admin') ||
-        (response.user.email && response.user.email.toLowerCase().includes('admin'));
+        (response.user as any).roleId?.name?.toLowerCase().includes('admin');
       
       if (!isAdmin && !isStoreManager) {
         dispatch(setAuthLoading(false));

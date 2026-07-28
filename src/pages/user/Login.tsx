@@ -63,12 +63,14 @@ const Login: React.FC = () => {
     try {
       const response = await authApi.login(email, password);
       
+      // Derived only from backend-supplied role data - checking the user's
+      // own email string is bypassable by anyone registering an
+      // email containing "admin".
       const roleStr = String(response.user.role || '').toLowerCase();
-      const isAdmin = 
-        roleStr === 'admin' || 
+      const isAdmin =
+        roleStr === 'admin' ||
         roleStr.includes('admin') ||
-        (response.user as any).roleId?.name?.toLowerCase().includes('admin') ||
-        (response.user.email && response.user.email.toLowerCase().includes('admin'));
+        (response.user as any).roleId?.name?.toLowerCase().includes('admin');
       
       if (isAdmin) {
         dispatch(setAuthLoading(false));
