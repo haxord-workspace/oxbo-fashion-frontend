@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axiosInstance from '../../services/axiosInstance';
+import api from '../../services/api';
 
 interface Category {
   _id: string;
@@ -19,7 +19,7 @@ const ShopByCategory: React.FC = () => {
     const fetchCategories = async () => {
       setIsLoading(true);
       try {
-        const response = await axiosInstance.get(`/categories?limit=4&page=${page}`);
+        const response = await api.get(`/categories?limit=4&page=${page}`);
         const data = response.data?.data?.categories || response.data?.categories || response.data?.data || response.data;
         const total = response.data?.data?.total || response.data?.total || 0;
         
