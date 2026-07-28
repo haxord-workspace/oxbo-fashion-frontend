@@ -43,7 +43,7 @@ export const adminNotificationApi = {
       throw error.response?.data || error;
     }
   },
-  getAllNotifications: async (params?: { page?: number; limit?: number }) => {
+  getAllNotifications: async (params?: { page?: number; limit?: number; type?: string }) => {
     try {
       const response = await api.get('/admin/notifications', { params });
       return response.data;
