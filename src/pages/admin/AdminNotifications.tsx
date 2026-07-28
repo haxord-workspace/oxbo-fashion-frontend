@@ -181,15 +181,20 @@ export const AdminNotifications = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalNotifications, setTotalNotifications] = useState(0);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [filterType, setFilterType] = useState('All');
   const itemsPerPage = 10;
 
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await adminNotificationApi.getAllNotifications({
+      const params: any = {
         page: currentPage,
         limit: itemsPerPage
-      });
+      };
+      if (filterType !== 'All') {
+        params.type = filterType;
+      }
+      const response = await adminNotificationApi.getAllNotifications(params);
       const notifs = response?.data?.data || response?.data || response?.notifications || [];
       const total = response?.data?.total || response?.total || response?.count || 0;
       setNotifications(Array.isArray(notifs) ? notifs : []);
@@ -199,7 +204,7 @@ export const AdminNotifications = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage]);
+  }, [currentPage, filterType]);
 
   useEffect(() => {
     fetchNotifications();
@@ -236,6 +241,26 @@ export const AdminNotifications = () => {
         }
       >
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-4 border-b border-gray-100 flex justify-end bg-gray-50/50">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-500">Filter by Type:</span>
+              <select
+                value={filterType}
+                onChange={(e) => {
+                  setFilterType(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary bg-white cursor-pointer min-w-[140px]"
+              >
+                <option value="All">All Types</option>
+                <option value="order">Order</option>
+                <option value="system">System</option>
+                <option value="offer">Offer</option>
+                <option value="payment">Payment</option>
+                <option value="inventory">Inventory</option>
+              </select>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
