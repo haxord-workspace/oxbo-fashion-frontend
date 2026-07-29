@@ -15,18 +15,58 @@ export const AdminBulkUpload: React.FC = () => {
   const [isFetchingData, setIsFetchingData] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
+  
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const [subCategoriesMap, setSubCategoriesMap] = useState<Record<string, any[]>>({});
+  const [loadingSubCategory, setLoadingSubCategory] = useState<string | null>(null);
 
   const fetchCategories = async () => {
     setIsFetchingData(true);
     setIsCategoryModalOpen(true);
+    setExpandedCategoryId(null);
     try {
-      const response = await adminCategoriesApi.getCategories({ limit: 1000 });
-      setCategories(response.categories || (response as any).data || []);
+      const response = await adminCategoriesApi.getRootCategories();
+      const roots = response.categories || (response as any).data || [];
+      setCategories(roots);
+      
+      // Prefetch subcategories to show indicator
+      const subMap: Record<string, any[]> = {};
+      await Promise.all(roots.map(async (c: any) => {
+        const cId = c._id || c.id;
+        try {
+          const subRes = await adminCategoriesApi.getCategoryChildren(cId);
+          subMap[cId] = subRes.categories || [];
+        } catch {
+          subMap[cId] = [];
+        }
+      }));
+      setSubCategoriesMap(subMap);
     } catch (error: any) {
       toast.error(error.message || 'Failed to fetch categories');
       setIsCategoryModalOpen(false);
     } finally {
       setIsFetchingData(false);
+    }
+  };
+
+  const handleCategoryClick = async (categoryId: string) => {
+    if (expandedCategoryId === categoryId) {
+      setExpandedCategoryId(null);
+      return;
+    }
+    
+    setExpandedCategoryId(categoryId);
+    
+    if (!subCategoriesMap[categoryId]) {
+      setLoadingSubCategory(categoryId);
+      try {
+        const response = await adminCategoriesApi.getCategoryChildren(categoryId);
+        setSubCategoriesMap(prev => ({ ...prev, [categoryId]: response.categories || [] }));
+      } catch (error) {
+        console.error("Failed to fetch subcategories", error);
+      } finally {
+        setLoadingSubCategory(null);
+      }
     }
   };
 
@@ -230,17 +270,66 @@ export const AdminBulkUpload: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {categories.map((c: any) => (
-                    <div key={c._id || c.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                      <span className="text-sm font-medium text-gray-700">{c.name}</span>
-                      <div className="flex items-center gap-2">
-                        <code className="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">{c._id || c.id}</code>
-                        <button onClick={() => copyToClipboard(c._id || c.id)} className="text-gray-400 hover:text-primary transition-colors" title="Copy ID">
-                          <Copy size={14} />
-                        </button>
+                  {categories.map((c: any) => {
+                    const cId = c._id || c.id;
+                    const isExpanded = expandedCategoryId === cId;
+                    const cSubCategories = subCategoriesMap[cId] || [];
+                    const hasLoaded = subCategoriesMap[cId] !== undefined;
+
+                    return (
+                      <div key={cId} className="space-y-2">
+                        <div 
+                          onClick={() => handleCategoryClick(cId)}
+                          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
+                        >
+                          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            {c.name}
+                            {hasLoaded && (
+                               cSubCategories.length > 0 
+                               ? <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap">Has Subcategories</span>
+                               : <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full whitespace-nowrap">No Subcategories</span>
+                            )}
+                          </span>
+                          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                            <code className="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">{cId}</code>
+                            <button onClick={() => copyToClipboard(cId)} className="text-gray-400 hover:text-primary transition-colors" title="Copy ID">
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {isExpanded && (
+                          <div className="pl-4 ml-2 border-l-2 border-gray-100 space-y-2">
+                            {loadingSubCategory === cId ? (
+                              <div className="flex justify-center py-2">
+                                <Loader2 className="animate-spin text-gray-400" size={16} />
+                              </div>
+                            ) : cSubCategories.length > 0 ? (
+                              cSubCategories.map((sc: any) => {
+                                const scId = sc._id || sc.id;
+                                return (
+                                  <div key={scId} className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-100">
+                                    <span className="text-sm font-medium text-gray-600 flex items-center">
+                                      <span className="w-1.5 h-1.5 bg-gray-300 rounded-full mr-2"></span>
+                                      {sc.name}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <code className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-200">{scId}</code>
+                                      <button onClick={() => copyToClipboard(scId)} className="text-gray-400 hover:text-primary transition-colors" title="Copy ID">
+                                        <Copy size={14} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            ) : hasLoaded ? (
+                              <div className="text-sm text-gray-500 bg-gray-50/50 p-3 rounded-lg border border-gray-100 text-center">No subcategories found for this category.</div>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {categories.length === 0 && <p className="text-sm text-gray-500 text-center py-4">No categories found.</p>}
                 </div>
               )}

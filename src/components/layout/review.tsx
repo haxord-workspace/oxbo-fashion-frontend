@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Star, BadgeCheck, Loader2 } from 'lucide-react';
 import { userReviewsApi } from '../../services/user/reviews.Api';
 
 const Reviews: React.FC = () => {
+  const navigate = useNavigate();
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
@@ -145,12 +147,19 @@ const Reviews: React.FC = () => {
                 const productName = review.productId?.name || review.product?.name || review.productName || review.product || '';
                 const displayImage = (review.images && review.images.length > 0) 
                   ? review.images[0] 
-                  : review.userId?.image || review.user?.image || review.user?.avatar || review.reviewerImage || review.image || '/images/model1.png';
+                  : review.productId?.thumbnail || review.userId?.image || review.user?.image || review.user?.avatar || review.reviewerImage || review.image || '/images/model1.png';
+
+                const productId = review.productId?._id || review.productId?.id || review.productId;
 
                 return (
                   <div 
                     key={review._id || review.id || idx} 
-                    className="w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] flex-shrink-0 flex flex-col rounded-b-[8px] overflow-hidden"
+                    onClick={() => {
+                      if (productId) {
+                        navigate(`/products/${productId}`);
+                      }
+                    }}
+                    className={`w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] flex-shrink-0 flex flex-col rounded-b-[8px] overflow-hidden ${productId ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
                   >
                     {/* Product Image */}
                     <div className="h-[350px] w-full bg-gray-100 relative">

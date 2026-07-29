@@ -49,7 +49,7 @@ const MobileBottomNav: React.FC = () => {
         <span className="text-[10px] font-bold">HOME</span>
       </Link>
       
-      <Link to="/shop" className={`flex flex-col items-center p-1 ${isActive('/shop') ? 'text-primary' : 'text-gray-500'}`}>
+      <Link to="/collections/all-drops" className={`flex flex-col items-center p-1 ${isActive('/shop') ? 'text-primary' : 'text-gray-500'}`}>
         <LayoutGrid className="w-6 h-6 mb-1" strokeWidth={isActive('/shop') ? 2 : 1.5} />
         <span className="text-[10px] font-bold">SHOP</span>
       </Link>
@@ -77,22 +77,7 @@ const MobileBottomNav: React.FC = () => {
         <span className="text-[10px] font-bold">ACCOUNT</span>
       </Link>
 
-      {isAuthenticated && (
-        <Link 
-          to="/notifications" 
-          className={`flex flex-col items-center p-1 ${isActive('/notifications') ? 'text-primary' : 'text-gray-500'}`}
-        >
-          <div className="relative">
-            <Bell className="w-6 h-6 mb-1" strokeWidth={isActive('/notifications') ? 2 : 1.5} />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[9px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-bold">NOTIFICATIONS</span>
-        </Link>
-      )}
+     
     </div>
   );
 };

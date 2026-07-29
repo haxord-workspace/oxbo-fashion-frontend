@@ -629,6 +629,21 @@ export const AdminOrders = () => {
                         <td className="py-2 px-3 text-right text-gray-900">Rs. {selectedOrder.shippingCharge.toLocaleString('en-IN')}</td>
                       </tr>
                     )}
+                    {(selectedOrder.discount > 0) && (
+                      <tr>
+                        <td colSpan={4} className="py-2 px-3">
+                          <div className="flex justify-end items-center gap-2 text-right text-gray-600">
+                            <span>Discount</span>
+                            {selectedOrder.couponId && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                {selectedOrder.couponId.code} ({selectedOrder.couponId.type === 'percentage' ? `${selectedOrder.couponId.value}% OFF` : `Rs. ${selectedOrder.couponId.value} OFF`})
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 px-3 text-right text-green-600 font-medium">-Rs. {(selectedOrder.discount || 0).toLocaleString('en-IN')}</td>
+                      </tr>
+                    )}
                     <tr>
                       <td colSpan={4} className="py-2 px-3 text-right font-bold text-gray-900">Grand Total</td>
                       <td className="py-2 px-3 text-right font-bold text-gray-900">Rs. {(selectedOrder.grandTotal || selectedOrder.totalAmount || selectedOrder.total || 0).toLocaleString('en-IN')}</td>
@@ -666,11 +681,37 @@ export const AdminOrders = () => {
         title="Product Details"
       >
         {selectedProduct && (() => {
-          const displayProduct = fullProductDetails || selectedProduct.product || selectedProduct;
-          const image = displayProduct.image || displayProduct.imageUrl || displayProduct.thumbnail || displayProduct.images?.[0] || selectedProduct.image || selectedProduct.imageUrl;
-          const name = displayProduct.name || displayProduct.productName || selectedProduct.productName || selectedProduct.name;
-          const sku = displayProduct.sku || selectedProduct.sku || 'N/A';
-          const price = displayProduct.price || selectedProduct.price || 0;
+          const displayProduct = fullProductDetails || selectedProduct.product || selectedProduct.productId || selectedProduct;
+          
+          const image = 
+            selectedProduct.image ||
+            selectedProduct.imageUrl ||
+            selectedProduct.thumbnail ||
+            selectedProduct.photo ||
+            displayProduct?.images?.[0] ||
+            displayProduct?.image ||
+            displayProduct?.thumbnail ||
+            selectedProduct.variantId?.images?.[0] ||
+            selectedProduct.variantId?.image ||
+            selectedProduct.variant?.images?.[0] ||
+            selectedProduct.variant?.image ||
+            null;
+            
+          const name = 
+            selectedProduct.productName || 
+            selectedProduct.name || 
+            displayProduct?.name || 
+            displayProduct?.productName || 
+            'Unknown Item';
+            
+          const sku = 
+            selectedProduct.sku || 
+            selectedProduct.variantId?.sku || 
+            selectedProduct.variant?.sku || 
+            displayProduct?.sku || 
+            'N/A';
+            
+          const price = selectedProduct.price || displayProduct?.price || 0;
 
           return (
             <div className="space-y-4">

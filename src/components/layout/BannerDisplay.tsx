@@ -180,9 +180,9 @@ const BannerDisplay: React.FC<BannerDisplayProps> = ({ position, className = '' 
             }
 
             return (
-              <div key={`${banner._id || banner.id}-${index}`} className={slideWrapperClasses} style={{ width: `${100 / itemsPerView}%` }}>
+              <Link key={`${banner._id || banner.id}-${index}`} to="/collections/all-drops" className={slideWrapperClasses} style={{ width: `${100 / itemsPerView}%` }}>
                 {slideContent}
-              </div>
+              </Link>
             );
           })}
         </div>

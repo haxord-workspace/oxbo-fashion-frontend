@@ -350,9 +350,21 @@ const ProductDetail: React.FC = () => {
   return (
     <div className="w-full max-w-[1920px] mx-auto bg-white">
       {/* Breadcrumb / Top Bar */}
-      <div className="text-xs text-gray-500 py-4 px-4 sm:px-8 border-b border-gray-100 flex flex-wrap gap-2">
+      <div className="text-xs text-gray-500 py-4 px-4 sm:px-8 border-b border-gray-100 flex flex-wrap gap-2 items-center">
         <Link to="/" className="hover:text-primary shrink-0">Home</Link>
         <span className="shrink-0">/</span>
+        {((product as any).categoryId?.name || (product as any).category?.name) && (
+          <>
+            <span className="shrink-0 uppercase">{(product as any).categoryId?.name || (product as any).category?.name}</span>
+            <span className="shrink-0">/</span>
+          </>
+        )}
+        {((product as any).subCategoryId?.name || (product as any).subCategory?.name) && (
+          <>
+            <span className="shrink-0 uppercase">{(product as any).subCategoryId?.name || (product as any).subCategory?.name}</span>
+            <span className="shrink-0">/</span>
+          </>
+        )}
         <span className="text-primary uppercase truncate">{product.name}</span>
       </div>
 
