@@ -20,6 +20,9 @@ import Profile from './pages/user/Profile';
 import Orders from './pages/user/Orders';
 import Checkout from './pages/user/Checkout';
 import UserNotifications from './pages/user/UserNotifications';
+import Terms from './pages/user/Terms';
+import Privacy from './pages/user/Privacy';
+import ShippingPolicy from './pages/user/ShippingPolicy';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
@@ -81,6 +84,9 @@ const AppContent: React.FC = () => {
           <Route path="products/:id" element={<ProductDetail />} />
           <Route path="collections/:categoryId" element={<Collection />} />
           <Route path="contact" element={<Contact />} />
+          <Route path="terms" element={<Terms />} />
+          <Route path="privacy" element={<Privacy />} />
+          <Route path="shipping" element={<ShippingPolicy />} />
 
           {/* Protected Client Routes */}
           <Route element={<ProtectedRoute allowedRoles={['user']} />}>

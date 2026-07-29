@@ -39,7 +39,7 @@ const Footer: React.FC = () => {
           <h3 className="uppercase tracking-wider font-medium text-primary text-base">Quick Links</h3>
           <ul className="flex flex-col gap-4 text-sm text-gray-700">
             <li><Link to="/contact" className="hover:underline hover:text-primary transition-colors">Contact us</Link></li>
-            <li><Link to="/track-order" className="hover:underline hover:text-primary transition-colors">Track your order</Link></li>
+            <li><Link to="/orders" className="hover:underline hover:text-primary transition-colors"> orders</Link></li>
           </ul>
         </div>
 
