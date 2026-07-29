@@ -73,7 +73,7 @@ interface FormErrors {
 
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
-  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay'>('razorpay');
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -386,16 +386,6 @@ const Checkout: React.FC = () => {
         });
         rzp1.open();
         
-      } else {
-        // COD logic
-        await userOrdersApi.createOrder({
-          shippingAddressId: finalAddressId,
-          paymentReference: 'COD',
-          notes: ''
-        });
-        
-        toast.success('Order placed successfully!');
-        navigate('/orders');
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to place order');
@@ -672,20 +662,6 @@ const Checkout: React.FC = () => {
                       You will be redirected to Razorpay securely to complete your payment. UPI, Credit/Debit cards, and Netbanking are supported.
                     </div>
                   )}
-                </label>
-
-                <label className={`block border ${paymentMethod === 'cod' ? 'border-primary bg-gray-50' : 'border-gray-200'} p-4 cursor-pointer transition-colors`}>
-                  <div className="flex items-center">
-                    <input 
-                      type="radio" 
-                      name="payment" 
-                      value="cod" 
-                      checked={paymentMethod === 'cod'} 
-                      onChange={() => setPaymentMethod('cod')}
-                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
-                    />
-                    <span className="ml-3 text-sm font-medium uppercase tracking-wide">Cash on Delivery (COD)</span>
-                  </div>
                 </label>
               </div>
             </div>

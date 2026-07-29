@@ -125,7 +125,7 @@ const ProductDetail: React.FC = () => {
     // New flat structure
     availableSizes = variantsForColor.map((v: any) => ({
       size: v.attributes?.size || v.size || '',
-      stock: v.status === 'active' ? 10 : 0, // Fallback stock if not provided
+      stock: v.stock !== undefined ? v.stock : (v.quantity !== undefined ? v.quantity : (v.status === 'active' ? 10 : 0)),
       variantId: v._id || v.id
     })).filter(s => s.size);
   }
@@ -142,6 +142,18 @@ const ProductDetail: React.FC = () => {
   const displayImages = activeVariant?.images && activeVariant.images.length > 0 
     ? activeVariant.images 
     : fallbackImages;
+
+  let currentStock = 0;
+  if (availableSizes.length > 0) {
+    const sizeObj = availableSizes.find(s => s.size === selectedSize);
+    currentStock = sizeObj ? sizeObj.stock : 0;
+  } else if (activeVariant) {
+    currentStock = activeVariant.stock !== undefined ? activeVariant.stock : (activeVariant.quantity !== undefined ? activeVariant.quantity : 0);
+  } else if (product) {
+    currentStock = (product as any).stock !== undefined ? (product as any).stock : ((product as any).quantity !== undefined ? (product as any).quantity : 10);
+  }
+  
+  const isVariantOutOfStock = currentStock <= 0;
 
   // Update size if current size is out of stock in new color
   useEffect(() => {
@@ -483,15 +495,14 @@ const ProductDetail: React.FC = () => {
                 );
               })}
             </div>
-            {availableSizes.find(s => s.size === selectedSize)?.stock === 0 && (
-              <p className="text-red-500 text-xs mt-2 font-medium">Out of stock in this size/color combination.</p>
+            {isVariantOutOfStock && (
+              <p className="text-red-500 text-xs mt-2 font-medium">Out of Stock</p>
             )}
-            {(() => {
-              const stock = availableSizes.find(s => s.size === selectedSize)?.stock || 0;
-              return stock > 0 && stock <= 5 ? (
-                <p className="text-[#e35a39] text-xs mt-2 font-medium">Only {stock} left in stock - order soon.</p>
-              ) : null;
-            })()}
+            {!isVariantOutOfStock && currentStock < 10 && (
+              <p className="text-[#e35a39] text-xs mt-2 font-medium">
+                Only {currentStock} piece{currentStock === 1 ? '' : 's'} left!
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -518,17 +529,23 @@ const ProductDetail: React.FC = () => {
 
             <button
               onClick={handleAddToCart}
-              className="flex-1 rounded-xl bg-primary text-white font-medium text-base py-4 px-6 hover:bg-gray-800 transition-colors"
+              disabled={isVariantOutOfStock}
+              className={`flex-1 rounded-xl font-medium text-base py-4 px-6 transition-colors ${
+                isVariantOutOfStock ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-primary text-white hover:bg-gray-800'
+              }`}
             >
-              Add to Cart - Rs. {Number(activeVariant?.salePrice || activeVariant?.price || product.price || 0).toLocaleString('en-IN')}.00
+              {isVariantOutOfStock ? 'Out of Stock' : `Add to Cart - Rs. ${Number(activeVariant?.salePrice || activeVariant?.price || product.price || 0).toLocaleString('en-IN')}.00`}
             </button>
           </div>
 
           <button 
             onClick={handleBuyNow}
-            className="w-full border border-primary rounded-xl py-4 font-medium mb-10 hover:bg-gray-50 transition-colors"
+            disabled={isVariantOutOfStock}
+            className={`w-full border rounded-xl py-4 font-medium mb-10 transition-colors ${
+              isVariantOutOfStock ? 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-primary hover:bg-gray-50'
+            }`}
           >
-            Buy it now
+            {isVariantOutOfStock ? 'Out of Stock' : 'Buy it now'}
           </button>
 
           {/* Accordions */}
@@ -586,15 +603,22 @@ const ProductDetail: React.FC = () => {
                 <h4 className="font-bold text-gray-900 mb-2">{review.title}</h4>
                 <p className="text-sm text-gray-600 mb-4">{review.review || review.comment}</p>
                 {review.images && review.images.length > 0 && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mb-2">
                     {review.images.map((img: string, i: number) => (
                       <img key={i} src={img} alt="Review" className="w-20 h-20 object-cover border border-gray-200 rounded" />
                     ))}
                   </div>
                 )}
-                {review.user && (
-                  <p className="text-xs text-gray-400 mt-2">By {review.user.name || review.user.firstName || 'Anonymous'} on {new Date(review.createdAt || review.date || Date.now()).toLocaleDateString()}</p>
-                )}
+                {(() => {
+                  const reviewerName = review.userId?.firstName 
+                    ? `${review.userId.firstName} ${review.userId.lastName || ''}`.trim() 
+                    : review.user?.name || review.user?.firstName || review.reviewerName || review.author || 'Anonymous';
+                  return (
+                    <p className="text-xs text-gray-400 mt-2">
+                      By {reviewerName} on {new Date(review.createdAt || review.date || Date.now()).toLocaleDateString()}
+                    </p>
+                  );
+                })()}
               </div>
             ))}
           </div>

@@ -58,5 +58,13 @@ export const adminNotificationApi = {
     } catch (error: any) {
       throw error.response?.data || error;
     }
+  },
+  readAllNotifications: async () => {
+    try {
+      const response = await api.patch('/notifications/read-all');
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
   }
 };
