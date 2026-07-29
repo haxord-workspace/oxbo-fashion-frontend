@@ -77,14 +77,33 @@ const Orders: React.FC = () => {
       return;
     }
 
+    // Try to get the product image
+    let productImage = reviewProduct?.image || reviewProduct?.imageUrl || reviewProduct?.product?.image || reviewProduct?.product?.images?.[0] || reviewProduct?.productId?.thumbnail || reviewProduct?.productId?.image || null;
+
     setIsSubmittingReview(true);
     try {
-      await userReviewsApi.addReview({
+      if (!productImage) {
+        try {
+          const res: any = await productsApi.getProductById(productId);
+          const p = res.data?.product || res.data || res;
+          productImage = p.thumbnail || p.imageUrl || p.images?.[0] || null;
+        } catch (err) {
+          console.error("Failed to fetch product image for review", err);
+        }
+      }
+
+      const payload: any = {
         productId,
         rating,
         title: reviewTitle,
         review: reviewText,
-      });
+      };
+
+      if (productImage) {
+        payload.images = [productImage];
+      }
+
+      await userReviewsApi.addReview(payload);
       toast.success("Review submitted successfully!");
       closeReviewModal();
     } catch (error: any) {
@@ -206,16 +225,14 @@ const Orders: React.FC = () => {
   const filteredOrders = orders; // We filter via API call now, or fallback locally if needed.
   const orderStatuses = ['All', 'Processing', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'];
 
-  const handleViewOrderProduct = (order: any) => {
-    const firstItem = (order.orderedItems || order.items || [])[0];
-    if (firstItem) {
-      const productId = typeof firstItem.productId === 'string' 
-        ? firstItem.productId 
-        : (firstItem.productId?._id || firstItem.productId?.id);
-      
-      if (productId) {
-        navigate(`/products/${productId}`);
-      }
+  const handleViewSingleProduct = (item: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const productId = typeof item.productId === 'string' 
+      ? item.productId 
+      : (item.productId?._id || item.productId?.id || item.product?._id || item.product?.id || item.product);
+    
+    if (productId && typeof productId === 'string') {
+      navigate(`/products/${productId}`);
     }
   };
 
@@ -273,7 +290,9 @@ const Orders: React.FC = () => {
               No orders found matching this status.
             </div>
           ) : (
-            filteredOrders.map((order) => (
+            filteredOrders.map((order) => {
+              if (order.status?.toLowerCase() === 'pending') return null;
+              return (
               <div key={order.id || order._id} className="bg-white border border-gray-200 p-6 shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-gray-100 pb-4 mb-4 gap-4">
                   <div className="flex flex-wrap gap-4 md:gap-8 text-sm">
@@ -301,7 +320,7 @@ const Orders: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  {(order.orderedItems || order.items || []).map((item: any, idx: number) => (
+                  {order.status?.toLowerCase() !== 'pending' && (order.orderedItems || order.items || []).map((item: any, idx: number) => (
                     <div 
                       key={item.id || item._id || idx} 
                       className="flex items-center gap-4 hover:bg-gray-50 p-2 -mx-2 rounded transition-colors"
@@ -330,10 +349,20 @@ const Orders: React.FC = () => {
                             </button>
                           )}
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-gray-900">Rs. {(item.price || 0).toLocaleString('en-IN')}.00</p>
-                          {item.originalPrice && item.originalPrice > item.price && (
-                            <p className="text-xs text-gray-500 line-through">Rs. {(item.originalPrice || 0).toLocaleString('en-IN')}.00</p>
+                        <div className="text-right flex flex-col justify-between items-end h-full">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Rs. {(item.price || 0).toLocaleString('en-IN')}.00</p>
+                            {item.originalPrice && item.originalPrice > item.price && (
+                              <p className="text-xs text-gray-500 line-through">Rs. {(item.originalPrice || 0).toLocaleString('en-IN')}.00</p>
+                            )}
+                          </div>
+                          {order.status?.toLowerCase() !== 'pending' && (
+                            <button
+                              onClick={(e) => handleViewSingleProduct(item, e)}
+                              className="mt-3 px-4 py-1.5 bg-primary text-white text-[10px] font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors rounded-xl"
+                            >
+                              View Product
+                            </button>
                           )}
                         </div>
                       </div>
@@ -357,16 +386,9 @@ const Orders: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
-                  <button
-                    onClick={() => handleViewOrderProduct(order)}
-                    className="px-6 py-2 bg-primary text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors"
-                  >
-                    View Product
-                  </button>
-                </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
 

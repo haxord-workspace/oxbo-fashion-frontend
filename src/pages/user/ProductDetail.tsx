@@ -603,15 +603,22 @@ const ProductDetail: React.FC = () => {
                 <h4 className="font-bold text-gray-900 mb-2">{review.title}</h4>
                 <p className="text-sm text-gray-600 mb-4">{review.review || review.comment}</p>
                 {review.images && review.images.length > 0 && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mb-2">
                     {review.images.map((img: string, i: number) => (
                       <img key={i} src={img} alt="Review" className="w-20 h-20 object-cover border border-gray-200 rounded" />
                     ))}
                   </div>
                 )}
-                {review.user && (
-                  <p className="text-xs text-gray-400 mt-2">By {review.user.name || review.user.firstName || 'Anonymous'} on {new Date(review.createdAt || review.date || Date.now()).toLocaleDateString()}</p>
-                )}
+                {(() => {
+                  const reviewerName = review.userId?.firstName 
+                    ? `${review.userId.firstName} ${review.userId.lastName || ''}`.trim() 
+                    : review.user?.name || review.user?.firstName || review.reviewerName || review.author || 'Anonymous';
+                  return (
+                    <p className="text-xs text-gray-400 mt-2">
+                      By {reviewerName} on {new Date(review.createdAt || review.date || Date.now()).toLocaleDateString()}
+                    </p>
+                  );
+                })()}
               </div>
             ))}
           </div>
