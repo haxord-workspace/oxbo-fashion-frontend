@@ -1098,43 +1098,17 @@ export const AdminUsers = () => {
                 {notificationErrors.message && <p className="mt-1 text-xs text-red-500">{notificationErrors.message}</p>}
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                  <select
-                    value={notificationForm.type}
-                    onChange={e => setNotificationForm({ ...notificationForm, type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white text-sm"
-                  >
-                    <option value="system">System</option>
-                    <option value="promotional">Promotional</option>
-                    <option value="alert">Alert</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Channel</label>
-                  <select
-                    value={notificationForm.channel}
-                    onChange={e => setNotificationForm({ ...notificationForm, channel: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white text-sm"
-                  >
-                    <option value="email">Email</option>
-                    <option value="push">Push</option>
-                    <option value="sms">SMS</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                  <select
-                    value={notificationForm.priority}
-                    onChange={e => setNotificationForm({ ...notificationForm, priority: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white text-sm"
-                  >
-                    <option value="low">Low</option>
-                    <option value="normal">Normal</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <select
+                  value={notificationForm.priority}
+                  onChange={e => setNotificationForm({ ...notificationForm, priority: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white text-sm"
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                </select>
               </div>
 
               <div className="pt-4 flex gap-3">

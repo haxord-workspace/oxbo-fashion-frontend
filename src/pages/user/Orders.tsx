@@ -77,33 +77,14 @@ const Orders: React.FC = () => {
       return;
     }
 
-    // Try to get the product image
-    let productImage = reviewProduct?.image || reviewProduct?.imageUrl || reviewProduct?.product?.image || reviewProduct?.product?.images?.[0] || reviewProduct?.productId?.thumbnail || reviewProduct?.productId?.image || null;
-
     setIsSubmittingReview(true);
     try {
-      if (!productImage) {
-        try {
-          const res: any = await productsApi.getProductById(productId);
-          const p = res.data?.product || res.data || res;
-          productImage = p.thumbnail || p.imageUrl || p.images?.[0] || null;
-        } catch (err) {
-          console.error("Failed to fetch product image for review", err);
-        }
-      }
-
-      const payload: any = {
+      await userReviewsApi.addReview({
         productId,
         rating,
         title: reviewTitle,
         review: reviewText,
-      };
-
-      if (productImage) {
-        payload.images = [productImage];
-      }
-
-      await userReviewsApi.addReview(payload);
+      });
       toast.success("Review submitted successfully!");
       closeReviewModal();
     } catch (error: any) {

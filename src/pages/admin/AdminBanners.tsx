@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, LayoutPanelTop } from 'lucide-react';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
@@ -22,6 +22,13 @@ export const AdminBanners = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [selectedBanner, setSelectedBanner] = useState<Banner | null>(null);
+  
+  // Navbar Offers State
+  const [isNavbarOffersModalOpen, setIsNavbarOffersModalOpen] = useState(false);
+  const [navbarOffers, setNavbarOffers] = useState<{ texts: string[], enabled: boolean }>({ texts: [], enabled: true });
+  const [isFetchingOffers, setIsFetchingOffers] = useState(false);
+  const [isSavingOffers, setIsSavingOffers] = useState(false);
+  const [newOfferText, setNewOfferText] = useState('');
   
   const [bannerForm, setBannerForm] = useState<Partial<Banner>>({
     title: '',
@@ -55,6 +62,60 @@ export const AdminBanners = () => {
   useEffect(() => {
     fetchBanners();
   }, [fetchBanners]);
+
+  const fetchNavbarOffers = async () => {
+    setIsFetchingOffers(true);
+    try {
+      const res = await adminBannerApi.getNavbarOffers();
+      setNavbarOffers({
+        texts: Array.isArray(res.data?.texts) ? res.data.texts : (res.texts || []),
+        enabled: res.data?.enabled ?? res.enabled ?? true
+      });
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to fetch navbar offers');
+    } finally {
+      setIsFetchingOffers(false);
+    }
+  };
+
+  const handleOpenNavbarOffers = () => {
+    fetchNavbarOffers();
+    setIsNavbarOffersModalOpen(true);
+  };
+
+  const handleSaveNavbarOffers = async () => {
+    setIsSavingOffers(true);
+    try {
+      await adminBannerApi.updateNavbarOffers(navbarOffers);
+      toast.success('Navbar offers updated successfully');
+      setIsNavbarOffersModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save navbar offers');
+    } finally {
+      setIsSavingOffers(false);
+    }
+  };
+
+  const handleAddOfferText = () => {
+    if (!newOfferText.trim()) return;
+    setNavbarOffers(prev => ({ ...prev, texts: [...prev.texts, newOfferText.trim()] }));
+    setNewOfferText('');
+  };
+
+  const handleRemoveOfferText = (index: number) => {
+    setNavbarOffers(prev => ({
+      ...prev,
+      texts: prev.texts.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleUpdateOfferText = (index: number, val: string) => {
+    setNavbarOffers(prev => {
+      const updated = [...prev.texts];
+      updated[index] = val;
+      return { ...prev, texts: updated };
+    });
+  };
 
   const totalPages = Math.ceil(totalBanners / itemsPerPage) || 1;
 
@@ -185,13 +246,22 @@ export const AdminBanners = () => {
       <PageWrapper 
         title="Banners"
         headerAction={
-          <button 
-            onClick={() => openModal('add')}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            <Plus size={18} />
-            <span className="text-sm font-medium">Add Banner</span>
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={handleOpenNavbarOffers}
+              className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <LayoutPanelTop size={18} />
+              <span className="text-sm font-medium">Navbar Offers</span>
+            </button>
+            <button 
+              onClick={() => openModal('add')}
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              <Plus size={18} />
+              <span className="text-sm font-medium">Add Banner</span>
+            </button>
+          </div>
         }
       >
         <div className="grid grid-cols-1 gap-4">
@@ -364,6 +434,93 @@ export const AdminBanners = () => {
               {isDeleting ? <Loader2 size={16} className="animate-spin" /> : 'Delete'}
             </button>
           </div>
+        </div>
+      </AdminModal>
+
+      {/* Navbar Offers Modal */}
+      <AdminModal
+        isOpen={isNavbarOffersModalOpen}
+        onClose={() => setIsNavbarOffersModalOpen(false)}
+        title="Manage Navbar Offers"
+      >
+        <div className="p-4 flex flex-col h-full max-h-[80vh]">
+          {isFetchingOffers ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="animate-spin text-gray-400" size={24} />
+            </div>
+          ) : (
+            <div className="flex flex-col space-y-6">
+              {/* Enable Toggle */}
+              <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div>
+                  <h4 className="font-medium text-gray-900">Enable Navbar Offers</h4>
+                  <p className="text-xs text-gray-500">Show the scrolling offers in the top navigation bar.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={navbarOffers.enabled} 
+                    onChange={e => setNavbarOffers(prev => ({ ...prev, enabled: e.target.checked }))} 
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                </label>
+              </div>
+
+              {/* Existing Offers */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900 text-sm">Offer Texts</h4>
+                {navbarOffers.texts.length > 0 ? (
+                  navbarOffers.texts.map((text, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input 
+                        type="text" 
+                        value={text} 
+                        onChange={e => handleUpdateOfferText(idx, e.target.value)} 
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm" 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => handleRemoveOfferText(idx)} 
+                        className="p-2 border border-gray-200 rounded text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100 text-center">No offers added yet.</p>
+                )}
+              </div>
+
+              {/* Add New Offer */}
+              <div className="flex items-center gap-2 border-t border-gray-100 pt-4">
+                <input 
+                  type="text" 
+                  value={newOfferText} 
+                  onChange={e => setNewOfferText(e.target.value)} 
+                  placeholder="E.g., FREE SHIPPING ON EVERY ORDERS" 
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm"
+                  onKeyDown={e => { if(e.key === 'Enter') { e.preventDefault(); handleAddOfferText(); } }}
+                />
+                <button 
+                  type="button" 
+                  onClick={handleAddOfferText} 
+                  disabled={!newOfferText.trim()}
+                  className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50 text-sm font-medium whitespace-nowrap"
+                >
+                  Add
+                </button>
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3 border-t border-gray-200 mt-4">
+                <button type="button" onClick={() => setIsNavbarOffersModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors" disabled={isSavingOffers}>Cancel</button>
+                <button type="button" onClick={handleSaveNavbarOffers} className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors flex items-center gap-2" disabled={isSavingOffers}>
+                  {isSavingOffers ? <Loader2 size={16} className="animate-spin" /> : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </AdminModal>
     </>
