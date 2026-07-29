@@ -456,7 +456,7 @@ export const AdminProducts = () => {
         const productVariants = Array.isArray(vRes.data) ? vRes.data : (Array.isArray(vRes) ? vRes : []);
         
         if (productVariants.length > 0) {
-          await Promise.all(productVariants.map(v => adminProductApi.deleteVariant(v._id || v.id)));
+          await Promise.all(productVariants.map((v: any) => adminProductApi.deleteVariant(v._id || v.id)));
         }
       } catch (variantError) {
         console.error("Error handling variants before deleting product", variantError);

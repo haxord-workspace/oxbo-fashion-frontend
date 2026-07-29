@@ -4,7 +4,7 @@ import { adminReportsApi, type ReportParams } from '../../services/admin/adminRe
 import { useAppSelector } from '../../app/hooks';
 import { selectIsStoreManager } from '../../features/auth/authSlice';
 import { 
-  TrendingUp, TrendingDown, DollarSign, 
+  TrendingUp, DollarSign, 
   ShoppingCart, Users, AlertTriangle, Clock, CreditCard, Award, Store, Download
 } from 'lucide-react';
 
@@ -95,7 +95,6 @@ export const AdminReports = () => {
   // Safely extract values from API responses
   const totalRevenue = salesData?.overall?.totalRevenue ?? salesData?.totalRevenue ?? 0;
   const aov = salesData?.overall?.averageOrderValue ?? salesData?.averageOrderValue ?? 0;
-  const refunds = salesData?.refunds?.totalRefundedAmount ?? (typeof salesData?.refunds === 'number' ? salesData.refunds : 0);
   
   let fulfillmentRateStr = orderData?.fulfillmentRate || orderData?.averageFulfillmentTime || 'N/A';
   if (orderData?.fulfillmentRate?.averageFulfillmentTimeMs !== undefined) {

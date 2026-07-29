@@ -132,7 +132,7 @@ const Orders: React.FC = () => {
   };
 
   const [page, setPage] = useState(1);
-  const [totalOrders, setTotalOrders] = useState(0);
+  // const [totalOrders, setTotalOrders] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
   const itemsPerPage = 8;
@@ -150,20 +150,20 @@ const Orders: React.FC = () => {
       const response = await userOrdersApi.getOrderHistory(pageNum, itemsPerPage, statusParam);
 
       let fetchedOrders: any[] = [];
-      let total = 0;
+      // let total = 0;
 
       if (response.data && Array.isArray(response.data.orders)) {
         fetchedOrders = response.data.orders;
-        total = response.data.total || 0;
+        // total = response.data.total || 0;
       } else if (response.data && Array.isArray(response.data)) {
         fetchedOrders = response.data;
-        total = response.total || fetchedOrders.length;
+        // total = response.total || fetchedOrders.length;
       } else if (Array.isArray(response.orders)) {
         fetchedOrders = response.orders;
-        total = response.total || 0;
+        // total = response.total || 0;
       } else if (Array.isArray(response)) {
         fetchedOrders = response;
-        total = fetchedOrders.length;
+        // total = fetchedOrders.length;
       }
 
       if (pageNum === 1) {
@@ -176,7 +176,7 @@ const Orders: React.FC = () => {
         });
       }
       
-      setTotalOrders(total);
+      // setTotalOrders(total);
       
       if (fetchedOrders.length < itemsPerPage) {
         setHasMore(false);
