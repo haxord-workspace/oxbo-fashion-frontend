@@ -44,7 +44,7 @@ const Collection: React.FC = () => {
   const currentFilters = useMemo(() => {
     let filters: any = {};
     if (categoryId === 'flash-sale') {
-      filters = { tag: 'flash-sale' };
+      filters = { flashSale: true };
     } else if (categoryId === 'new-drops') {
       filters = { sort: 'createdAt', order: 'desc', limit: 20 };
     } else if (categoryId === 'all-drops') {

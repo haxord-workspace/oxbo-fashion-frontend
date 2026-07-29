@@ -24,5 +24,13 @@ export const userReviewsApi = {
   getProductReviews: async (productId: string) => {
     const response = await api.get(`/reviews/product/${productId}`);
     return response.data;
+  },
+
+  /**
+   * Get all reviews
+   */
+  getAllReviews: async (params?: { page?: number; limit?: number }) => {
+    const response = await api.get('/reviews', { params });
+    return response.data;
   }
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Edit2, Trash2, Search, Loader2, X, AlertTriangle, Plus, Image as ImageIcon, Eye, EyeOff, Bell } from 'lucide-react';
+import { Edit2, Trash2, Search, Loader2, X, AlertTriangle, Plus, Image as ImageIcon, Eye, EyeOff, MessageSquare } from 'lucide-react';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import { ImageCropper } from '../../components/common/ImageCropper';
@@ -435,7 +435,7 @@ export const AdminUsers = () => {
               }}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center gap-2"
             >
-              <Bell className="w-4 h-4" />
+              <MessageSquare className="w-4 h-4" />
               Send Bulk Notification ({selectedUserIds.length})
             </button>
           )}
@@ -523,7 +523,7 @@ export const AdminUsers = () => {
                           setIsNotificationModalOpen(true);
                         }}
                         className="p-1.5 text-gray-400 hover:text-purple-500 transition-colors" title="Send Notification">
-                        <Bell size={16} />
+                        <MessageSquare size={16} />
                       </button>
                       <button
                         onClick={async () => {

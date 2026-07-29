@@ -1,12 +1,53 @@
 import React, { useState } from 'react';
-import { Download, Upload, FileType, CheckCircle } from 'lucide-react';
+import { Download, Upload, FileType, CheckCircle, X, Copy, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminProductApi } from '../../services/admin/adminProduct.Api';
+import { adminCategoriesApi } from '../../services/admin/admincategories.Api';
+import { adminBrandApi } from '../../services/admin/adminBrand.Api';
 
 export const AdminBulkUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
+
+  const fetchCategories = async () => {
+    setIsFetchingData(true);
+    setIsCategoryModalOpen(true);
+    try {
+      const response = await adminCategoriesApi.getCategories({ limit: 1000 });
+      setCategories(response.categories || (response as any).data || []);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to fetch categories');
+      setIsCategoryModalOpen(false);
+    } finally {
+      setIsFetchingData(false);
+    }
+  };
+
+  const fetchBrands = async () => {
+    setIsFetchingData(true);
+    setIsBrandModalOpen(true);
+    try {
+      const response = await adminBrandApi.getBrands({ limit: 1000 });
+      setBrands(response.brands || (response as any).data || []);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to fetch brands');
+      setIsBrandModalOpen(false);
+    } finally {
+      setIsFetchingData(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard!');
+  };
 
   const handleDownloadTemplate = async () => {
     setIsDownloading(true);
@@ -60,11 +101,27 @@ export const AdminBulkUpload: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Bulk Upload Products</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Download the template, fill in your product data, and upload the CSV file.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Bulk Upload Products</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Download the template, fill in your product data, and upload the CSV file.
+          </p>
+        </div>
+        <div className="flex space-x-3">
+          <button
+            onClick={fetchCategories}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Show Categories
+          </button>
+          <button
+            onClick={fetchBrands}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Show Brands
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -155,6 +212,78 @@ export const AdminBulkUpload: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Categories Modal */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">Categories</h3>
+              <button onClick={() => setIsCategoryModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-y-auto">
+              {isFetchingData ? (
+                <div className="flex justify-center items-center py-8">
+                  <Loader2 className="animate-spin text-gray-400" size={24} />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {categories.map((c: any) => (
+                    <div key={c._id || c.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <span className="text-sm font-medium text-gray-700">{c.name}</span>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">{c._id || c.id}</code>
+                        <button onClick={() => copyToClipboard(c._id || c.id)} className="text-gray-400 hover:text-primary transition-colors" title="Copy ID">
+                          <Copy size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {categories.length === 0 && <p className="text-sm text-gray-500 text-center py-4">No categories found.</p>}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Brands Modal */}
+      {isBrandModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">Brands</h3>
+              <button onClick={() => setIsBrandModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-y-auto">
+              {isFetchingData ? (
+                <div className="flex justify-center items-center py-8">
+                  <Loader2 className="animate-spin text-gray-400" size={24} />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {brands.map((b: any) => (
+                    <div key={b._id || b.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <span className="text-sm font-medium text-gray-700">{b.name}</span>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">{b._id || b.id}</code>
+                        <button onClick={() => copyToClipboard(b._id || b.id)} className="text-gray-400 hover:text-primary transition-colors" title="Copy ID">
+                          <Copy size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {brands.length === 0 && <p className="text-sm text-gray-500 text-center py-4">No brands found.</p>}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

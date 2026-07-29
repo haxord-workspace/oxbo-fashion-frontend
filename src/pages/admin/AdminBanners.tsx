@@ -16,6 +16,8 @@ export const AdminBanners = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [bannerToDelete, setBannerToDelete] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
@@ -157,13 +159,20 @@ export const AdminBanners = () => {
     }
   };
 
-  const handleDeleteBanner = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this banner?')) return;
-    setIsDeleting(id);
+  const confirmDelete = (id: string) => {
+    setBannerToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteBanner = async () => {
+    if (!bannerToDelete) return;
+    setIsDeleting(bannerToDelete);
     try {
-      await adminBannerApi.deleteBanner(id);
+      await adminBannerApi.deleteBanner(bannerToDelete);
       toast.success('Banner deleted successfully');
       fetchBanners();
+      setIsDeleteModalOpen(false);
+      setBannerToDelete(null);
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete banner');
     } finally {
@@ -226,7 +235,7 @@ export const AdminBanners = () => {
                     <Edit2 size={16} />
                   </button>
                   <button 
-                    onClick={() => handleDeleteBanner(banner._id || banner.id || '')}
+                    onClick={() => confirmDelete(banner._id || banner.id || '')}
                     disabled={isDeleting === (banner._id || banner.id)}
                     className="p-2 border border-gray-200 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
                   >
@@ -330,6 +339,32 @@ export const AdminBanners = () => {
             </button>
           </div>
         </form>
+      </AdminModal>
+
+      <AdminModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Confirm Deletion"
+      >
+        <div className="p-4">
+          <p className="text-gray-700 mb-6">Are you sure you want to delete this banner? This action cannot be undone.</p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              disabled={!!isDeleting}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteBanner}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
+              disabled={!!isDeleting}
+            >
+              {isDeleting ? <Loader2 size={16} className="animate-spin" /> : 'Delete'}
+            </button>
+          </div>
+        </div>
       </AdminModal>
     </>
   );
