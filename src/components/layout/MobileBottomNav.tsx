@@ -1,44 +1,16 @@
 import React from 'react';
-import { Home, LayoutGrid, ShoppingBag, User, Bell } from 'lucide-react';
+import { Home, LayoutGrid, ShoppingBag, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { toggleCart } from '../../features/ui/uiSlice';
 import { selectCartCount } from '../../features/cart/cartSlice';
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
-import { useState, useEffect } from 'react';
-import { userNotificationsApi } from '../../services/user/notifications.Api';
 
 const MobileBottomNav: React.FC = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
   const cartCount = useAppSelector(selectCartCount);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    let isMounted = true;
-    const fetchUnreadCount = async () => {
-      if (!isAuthenticated) return;
-      try {
-        const response = await userNotificationsApi.getUnreadNotifications();
-        if (isMounted) {
-          let count = 0;
-          if (Array.isArray(response?.data)) {
-            count = response.data.length;
-          } else if (Array.isArray(response)) {
-            count = response.length;
-          } else {
-            count = response?.count || response?.unreadCount || 0;
-          }
-          setUnreadCount(count);
-        }
-      } catch (error) {
-        console.error('Failed to fetch unread notifications count', error);
-      }
-    };
-    
-    fetchUnreadCount();
-  }, [isAuthenticated, location.pathname]);
 
   const isActive = (path: string) => location.pathname === path;
 
