@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Bell, CheckCircle, Trash2, CheckCheck } from 'lucide-react';
+import { Loader2, Bell, CheckCircle, Trash2, CheckCheck, X } from 'lucide-react';
 import { userNotificationsApi } from '../../services/user/notifications.Api';
 import toast from 'react-hot-toast';
 
@@ -8,6 +8,7 @@ export const UserNotifications = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalNotifications, setTotalNotifications] = useState(0);
+  const [selectedNotification, setSelectedNotification] = useState<any | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const itemsPerPage = 10;
 
@@ -88,6 +89,11 @@ export const UserNotifications = () => {
 
   const hasUnread = notifications.some((n) => !n.isRead);
 
+  // Use frontend pagination if the backend returns all items instead of a paginated list
+  const displayedNotifications = notifications.length > itemsPerPage 
+    ? notifications.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+    : notifications;
+
   return (
     <div className="flex-1 bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 relative min-h-screen">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -118,17 +124,18 @@ export const UserNotifications = () => {
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
               <span>Loading your notifications...</span>
             </div>
-          ) : notifications.length > 0 ? (
+          ) : displayedNotifications.length > 0 ? (
             <div className="space-y-4">
-              {notifications.map((notification, index) => {
+              {displayedNotifications.map((notification, index) => {
                 const id = notification._id || notification.id || index;
                 const isRead = notification.isRead;
                 return (
                   <div
                     key={id}
-                    className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border transition-colors ${
-                      isRead ? 'bg-gray-50 border-gray-100' : 'bg-white border-primary border-opacity-30 shadow-sm'
+                    className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border transition-colors cursor-pointer ${
+                      isRead ? 'bg-gray-50 border-gray-100 hover:bg-gray-100' : 'bg-white border-primary border-opacity-30 shadow-sm hover:shadow-md'
                     }`}
+                    onClick={() => setSelectedNotification(notification)}
                   >
                     <div className={`p-3 rounded-full ${isRead ? 'bg-gray-200 text-gray-500' : 'bg-primary text-white'}`}>
                       <Bell size={20} />
@@ -158,7 +165,7 @@ export const UserNotifications = () => {
                     <div className="flex items-center gap-2 self-end sm:self-center mt-2 sm:mt-0">
                       {!isRead && (
                         <button
-                          onClick={() => handleMarkAsRead(id)}
+                          onClick={(e) => { e.stopPropagation(); handleMarkAsRead(id); }}
                           disabled={actionLoading === `read-${id}`}
                           title="Mark as read"
                           className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
@@ -171,7 +178,7 @@ export const UserNotifications = () => {
                         </button>
                       )}
                       <button
-                        onClick={() => handleDelete(id)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(id); }}
                         disabled={actionLoading === `delete-${id}`}
                         title="Delete notification"
                         className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
@@ -196,29 +203,90 @@ export const UserNotifications = () => {
           )}
 
           {/* Pagination */}
-          {totalNotifications > itemsPerPage && (
+  
             <div className="mt-8 flex justify-center items-center gap-4">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 border border-gray-200 bg-white rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-600 font-medium">
+              <span className="text-sm text-gray-600 font-medium bg-gray-100 px-3 py-1.5 rounded-lg">
                 Page {currentPage} of {totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 border border-gray-200 bg-white rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
             </div>
-          )}
+  
         </div>
       </div>
+
+      {/* Modal */}
+      {selectedNotification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedNotification(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-100">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Bell className="w-5 h-5 text-primary" />
+                Notification Details
+              </h3>
+              <button onClick={() => setSelectedNotification(null)} className="text-gray-400 hover:text-gray-700 transition-colors p-2 hover:bg-gray-100 rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 sm:p-6 overflow-y-auto">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</h4>
+                  <p className="text-gray-900 font-medium text-lg">{selectedNotification.title}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Message</h4>
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {selectedNotification.message}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                    <span className="font-medium text-gray-700">Date:</span>
+                    <span>
+                      {selectedNotification.createdAt
+                        ? new Date(selectedNotification.createdAt).toLocaleString(undefined, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                    <span className="font-medium text-gray-700">Status:</span>
+                    <span className={selectedNotification.isRead ? 'text-gray-500' : 'text-primary font-medium'}>
+                      {selectedNotification.isRead ? 'Read' : 'Unread'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 sm:p-6 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setSelectedNotification(null)}
+                className="px-5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

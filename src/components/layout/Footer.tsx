@@ -38,10 +38,8 @@ const Footer: React.FC = () => {
         <div className="flex flex-col gap-6 md:w-1/3 md:ml-12">
           <h3 className="uppercase tracking-wider font-medium text-primary text-base">Quick Links</h3>
           <ul className="flex flex-col gap-4 text-sm text-gray-700">
-            <li><Link to="/search" className="hover:underline hover:text-primary transition-colors">Search</Link></li>
-            <li><Link to="/shop" className="hover:underline hover:text-primary transition-colors">Shop</Link></li>
             <li><Link to="/contact" className="hover:underline hover:text-primary transition-colors">Contact us</Link></li>
-            <li><Link to="/track-order" className="hover:underline hover:text-primary transition-colors">Track your order</Link></li>
+            <li><Link to="/orders" className="hover:underline hover:text-primary transition-colors"> orders</Link></li>
           </ul>
         </div>
 
@@ -51,9 +49,7 @@ const Footer: React.FC = () => {
           <ul className="flex flex-col gap-4 text-sm text-gray-700">
             <li><Link to="/terms" className="hover:underline hover:text-primary transition-colors">Terms & Condition</Link></li>
             <li><Link to="/privacy" className="hover:underline hover:text-primary transition-colors">Privacy Policy</Link></li>
-            <li><Link to="/refund" className="hover:underline hover:text-primary transition-colors">Refund Policy</Link></li>
             <li><Link to="/shipping" className="hover:underline hover:text-primary transition-colors">Shipping Policy</Link></li>
-            <li><Link to="/returns" className="hover:underline hover:text-primary transition-colors">Returns & Exchanges</Link></li>
           </ul>
         </div>
 

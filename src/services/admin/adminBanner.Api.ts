@@ -86,5 +86,23 @@ export const adminBannerApi = {
     } catch (error: any) {
       throw error.response?.data || error;
     }
+  },
+  
+  getNavbarOffers: async () => {
+    try {
+      const response = await api.get('/banners/navbar-offers/public');
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  },
+
+  updateNavbarOffers: async (data: { texts: string[], enabled: boolean }) => {
+    try {
+      const response = await api.put('/banners/navbar-offers', data);
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
   }
 };

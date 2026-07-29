@@ -26,6 +26,7 @@ export const AdminProducts = () => {
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete'>('add');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -57,6 +58,9 @@ export const AdminProducts = () => {
       try {
         setLoading(true);
         const params: any = { page: currentPage, limit: itemsPerPage, search: searchQuery };
+        if (selectedCategoryFilter) {
+          params.category = selectedCategoryFilter;
+        }
         if (isStoreManager && currentUser) {
           params.createdBy = currentUser.id || currentUser._id;
         }
@@ -91,13 +95,14 @@ export const AdminProducts = () => {
       }
     };
     fetchProducts();
-  }, [currentPage, searchQuery]);
+  }, [currentPage, searchQuery, selectedCategoryFilter]);
 
   const [productForm, setProductForm] = useState<{
     name: string;
     description: string;
     shortDescription: string;
     categoryId: string;
+    subCategoryId: string;
     brandId: string;
     mrp: string;
     price: string;
@@ -114,6 +119,7 @@ export const AdminProducts = () => {
     description: '',
     shortDescription: '',
     categoryId: '',
+    subCategoryId: '',
     brandId: '',
     mrp: '',
     price: '',
@@ -142,7 +148,25 @@ export const AdminProducts = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isFetchingVariants, setIsFetchingVariants] = useState(false);
   const [existingVariants, setExistingVariants] = useState<any[]>([]);
+  const [subCategories, setSubCategories] = useState<any[]>([]);
 
+  useEffect(() => {
+    const fetchSubCategories = async () => {
+      if (!productForm.categoryId) {
+        setSubCategories([]);
+        return;
+      }
+      try {
+        const res = await adminCategoriesApi.getCategoryChildren(productForm.categoryId);
+        setSubCategories(res.categories || []);
+      } catch (error) {
+        console.error("Failed to fetch subcategories", error);
+        setSubCategories([]);
+      }
+    };
+    
+    fetchSubCategories();
+  }, [productForm.categoryId]);
   const handleRemoveVariantBlock = async (index: number) => {
     const variantToRemove = variants[index];
     if (variantToRemove.color && selectedProduct && modalMode === 'edit') {
@@ -236,6 +260,7 @@ export const AdminProducts = () => {
         description: product.description || '',
         shortDescription: product.shortDescription || '',
         categoryId: product.categoryId?._id || product.categoryId || '',
+        subCategoryId: product.subCategoryId?._id || product.subCategoryId || '',
         brandId: product.brandId?._id || product.brandId || '',
         mrp: initialMrp,
         price: initialPrice,
@@ -262,6 +287,7 @@ export const AdminProducts = () => {
         description: '',
         shortDescription: '',
         categoryId: categories.length > 0 ? (categories[0].id || categories[0]._id) : '',
+        subCategoryId: '',
         brandId: brands.length > 0 ? (brands[0].id || brands[0]._id) : '',
         mrp: '',
         price: '',
@@ -304,6 +330,9 @@ export const AdminProducts = () => {
       formData.append('description', productForm.description || '');
       formData.append('shortDescription', productForm.shortDescription || '');
       formData.append('categoryId', productForm.categoryId);
+      if (productForm.subCategoryId) {
+        formData.append('subCategoryId', productForm.subCategoryId);
+      }
       formData.append('brandId', productForm.brandId);
       formData.append('status', productForm.status);
       formData.append('isFeatured', String(productForm.isFeatured));
@@ -523,7 +552,7 @@ export const AdminProducts = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, selectedCategoryFilter]);
 
   return (
     <>
@@ -550,10 +579,19 @@ export const AdminProducts = () => {
               className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm"
             />
           </div>
-          <button className="flex items-center gap-2 text-gray-600 hover:text-primary border border-gray-200 px-3 py-2 rounded-lg text-sm">
-            <Filter size={16} />
-            Filter
-          </button>
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-gray-500" />
+            <select
+              value={selectedCategoryFilter}
+              onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+              className="border border-gray-200 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-primary cursor-pointer"
+            >
+              <option value="">All Categories</option>
+              {categories.map(c => (
+                <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
         
         <div className="overflow-x-auto">
@@ -579,7 +617,16 @@ export const AdminProducts = () => {
                       <img src={product.thumbnail || product.image || product.images?.[0]?.url || 'https://via.placeholder.com/150'} alt={product.name} className="w-12 h-12 rounded object-cover border border-gray-200" />
                       <span className="font-medium text-gray-900">{product.name}</span>
                     </td>
-                    <td className="py-4 px-4 text-gray-600">{product.categoryId?.name || product.category?.name || product.category || 'Uncategorized'}</td>
+                    <td className="py-4 px-4 text-gray-600">
+                      <div className="flex flex-col">
+                        <span>{product.categoryId?.name || product.category?.name || product.category || 'Uncategorized'}</span>
+                        {(product.subCategoryId?.name || product.subCategory?.name) && (
+                          <span className="text-xs text-gray-400 mt-0.5">
+                            Sub: {product.subCategoryId?.name || product.subCategory?.name}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-4 px-4 font-medium">
                       {product.price ? (
                         <div className="flex flex-col">
@@ -714,16 +761,35 @@ export const AdminProducts = () => {
             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select value={productForm.categoryId} onChange={e => setProductForm({...productForm, categoryId: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
+              <select 
+                value={productForm.categoryId} 
+                onChange={e => setProductForm({...productForm, categoryId: e.target.value, subCategoryId: ''})} 
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white"
+              >
                 <option value="">Select Category</option>
                 {categories.map(c => (
                   <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>
                 ))}
               </select>
             </div>
+            {subCategories.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                <select 
+                  value={productForm.subCategoryId} 
+                  onChange={e => setProductForm({...productForm, subCategoryId: e.target.value})} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white"
+                >
+                  <option value="">Select Subcategory</option>
+                  {subCategories.map(sc => (
+                    <option key={sc.id || sc._id} value={sc.id || sc._id}>{sc.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
               <select value={productForm.brandId} onChange={e => setProductForm({...productForm, brandId: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">

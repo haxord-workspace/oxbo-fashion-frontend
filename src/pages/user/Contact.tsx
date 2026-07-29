@@ -70,17 +70,19 @@ const Contact: React.FC = () => {
               <div className="space-y-8">
                 <div>
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Email</span>
-                  <a href="mailto:hello@oxbofashion.com" className="text-lg font-medium hover:underline hover:text-gray-600 transition-colors">hello@oxbofashion.com</a>
+                  <a href="mailto:oxbostore@gmail.com" className="text-lg font-medium hover:underline hover:text-gray-600 transition-colors">oxbostore@gmail.com</a>
                 </div>
                 <div>
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Phone</span>
-                  <a href="tel:+1234567890" className="text-lg font-medium hover:underline hover:text-gray-600 transition-colors">+1 (234) 567-890</a>
+                  <a href="tel:+919747043736" className="text-lg font-medium hover:underline hover:text-gray-600 transition-colors">+91 97470 43736</a>
                 </div>
                 <div>
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Address</span>
                   <address className="text-lg font-medium not-italic leading-relaxed">
-                    thrisurr punnayukulam near royal hospital<br />
-                    kerala, 678004
+                    KPPAN Trade Center,<br />
+                    Palakkad Road, Melepattambi,<br />
+                    District Palakkad,<br />
+                    Kerala, India.
                   </address>
                 </div>
               </div>

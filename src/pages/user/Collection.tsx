@@ -9,6 +9,7 @@ const Collection: React.FC = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [searchParams] = useSearchParams();
   const categoryQuery = searchParams.get('category');
+  const searchQuery = searchParams.get('search');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<number>(5000);
@@ -17,6 +18,10 @@ const Collection: React.FC = () => {
   const [sortOption, setSortOption] = useState<string>('Sort by: Featured');
   const [categories, setCategories] = useState<{_id: string, name: string}[]>([]);
   const [productCount, setProductCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [categoryId, categoryQuery, searchQuery]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -33,13 +38,14 @@ const Collection: React.FC = () => {
     fetchCategories();
   }, []);
 
-  const getFormattedTitle = (id: string | undefined) => {
+  const getFormattedTitle = (id: string | undefined, query: string | null) => {
+    if (query) return `SEARCH RESULTS FOR "${query.toUpperCase()}"`;
     if (!id) return 'COLLECTION';
     if (id === 'flash-sale') return 'FLASH SALE ⚡';
     return id.replace(/-/g, ' ').toUpperCase();
   };
 
-  const title = getFormattedTitle(categoryId);
+  const title = getFormattedTitle(categoryId, searchQuery);
 
   const currentFilters = useMemo(() => {
     let filters: any = {};
@@ -53,6 +59,7 @@ const Collection: React.FC = () => {
       filters = { category: categoryQuery };
     }
 
+    if (searchQuery) filters.search = searchQuery;
     if (selectedCategory) filters.category = selectedCategory;
     if (maxPrice < 5000) filters.maxPrice = maxPrice;
     if (selectedColor) filters.color = selectedColor;
@@ -69,7 +76,7 @@ const Collection: React.FC = () => {
       filters.order = 'desc';
     }
     return filters;
-  }, [categoryId, categoryQuery, selectedCategory, maxPrice, selectedColor, selectedSize, sortOption]);
+  }, [categoryId, categoryQuery, searchQuery, selectedCategory, maxPrice, selectedColor, selectedSize, sortOption]);
 
   // Reset count to null (shows "Loading...") whenever filters change
   useEffect(() => {
@@ -85,7 +92,9 @@ const Collection: React.FC = () => {
             {title}
           </h1>
           <p className="mt-4 text-sm md:text-base text-gray-500 uppercase tracking-widest font-semibold">
-            {categoryId === 'flash-sale'
+            {searchQuery 
+              ? `Showing all products matching "${searchQuery}"`
+              : categoryId === 'flash-sale'
               ? 'Limited time offers. Grab them before they are gone.'
               : 'Explore our latest drops and premium collections.'}
           </p>

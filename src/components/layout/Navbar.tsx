@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Search, User, ShoppingBag, Bell } from 'lucide-react';
+import { Search, User, ShoppingBag, Bell, Heart } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { toggleCart, toggleMobileMenu } from '../../features/ui/uiSlice';
 import { selectCartCount } from '../../features/cart/cartSlice';
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { userNotificationsApi } from '../../services/user/notifications.Api';
+import { X } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const dispatch = useAppDispatch();
   const cartCount = useAppSelector(selectCartCount);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const location = useLocation();
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -37,10 +41,20 @@ const Navbar: React.FC = () => {
     };
     
     fetchUnreadCount();
+    fetchUnreadCount();
   }, [isAuthenticated, location.pathname]); // Re-fetch on route change as well
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setIsSearchOpen(false);
+      navigate(`/collections/all-drops?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
+
   return (
-    <header className="bg-white sticky top-0 z-40">
+    <header className="bg-white sticky top-0 z-40 relative">
       <div className="flex items-center justify-between px-4 md:px-8 h-20">
         
         {/* Left: Mobile Menu (Custom Staggered Hamburger) */}
@@ -70,9 +84,20 @@ const Navbar: React.FC = () => {
 
         {/* Right: Icons */}
         <div className="flex items-center justify-end flex-1 space-x-2 sm:space-x-4">
-          <button className="p-2 text-primary hover:opacity-70 transition-opacity">
+          <button 
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            className="p-2 text-primary hover:opacity-70 transition-opacity"
+          >
             <Search className="w-6 h-6" strokeWidth={1.5} />
           </button>
+
+          <Link 
+            to="/wishlist" 
+            className="p-2 text-primary hover:opacity-70 transition-opacity"
+            title="Wishlist"
+          >
+            <Heart className="w-6 h-6" strokeWidth={1.5} />
+          </Link>
           
           <Link 
             to={isAuthenticated ? "/profile" : "/login"} 
@@ -85,7 +110,7 @@ const Navbar: React.FC = () => {
           {isAuthenticated && (
             <Link 
               to="/notifications" 
-              className="p-2 text-primary hover:opacity-70 transition-opacity relative hidden sm:block"
+              className="p-2 text-primary hover:opacity-70 transition-opacity relative"
               title="Notifications"
             >
               <Bell className="w-6 h-6" strokeWidth={1.5} />
@@ -110,6 +135,26 @@ const Navbar: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Search Overlay Dropdown */}
+      {isSearchOpen && (
+        <div className="absolute top-20 left-0 w-full bg-white border-b border-gray-100 p-4 shadow-sm z-30 animate-in fade-in slide-in-from-top-2 duration-200">
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto flex items-center bg-gray-100 rounded-full px-4 py-2 border border-gray-200">
+            <Search size={20} className="text-gray-400 mr-2 shrink-0" />
+            <input 
+              type="text" 
+              autoFocus
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search products, categories, tags..." 
+              className="bg-transparent border-none focus:outline-none text-sm w-full text-gray-800 placeholder-gray-400"
+            />
+            <button type="button" onClick={() => setIsSearchOpen(false)} className="text-gray-400 hover:text-black ml-2 shrink-0">
+              <X size={20} />
+            </button>
+          </form>
+        </div>
+      )}
     </header>
   );
 };
