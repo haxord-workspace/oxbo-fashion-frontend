@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Bell, X, Send } from 'lucide-react';
+import { Loader2, Bell, X, Send, CheckCheck } from 'lucide-react';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import { adminNotificationApi } from '../../services/admin/adminNotification.Api';
 import toast from 'react-hot-toast';
+import { useAppSelector } from '../../app/hooks';
+import { selectIsStoreManager } from '../../features/auth/authSlice';
 
 // ─── Bulk Notification Modal ──────────────────────────────────────────────────
 
@@ -86,34 +88,8 @@ const BulkNotificationModal = ({ onClose, onSuccess }: { onClose: () => void; on
             />
           </div>
 
-          {/* Type / Channel / Priority */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Type</label>
-              <select
-                value={form.type}
-                onChange={e => setForm({ ...form, type: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
-              >
-                <option value="system">System</option>
-                <option value="promotional">Promotional</option>
-                <option value="alert">Alert</option>
-                <option value="offer">Offer</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Channel</label>
-              <select
-                value={form.channel}
-                onChange={e => setForm({ ...form, channel: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
-              >
-                <option value="in_app">In-App</option>
-                <option value="email">Email</option>
-                <option value="sms">SMS</option>
-                <option value="push">Push</option>
-              </select>
-            </div>
+          {/* Priority */}
+          <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Priority</label>
               <select
@@ -175,6 +151,7 @@ const BulkNotificationModal = ({ onClose, onSuccess }: { onClose: () => void; on
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export const AdminNotifications = () => {
+  const isStoreManager = useAppSelector(selectIsStoreManager);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [selectedNotification, setSelectedNotification] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -210,6 +187,16 @@ export const AdminNotifications = () => {
     fetchNotifications();
   }, [fetchNotifications]);
 
+  const handleMarkAllAsRead = async () => {
+    try {
+      await adminNotificationApi.readAllNotifications();
+      toast.success('All notifications marked as read');
+      fetchNotifications();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to mark all as read');
+    }
+  };
+
   const totalPages = Math.ceil(totalNotifications / itemsPerPage) || 1;
 
   const getBadgeClass = (type: string) => {
@@ -231,13 +218,24 @@ export const AdminNotifications = () => {
       <PageWrapper
         title="All Notifications"
         headerAction={
-          <button
-            onClick={() => setShowBulkModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-gray-900 transition-colors shadow-sm"
-          >
-            <Send size={15} />
-            Send Bulk Notification
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleMarkAllAsRead}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <CheckCheck size={15} />
+              Mark All as Read
+            </button>
+            {!isStoreManager && (
+              <button
+                onClick={() => setShowBulkModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-gray-900 transition-colors shadow-sm"
+              >
+                <Send size={15} />
+                Send Bulk Message
+              </button>
+            )}
+          </div>
         }
       >
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

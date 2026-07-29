@@ -7,6 +7,8 @@ export interface ProductVariant {
   images?: string[];
   price?: number;
   salePrice?: number;
+  stock?: number;
+  quantity?: number;
   sizes?: {
     size: string;
     stock: number;

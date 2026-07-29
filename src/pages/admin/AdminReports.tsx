@@ -151,24 +151,18 @@ export const AdminReports = () => {
       </div>
 
       {/* Top Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard 
           title="Total Revenue" 
-          value={`$${totalRevenue.toLocaleString()}`} 
+          value={`Rs. ${totalRevenue.toLocaleString()}`} 
           icon={DollarSign} 
           type="positive"
         />
         <StatCard 
           title="Average Order Value" 
-          value={`$${aov.toLocaleString()}`} 
+          value={`Rs. ${aov.toLocaleString()}`} 
           icon={TrendingUp} 
           type="neutral"
-        />
-        <StatCard 
-          title="Refunds & Cancellations" 
-          value={`$${refunds.toLocaleString()}`} 
-          icon={TrendingDown} 
-          type="negative"
         />
         <StatCard 
           title="Avg. Fulfillment Time" 
@@ -237,7 +231,7 @@ export const AdminReports = () => {
                           <p className="text-gray-500 text-xs">{spencer.orderCount} orders</p>
                         </div>
                       </div>
-                      <span className="font-bold text-green-600">${spencer.totalSpent?.toLocaleString()}</span>
+                      <span className="font-bold text-green-600">Rs. {spencer.totalSpent?.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
@@ -316,7 +310,7 @@ export const AdminReports = () => {
               Object.entries(salesData.paymentMethods).map(([method, amount]: any, i) => (
                 <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-600 font-medium capitalize">{method}</span>
-                  <span className="font-bold text-gray-900">${Number(amount).toLocaleString()}</span>
+                  <span className="font-bold text-gray-900">Rs. {Number(amount).toLocaleString()}</span>
                 </div>
               ))
             ) : (
@@ -340,7 +334,7 @@ export const AdminReports = () => {
                   <div key={i} className="flex justify-between items-center border-b border-gray-100 pb-3 last:border-0">
                     <span className="text-gray-700 font-medium">{store.name || store.storeName || 'Unknown Store'}</span>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">${(store.revenue || 0).toLocaleString()}</p>
+                      <p className="font-bold text-gray-900">Rs. {(store.revenue || 0).toLocaleString()}</p>
                       <p className="text-xs text-gray-500">{store.orders || 0} orders</p>
                     </div>
                   </div>

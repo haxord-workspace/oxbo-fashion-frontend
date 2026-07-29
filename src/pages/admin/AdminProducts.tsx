@@ -103,6 +103,7 @@ export const AdminProducts = () => {
     price: string;
     status: string;
     isFeatured: boolean;
+    isFlashSale: boolean;
     tags: string;
     seoTitle: string;
     seoDescription: string;
@@ -118,6 +119,7 @@ export const AdminProducts = () => {
     price: '',
     status: 'active',
     isFeatured: false,
+    isFlashSale: false,
     tags: '',
     seoTitle: '',
     seoDescription: '',
@@ -239,6 +241,7 @@ export const AdminProducts = () => {
         price: initialPrice,
         status: product.status || 'active',
         isFeatured: product.isFeatured || false,
+        isFlashSale: product.isFlashSale || false,
         tags: Array.isArray(product.tags) ? product.tags.join(', ') : (product.tags || ''),
         seoTitle: product.seo?.title || '',
         seoDescription: product.seo?.description || '',
@@ -264,6 +267,7 @@ export const AdminProducts = () => {
         price: '',
         status: 'active',
         isFeatured: false,
+        isFlashSale: false,
         tags: '',
         seoTitle: '',
         seoDescription: '',
@@ -303,6 +307,7 @@ export const AdminProducts = () => {
       formData.append('brandId', productForm.brandId);
       formData.append('status', productForm.status);
       formData.append('isFeatured', String(productForm.isFeatured));
+      formData.append('isFlashSale', String(productForm.isFlashSale));
       
       const tagsArray = productForm.tags.split(',').map(t => t.trim()).filter(Boolean);
       if (tagsArray.length > 0) formData.append('tags', JSON.stringify(tagsArray));
@@ -444,6 +449,19 @@ export const AdminProducts = () => {
     const productId = selectedProduct._id || selectedProduct.id;
     try {
       setLoading(true);
+      
+      // Fetch variants and delete them first
+      try {
+        const vRes = await adminProductApi.getVariants(productId);
+        const productVariants = Array.isArray(vRes.data) ? vRes.data : (Array.isArray(vRes) ? vRes : []);
+        
+        if (productVariants.length > 0) {
+          await Promise.all(productVariants.map(v => adminProductApi.deleteVariant(v._id || v.id)));
+        }
+      } catch (variantError) {
+        console.error("Error handling variants before deleting product", variantError);
+      }
+
       await adminProductApi.deleteProduct(productId);
       toast.success('Product deleted successfully');
       
@@ -771,9 +789,15 @@ export const AdminProducts = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
               <input type="text" value={productForm.tags} onChange={e => setProductForm({...productForm, tags: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="shirt, cotton, formal" />
             </div>
-            <div className="flex items-center mt-6">
-              <input type="checkbox" id="isFeatured" checked={productForm.isFeatured} onChange={e => setProductForm({...productForm, isFeatured: e.target.checked})} className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" />
-              <label htmlFor="isFeatured" className="ml-2 block text-sm text-gray-900">Is Featured Product?</label>
+            <div className="flex flex-col justify-center mt-4 gap-3">
+              <div className="flex items-center">
+                <input type="checkbox" id="isFeatured" checked={productForm.isFeatured} onChange={e => setProductForm({...productForm, isFeatured: e.target.checked})} className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" />
+                <label htmlFor="isFeatured" className="ml-2 block text-sm text-gray-900">Is Featured Product?</label>
+              </div>
+              <div className="flex items-center">
+                <input type="checkbox" id="isFlashSale" checked={productForm.isFlashSale} onChange={e => setProductForm({...productForm, isFlashSale: e.target.checked})} className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" />
+                <label htmlFor="isFlashSale" className="ml-2 block text-sm text-gray-900">Is Flash Sale?</label>
+              </div>
             </div>
           </div>
 
@@ -880,14 +904,7 @@ export const AdminProducts = () => {
                       ))}
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Color Images (Comma separated URLs)</label>
-                    <input type="text" value={v.images} onChange={e => {
-                      const newVariants = [...variants];
-                      newVariants[index].images = e.target.value;
-                      setVariants(newVariants);
-                    }} placeholder="URL1, URL2" className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-primary" />
-                  </div>
+               
                 </div>
                 <label className="block text-xs font-medium text-gray-700 mb-2">Size Inventory</label>
                 <div className="grid grid-cols-4 gap-2">
