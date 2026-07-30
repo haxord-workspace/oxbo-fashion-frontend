@@ -5,7 +5,7 @@ import { useAppSelector } from '../../app/hooks';
 import { selectIsStoreManager } from '../../features/auth/authSlice';
 import { 
   TrendingUp, DollarSign, 
-  ShoppingCart, Users, AlertTriangle, Clock, CreditCard, Award, Store, Download
+  ShoppingCart, Users, AlertTriangle, Clock, Award, Store, Download
 } from 'lucide-react';
 
 export const AdminReports = () => {
@@ -255,9 +255,17 @@ export const AdminReports = () => {
             {inventoryData?.lowStockAlerts?.length > 0 ? (
               inventoryData.lowStockAlerts.map((item: any, i: number) => (
                 <div key={i} className="flex justify-between items-center border-b border-gray-100 pb-3 last:border-0">
-                  <span className="text-gray-700 font-medium">{item.variantId?.sku || item.name || 'Unknown Product'}</span>
-                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-md">
-                    {item.availableQuantity || item.quantity || item.stock || 0} left
+                  <div>
+                    <p className="text-gray-700 font-medium leading-tight">{item.variantId?.sku || item.name || 'Unknown Product'}</p>
+                    {item.storeId?.name && (
+                      <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
+                        <Store size={12} />
+                        {item.storeId.name}
+                      </p>
+                    )}
+                  </div>
+                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-md whitespace-nowrap ml-2">
+                    {item.availableQuantity ?? item.quantity ?? item.stock ?? 0} left
                   </span>
                 </div>
               ))
@@ -297,26 +305,7 @@ export const AdminReports = () => {
 
       {/* Payment Methods & Store Comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
-              <CreditCard size={20} className="text-blue-500" />
-              Payment Methods
-            </h3>
-          </div>
-          <div className="space-y-4">
-            {salesData?.paymentMethods ? (
-              Object.entries(salesData.paymentMethods).map(([method, amount]: any, i) => (
-                <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-600 font-medium capitalize">{method}</span>
-                  <span className="font-bold text-gray-900">Rs. {Number(amount).toLocaleString()}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 italic text-center py-4">No payment method data.</p>
-            )}
-          </div>
-        </div>
+       
 
         {/* Store Comparison (More useful for Super Admin) */}
         {!isStoreManager && (
@@ -331,10 +320,12 @@ export const AdminReports = () => {
               {storeData?.storePerformance?.length > 0 ? (
                 storeData.storePerformance.map((store: any, i: number) => (
                   <div key={i} className="flex justify-between items-center border-b border-gray-100 pb-3 last:border-0">
-                    <span className="text-gray-700 font-medium">{store.name || store.storeName || 'Unknown Store'}</span>
+                    <span className="text-gray-700 font-medium">
+                      {store.storeInfo?.name || store.name || store.storeName || (store._id === null ? 'Online Store' : 'Unknown Store')}
+                    </span>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">Rs. {(store.revenue || 0).toLocaleString()}</p>
-                      <p className="text-xs text-gray-500">{store.orders || 0} orders</p>
+                      <p className="font-bold text-gray-900">Rs. {(store.totalRevenue ?? store.revenue ?? 0).toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">{store.orderCount ?? store.orders ?? 0} orders</p>
                     </div>
                   </div>
                 ))

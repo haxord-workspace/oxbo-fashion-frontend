@@ -1,6 +1,6 @@
 import React from 'react';
 import { Home, LayoutGrid, ShoppingBag, User } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { toggleCart } from '../../features/ui/uiSlice';
 import { selectCartCount } from '../../features/cart/cartSlice';

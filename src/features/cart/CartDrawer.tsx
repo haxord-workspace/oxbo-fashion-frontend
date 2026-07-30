@@ -5,7 +5,7 @@ import { toggleCart } from '../ui/uiSlice';
 import { selectCartTotal } from './cartSlice';
 import { selectIsAuthenticated } from '../auth/authSlice';
 import CartItem from './CartItem';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 const CartDrawer: React.FC = () => {
   const dispatch = useAppDispatch();

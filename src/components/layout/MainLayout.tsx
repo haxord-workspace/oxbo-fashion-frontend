@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router';
 import AnnouncementBar from './AnnouncementBar';
 import Navbar from './Navbar';
 import CategoryNav from './CategoryNav';

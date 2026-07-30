@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { logout, selectCurrentUser, selectIsStoreManager, selectIsAuthenticated } from '../../features/auth/authSlice';
 import { authApi } from '../../services/authApi';

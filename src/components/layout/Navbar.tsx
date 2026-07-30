@@ -4,7 +4,7 @@ import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { toggleCart, toggleMobileMenu } from '../../features/ui/uiSlice';
 import { selectCartCount } from '../../features/cart/cartSlice';
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { userNotificationsApi } from '../../services/user/notifications.Api';
 import { X } from 'lucide-react';
 
