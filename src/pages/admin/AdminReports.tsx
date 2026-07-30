@@ -5,7 +5,7 @@ import { useAppSelector } from '../../app/hooks';
 import { selectIsStoreManager } from '../../features/auth/authSlice';
 import { 
   TrendingUp, DollarSign, 
-  ShoppingCart, Users, AlertTriangle, Clock, CreditCard, Award, Store, Download
+  ShoppingCart, Users, AlertTriangle, Clock, Award, Store, Download
 } from 'lucide-react';
 
 export const AdminReports = () => {
