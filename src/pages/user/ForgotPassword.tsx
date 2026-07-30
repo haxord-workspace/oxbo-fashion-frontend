@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { authApi } from '../../services/authApi';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';

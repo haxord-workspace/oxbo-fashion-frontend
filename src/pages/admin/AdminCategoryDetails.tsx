@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { Plus, Edit2, Trash2, Search, ArrowLeft, Loader2 } from 'lucide-react';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';

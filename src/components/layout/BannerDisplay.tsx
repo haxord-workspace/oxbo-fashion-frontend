@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { adminBannerApi, type Banner } from '../../services/admin/adminBanner.Api';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 

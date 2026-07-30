@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Heart, Trash2, ShoppingBag } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { selectWishlistItems, removeFromWishlistAsync, clearWishlist, fetchWishlist } from '../../features/wishlist/wishlistSlice';

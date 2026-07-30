@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router';
 import { Filter, X } from 'lucide-react';
 import InfiniteProductGrid from '../../components/layout/InfiniteProductGrid';
 import BannerDisplay from '../../components/layout/BannerDisplay';

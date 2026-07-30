@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ChevronLeft, X, Star } from 'lucide-react';
 import { userOrdersApi } from '../../services/user/orders.Api';
 import { userReviewsApi } from '../../services/user/reviews.Api';
