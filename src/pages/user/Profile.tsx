@@ -3,7 +3,7 @@ import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { selectCurrentUser, logout, updateUser } from '../../features/auth/authSlice';
 import toast from 'react-hot-toast';
 import { authApi } from '../../services/authApi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Loader2, Camera, X } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../../utils/cropUtils';

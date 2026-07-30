@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { X } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { removeFromCartAsync, updateCartItemAsync, applyCouponAsync, fetchCart } from '../../features/cart/cartSlice';

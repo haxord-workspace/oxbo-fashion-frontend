@@ -238,24 +238,24 @@ export const AdminSettings = () => {
           >
             General Settings
           </button>
-          <button
+          {/* <button
             className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'tax' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             onClick={() => setActiveTab('tax')}
           >
             Tax Settings
-          </button>
+          </button> */}
           <button
             className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'shipping' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             onClick={() => setActiveTab('shipping')}
           >
             Shipping Settings
           </button>
-          <button
+          {/* <button
             className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'payment' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             onClick={() => setActiveTab('payment')}
           >
             Payment Settings
-          </button>
+          </button> */}
         </div>
 
         {activeTab === 'general' && (

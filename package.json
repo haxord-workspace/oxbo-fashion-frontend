@@ -20,7 +20,7 @@
     "react-easy-crop": "^6.0.2",
     "react-hot-toast": "^2.6.0",
     "react-redux": "^9.3.0",
-    "react-router-dom": "^7.18.0",
+    "react-router": "^8.3.0",
     "redux-persist": "^6.0.0"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X, ChevronRight, User } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { toggleMobileMenu } from '../../features/ui/uiSlice';
 

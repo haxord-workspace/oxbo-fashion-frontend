@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ChevronLeft, Edit2, Trash2 } from 'lucide-react';
 import { LoadingButton } from '../../components/common/LoadingButton';
 import toast from 'react-hot-toast';

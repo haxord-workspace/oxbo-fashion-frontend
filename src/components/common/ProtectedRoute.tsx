@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router';
 import { useAppSelector } from '../../app/hooks';
 import { selectIsAuthenticated, selectUserRole, selectAuthInitialized } from '../../features/auth/authSlice';
 import { Loader2 } from 'lucide-react';
