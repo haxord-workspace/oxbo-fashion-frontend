@@ -46,6 +46,7 @@ import {
   AdminNotifications,
   AdminBulkUpload,
   AdminEnquiries,
+  AdminOffers,
 } from './pages/admin/AdminPages';
 import CartPage from './pages/user/CartPage';
 
@@ -137,6 +138,7 @@ const AppContent: React.FC = () => {
               <Route path="stores" element={<AdminStores />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="enquiries" element={<AdminEnquiries />} />
+              <Route path="offers" element={<AdminOffers />} />
             </Route>
           </Route>
         </Route>

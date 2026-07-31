@@ -23,7 +23,8 @@ import {
   Award,
   Bell,
   Upload,
-  MessageSquare
+  MessageSquare,
+  Gift
 } from 'lucide-react';
 
 const navItems = [
@@ -37,6 +38,7 @@ const navItems = [
   { name: 'Inventory', path: '/admin/inventory', icon: Archive },
   { name: 'Banners', path: '/admin/banners', icon: ImageIcon },
   { name: 'Coupons', path: '/admin/coupons', icon: Ticket },
+  { name: 'Offers', path: '/admin/offers', icon: Gift },
   { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
   { name: 'Stores', path: '/admin/stores', icon: Store },
   { name: 'Notifications', path: '/admin/notifications', icon: Bell },

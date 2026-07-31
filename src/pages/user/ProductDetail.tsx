@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router';
 import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
@@ -12,7 +12,7 @@ import { productsApi } from '../../services/productsApi';
 import { userReviewsApi } from '../../services/user/reviews.Api';
 import type { Product } from '../../types';
 
-const SIZES = ['28', '30', '32', '34']; // Fallback sizes if variants have none
+const SIZES = ['28', '30', '32', '34']; 
 const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useAppDispatch();
@@ -31,6 +31,7 @@ const ProductDetail: React.FC = () => {
 
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState(0);
+  const [currentImages, setCurrentImages] = useState<string[]>([]);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [shareCopied, setShareCopied] = useState(false);
@@ -153,9 +154,19 @@ const ProductDetail: React.FC = () => {
     fallbackImages = [product.imageUrl];
   }
 
-  const displayImages = activeVariant?.images && activeVariant.images.length > 0 
-    ? activeVariant.images 
-    : fallbackImages;
+  useEffect(() => {
+    if (selectedColor && product?.variants && product.variants.length > 0) {
+      const matchingVariant = product.variants.find((v: any) => (v.attributes?.color || v.color) === selectedColor);
+      if (matchingVariant && matchingVariant.images && matchingVariant.images.length > 0) {
+        setCurrentImages(matchingVariant.images);
+      } else {
+        setCurrentImages(fallbackImages);
+      }
+      setSelectedImage(0);
+    }
+  }, [selectedColor, product]);
+
+  const displayImages = currentImages.length > 0 ? currentImages : fallbackImages;
 
   let currentStock = 0;
   if (availableSizes.length > 0) {
@@ -398,6 +409,13 @@ const ProductDetail: React.FC = () => {
               className={`absolute inset-0 w-full h-full object-cover transition-transform duration-200 ease-out ${isZoomed ? 'scale-[2]' : 'scale-100'}`}
               style={isZoomed ? zoomStyle : { transformOrigin: 'center center' }}
             />
+            
+            {/* Offer Seal */}
+            {(product as any)?.hasActiveOffer && (product as any)?.activeOfferPercentage > 0 && (
+              <div className="absolute top-5 -left-12 w-40 bg-red-600 text-white text-xs sm:text-sm font-bold py-1.5 text-center -rotate-45 z-20 shadow-md pointer-events-none">
+                {(product as any).activeOfferPercentage}% OFF
+              </div>
+            )}
             {/* Wishlist + Share buttons */}
             <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 cursor-default opacity-100 transition-opacity">
               <div className="relative">
@@ -520,12 +538,9 @@ const ProductDetail: React.FC = () => {
                 );
               })}
             </div>
-            {isVariantOutOfStock && (
-              <p className="text-red-500 text-xs mt-2 font-medium">Out of Stock</p>
-            )}
-            {!isVariantOutOfStock && currentStock < 10 && (
-              <p className="text-[#e35a39] text-xs mt-2 font-medium">
-                Only {currentStock} piece{currentStock === 1 ? '' : 's'} left!
+            {currentStock < 10 && (
+              <p className="text-red-600 text-sm mt-2 font-bold">
+                avilable stock {currentStock}
               </p>
             )}
           </div>

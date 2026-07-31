@@ -138,12 +138,14 @@ export const AdminProducts = () => {
   const [variants, setVariants] = useState<{
     color: string;
     images: string;
+    imageFiles?: File[];
+    applyImagesToSameColor?: boolean;
     size28: string;
     size30: string;
     size32: string;
     size34: string;
   }[]>([
-    { color: '', images: '', size28: '', size30: '', size32: '', size34: '' }
+    { color: '', images: '', imageFiles: [], applyImagesToSameColor: false, size28: '', size30: '', size32: '', size34: '' }
   ]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isFetchingVariants, setIsFetchingVariants] = useState(false);
@@ -229,6 +231,8 @@ export const AdminProducts = () => {
             variantsByColor[color] = {
               color,
               images: Array.isArray(v.images) ? v.images.join(', ') : '',
+              imageFiles: [],
+              applyImagesToSameColor: false,
               size28: '', size30: '', size32: '', size34: ''
             };
           }
@@ -277,7 +281,7 @@ export const AdminProducts = () => {
       if (mappedVariants.length > 0) {
         setVariants(mappedVariants as any);
       } else {
-        setVariants([{ color: '', images: '', size28: '', size30: '', size32: '', size34: '' }]);
+        setVariants([{ color: '', images: '', imageFiles: [], applyImagesToSameColor: false, size28: '', size30: '', size32: '', size34: '' }]);
       }
       
       setIsFetchingVariants(false);
@@ -300,7 +304,7 @@ export const AdminProducts = () => {
         seoKeywords: '',
         images: []
       });
-      setVariants([{ color: '', images: '', size28: '', size30: '', size32: '', size34: '' }]);
+      setVariants([{ color: '', images: '', imageFiles: [], applyImagesToSameColor: false, size28: '', size30: '', size32: '', size34: '' }]);
     }
     setErrors({});
     setIsModalOpen(true);
@@ -405,15 +409,31 @@ export const AdminProducts = () => {
           
           for (const s of sizes) {
             if (s.qty && parseInt(s.qty) > 0) {
-              const variantData = {
-                sku: `${productForm.name.substring(0, 3).toUpperCase()}-${v.color.toUpperCase().substring(0,3)}-${s.size}`,
-                attributes: { color: v.color, size: s.size },
-                price: parseFloat(productForm.price),
-                salePrice: parseFloat(productForm.price),
-                costPrice: parseFloat(productForm.mrp),
-                images: v.images.split(',').map(i => i.trim()).filter(i => i),
-                status: 'active'
-              };
+              const variantFormData = new FormData();
+              variantFormData.append('sku', `${productForm.name.substring(0, 3).toUpperCase()}-${v.color.toUpperCase().substring(0,3)}-${s.size}`);
+              variantFormData.append('attributes[color]', v.color);
+              variantFormData.append('attributes[size]', s.size);
+              variantFormData.append('price', String(productForm.price));
+              variantFormData.append('salePrice', String(productForm.price));
+              variantFormData.append('costPrice', String(productForm.mrp));
+              variantFormData.append('stock', s.qty);
+              variantFormData.append('quantity', s.qty); // sending both just in case
+              variantFormData.append('status', 'active');
+              
+              if (v.images) {
+                const existingImgs = v.images.split(',').map(i => i.trim()).filter(Boolean);
+                existingImgs.forEach(img => variantFormData.append('existingImages', img));
+              }
+
+              if (v.imageFiles && v.imageFiles.length > 0) {
+                v.imageFiles.forEach(file => {
+                  variantFormData.append('images', file);
+                });
+              }
+
+              if (v.applyImagesToSameColor) {
+                variantFormData.append('applyImagesToSameColor', 'true');
+              }
               
               const existingVariant = existingVariants.find(ev => 
                  ev.attributes?.color?.toLowerCase() === v.color.toLowerCase() && 
@@ -422,9 +442,9 @@ export const AdminProducts = () => {
 
               try {
                 if (existingVariant) {
-                  await adminProductApi.updateVariant(existingVariant._id || existingVariant.id, variantData);
+                  await adminProductApi.updateVariant(existingVariant._id || existingVariant.id, variantFormData);
                 } else {
-                  await adminProductApi.createVariant(productId, variantData);
+                  await adminProductApi.createVariant(productId, variantFormData);
                 }
               } catch (err: any) {
                 const msg = err.response?.data?.message || err.message;
@@ -970,7 +990,25 @@ export const AdminProducts = () => {
                       ))}
                     </div>
                   </div>
-               
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Variant Images (Optional)</label>
+                    <input type="file" accept="image/*" multiple onChange={e => {
+                        const files = Array.from(e.target.files || []);
+                        const newVariants = [...variants];
+                        newVariants[index].imageFiles = files;
+                        setVariants(newVariants);
+                    }} className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md mb-2" />
+                    
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id={`apply-${index}`} checked={v.applyImagesToSameColor || false} onChange={e => {
+                        const newVariants = [...variants];
+                        newVariants[index].applyImagesToSameColor = e.target.checked;
+                        setVariants(newVariants);
+                      }} className="w-3.5 h-3.5 text-primary border-gray-300 rounded focus:ring-primary" />
+                      <label htmlFor={`apply-${index}`} className="text-xs text-gray-700 cursor-pointer">Apply these images to all {v.color || 'this color'} variants</label>
+                    </div>
+                  </div>
                 </div>
                 <label className="block text-xs font-medium text-gray-700 mb-2">Size Inventory</label>
                 <div className="grid grid-cols-4 gap-2">
@@ -997,7 +1035,7 @@ export const AdminProducts = () => {
                 </div>
               </div>
             ))}
-            <button type="button" onClick={() => setVariants([...variants, { color: '', images: '', size28: '', size30: '', size32: '', size34: '' }])} className="mt-2 text-xs text-[#e35a39] font-medium hover:underline flex items-center">
+            <button type="button" onClick={() => setVariants([...variants, { color: '', images: '', imageFiles: [], applyImagesToSameColor: false, size28: '', size30: '', size32: '', size34: '' }])} className="mt-2 text-xs text-[#e35a39] font-medium hover:underline flex items-center">
               <Plus size={12} className="mr-1" /> Add Another Color Variant
             </button>
           </div>

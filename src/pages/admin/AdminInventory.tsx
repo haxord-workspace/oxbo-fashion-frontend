@@ -55,7 +55,7 @@ export const AdminInventory = () => {
   useEffect(() => {
     const fetchStoresForFilter = async () => {
       try {
-        const storeRes = await adminStoreApi.getStores({ limit: 100 });
+        const storeRes = await adminStoreApi.getStores();
         setStores(storeRes.stores || []);
       } catch (e) {}
     };
@@ -106,14 +106,16 @@ export const AdminInventory = () => {
     action: 'add' as 'add' | 'reduce' | 'adjust' | 'reserve' | 'release'
   });
 
+  const [isVariantDropdownOpen, setIsVariantDropdownOpen] = useState(false);
+
   const loadOptions = async () => {
     if (stores.length === 0 || variants.length === 0) {
       setIsLoadingOptions(true);
       try {
-        const storeRes = await adminStoreApi.getStores({ limit: 100 });
+        const storeRes = await adminStoreApi.getStores();
         setStores(storeRes.stores || []);
         
-        const prodRes = await adminProductApi.getProducts({ limit: 100 });
+        const prodRes = await adminProductApi.getProducts();
         const allProducts = prodRes.products || [];
         
         let allVariants: any[] = [];
@@ -126,7 +128,8 @@ export const AdminInventory = () => {
                  id: v._id || v.id,
                  sku: v.sku,
                  productName: p.name,
-                 attributes: v.attributes
+                 attributes: v.attributes,
+                 image: p.thumbnail
                });
              });
            } catch (e) {
@@ -401,21 +404,69 @@ export const AdminInventory = () => {
             </select>
           </div>
 
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">Variant</label>
-            <select 
-              value={stockForm.variantId} 
-              onChange={e => setStockForm({...stockForm, variantId: e.target.value})} 
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm bg-white disabled:bg-gray-100"
-              disabled={isLoadingOptions}
+            <div 
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm bg-white flex justify-between items-center ${isLoadingOptions ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'cursor-pointer'}`}
+              onClick={() => !isLoadingOptions && setIsVariantDropdownOpen(!isVariantDropdownOpen)}
             >
-              <option value="">{isLoadingOptions ? 'Loading variants...' : 'Select a variant'}</option>
-              {variants.map(v => (
-                <option key={v.id} value={v.id}>
-                  {v.productName} - {v.sku} {v.attributes ? `(${v.attributes.color || ''}, ${v.attributes.size || ''})` : ''}
-                </option>
-              ))}
-            </select>
+              <span className="truncate">
+                {isLoadingOptions ? 'Loading variants...' : 
+                 stockForm.variantId ? 
+                  (() => {
+                    const v = variants.find(v => v.id === stockForm.variantId);
+                    return v ? `${v.productName} - ${v.sku} ${v.attributes ? `(${v.attributes.color || ''}${v.attributes.color && v.attributes.size ? ', ' : ''}${v.attributes.size || ''})` : ''}` : 'Select a variant';
+                  })() : 
+                  'Select a variant'}
+              </span>
+              <span className="text-gray-400 text-xs">▼</span>
+            </div>
+            
+            {isVariantDropdownOpen && !isLoadingOptions && (
+              <>
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setIsVariantDropdownOpen(false)}
+                ></div>
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                  <div 
+                    className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-500"
+                    onClick={() => {
+                      setStockForm({...stockForm, variantId: ''});
+                      setIsVariantDropdownOpen(false);
+                    }}
+                  >
+                    Select a variant
+                  </div>
+                  {variants.map(v => (
+                    <div 
+                      key={v.id}
+                      className={`px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm flex items-center gap-3 ${stockForm.variantId === v.id ? 'bg-gray-50 font-medium' : ''}`}
+                      onClick={() => {
+                        setStockForm({...stockForm, variantId: v.id});
+                        setIsVariantDropdownOpen(false);
+                      }}
+                    >
+                      {v.image ? (
+                        <img src={v.image} alt={v.productName} className="w-8 h-8 object-cover rounded border border-gray-200" />
+                      ) : (
+                        <div className="w-8 h-8 bg-gray-100 rounded border border-gray-200 flex items-center justify-center text-gray-400">
+                          -
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-gray-900">{v.productName} - {v.sku}</div>
+                        {v.attributes && (
+                          <div className="text-xs text-gray-500">
+                            {v.attributes.color || ''}{v.attributes.color && v.attributes.size ? ', ' : ''}{v.attributes.size || ''}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <div>

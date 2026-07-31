@@ -14,3 +14,4 @@ export * from './AdminBrands';
 export * from './AdminNotifications';
 export * from './AdminBulkUpload';
 export * from './AdminEnquiries';
+export * from './AdminOffers';
