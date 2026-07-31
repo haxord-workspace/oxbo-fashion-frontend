@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './app/store';
@@ -45,8 +45,19 @@ import {
   AdminBrands,
   AdminNotifications,
   AdminBulkUpload,
+  AdminEnquiries,
 } from './pages/admin/AdminPages';
 import CartPage from './pages/user/CartPage';
+
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
 
 const AppContent: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -73,6 +84,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         {/* Client Routes */}
         <Route path="/" element={<MainLayout />}>
@@ -124,6 +136,7 @@ const AppContent: React.FC = () => {
               <Route path="coupons" element={<AdminCoupons />} />
               <Route path="stores" element={<AdminStores />} />
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="enquiries" element={<AdminEnquiries />} />
             </Route>
           </Route>
         </Route>

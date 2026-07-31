@@ -48,7 +48,7 @@ const ShippingPolicy: React.FC = () => {
             </p>
             <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-100 inline-block">
               <p className="mb-1"><strong>Email:</strong> <a href="mailto:oxbostore@gmail.com" className="text-primary hover:underline">oxbostore@gmail.com</a></p>
-              <p><strong>Phone:</strong> +91 97470 43736</p>
+              <p><strong>Phone:</strong> +91 6282-856050</p>
             </div>
           </section>
         </div>

@@ -22,7 +22,8 @@ import {
   Store,
   Award,
   Bell,
-  Upload
+  Upload,
+  MessageSquare
 } from 'lucide-react';
 
 const navItems = [
@@ -39,6 +40,7 @@ const navItems = [
   { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
   { name: 'Stores', path: '/admin/stores', icon: Store },
   { name: 'Notifications', path: '/admin/notifications', icon: Bell },
+  { name: 'Enquiries', path: '/admin/enquiries', icon: MessageSquare },
   { name: 'Settings', path: '/admin/settings', icon: Settings },
 ];
 
@@ -120,7 +122,7 @@ const AdminLayout: React.FC = () => {
             {navItems
               .filter(item => {
                 if (isStoreManager) {
-                  return !['Stores', 'Users', 'Settings', 'Banners', 'Coupons'].includes(item.name);
+                  return !['Stores', 'Users', 'Settings', 'Banners', 'Coupons', 'Enquiries'].includes(item.name);
                 }
                 return true;
               })

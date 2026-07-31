@@ -7,12 +7,12 @@ import toast from 'react-hot-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface FormErrors {
-  email?: string;
+  identifier?: string;
   password?: string;
 }
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -36,10 +36,8 @@ const Login: React.FC = () => {
   const validateForm = () => {
     const newErrors: FormErrors = {};
 
-    if (!email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
+    if (!identifier.trim()) {
+      newErrors.identifier = 'Email or Mobile Number is required';
     }
 
     if (!password) {
@@ -61,7 +59,7 @@ const Login: React.FC = () => {
     dispatch(setAuthError(''));
 
     try {
-      const response = await authApi.login(email, password);
+      const response = await authApi.login(identifier, password);
       
       // Derived only from backend-supplied role data - checking the user's
       // own email string is bypassable by anyone registering an
@@ -109,23 +107,23 @@ const Login: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
           <div className="space-y-4">
             <div>
-              <label htmlFor="email-address" className="sr-only">Email address</label>
+              <label htmlFor="identifier" className="sr-only">Email address or Mobile Number</label>
               <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="identifier"
+                name="identifier"
+                type="text"
+                autoComplete="username"
                 className={`relative block w-full appearance-none rounded-none border px-3 py-3 text-primary placeholder-gray-500 focus:z-10 focus:outline-none sm:text-sm ${
-                  errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
+                  errors.identifier ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'
                 }`}
-                placeholder="EMAIL ADDRESS"
-                value={email}
+                placeholder="EMAIL ADDRESS or MOBILE NUMBER"
+                value={identifier}
                 onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) setErrors({ ...errors, email: undefined });
+                  setIdentifier(e.target.value);
+                  if (errors.identifier) setErrors({ ...errors, identifier: undefined });
                 }}
               />
-              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+              {errors.identifier && <p className="mt-1 text-xs text-red-500">{errors.identifier}</p>}
             </div>
             <div className="relative">
               <label htmlFor="password" className="sr-only">Password</label>

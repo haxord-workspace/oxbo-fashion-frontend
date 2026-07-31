@@ -9,11 +9,11 @@ export interface AuthResponse {
 }
 
 export const authApi = {
-  login: async (email: string, password: string): Promise<AuthResponse> => {
-    const response = await api.post('/auth/login', { email, password });
-   
+  login: async (identifier: string, password: string): Promise<AuthResponse> => {
+    const response = await api.post('/auth/login', { identifier, password });
+
     const responseData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-    
+
     // Deep search function to find keys no matter where they are nested
     const findToken = (obj: any, key: string): string => {
       if (!obj || typeof obj !== 'object') return '';
@@ -25,17 +25,17 @@ export const authApi = {
       return '';
     };
 
-    const accessToken = findToken(responseData, 'accessToken') || 
-                        findToken(responseData, 'token') || 
-                        response.headers['authorization']?.replace('Bearer ', '') || 
-                        response.headers['x-auth-token'] || 
-                        response.headers['access-token'] || 
-                        '';
-                        
-    const refreshToken = findToken(responseData, 'refreshToken') || 
-                         response.headers['x-refresh-token'] || 
-                         response.headers['refresh-token'] || 
-                         '';
+    const accessToken = findToken(responseData, 'accessToken') ||
+      findToken(responseData, 'token') ||
+      response.headers['authorization']?.replace('Bearer ', '') ||
+      response.headers['x-auth-token'] ||
+      response.headers['access-token'] ||
+      '';
+
+    const refreshToken = findToken(responseData, 'refreshToken') ||
+      response.headers['x-refresh-token'] ||
+      response.headers['refresh-token'] ||
+      '';
 
 
     if (accessToken) {
@@ -62,9 +62,9 @@ export const authApi = {
 
   register: async (data: { firstName: string; lastName: string; email: string; password: string; phone: string }): Promise<AuthResponse> => {
     const response = await api.post('/auth/register', data);
-    
+
     const responseData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-    
+
     const findToken = (obj: any, key: string): string => {
       if (!obj || typeof obj !== 'object') return '';
       if (obj[key] && typeof obj[key] === 'string') return obj[key];
@@ -75,17 +75,17 @@ export const authApi = {
       return '';
     };
 
-    const accessToken = findToken(responseData, 'accessToken') || 
-                        findToken(responseData, 'token') || 
-                        response.headers['authorization']?.replace('Bearer ', '') || 
-                        response.headers['x-auth-token'] || 
-                        response.headers['access-token'] || 
-                        '';
-                        
-    const refreshToken = findToken(responseData, 'refreshToken') || 
-                         response.headers['x-refresh-token'] || 
-                         response.headers['refresh-token'] || 
-                         '';
+    const accessToken = findToken(responseData, 'accessToken') ||
+      findToken(responseData, 'token') ||
+      response.headers['authorization']?.replace('Bearer ', '') ||
+      response.headers['x-auth-token'] ||
+      response.headers['access-token'] ||
+      '';
+
+    const refreshToken = findToken(responseData, 'refreshToken') ||
+      response.headers['x-refresh-token'] ||
+      response.headers['refresh-token'] ||
+      '';
 
     if (accessToken) {
       localStorage.setItem('accessToken', accessToken);
@@ -116,11 +116,11 @@ export const authApi = {
 
   refreshToken: async (token: string): Promise<{ accessToken: string }> => {
     const response = await api.post('/auth/refresh', { refreshToken: token });
-    const accessToken = response.data.data?.tokens?.accessToken || 
-                        response.data.data?.token || 
-                        response.data.data?.accessToken || 
-                        response.data.token || 
-                        response.data.accessToken || '';
+    const accessToken = response.data.data?.tokens?.accessToken ||
+      response.data.data?.token ||
+      response.data.data?.accessToken ||
+      response.data.token ||
+      response.data.accessToken || '';
     return { accessToken };
   },
 

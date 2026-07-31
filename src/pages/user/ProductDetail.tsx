@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router';
-import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star, Share2 } from 'lucide-react';
+import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { addToCartAsync } from '../../features/cart/cartSlice';
 import { toggleCart } from '../../features/ui/uiSlice';
@@ -37,6 +37,20 @@ const ProductDetail: React.FC = () => {
 
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomStyle, setZoomStyle] = useState({});
+
+  const [reviewPage, setReviewPage] = useState(0);
+
+  const handleNextReviews = () => {
+    if ((reviewPage + 1) * 5 < reviews.length) {
+      setReviewPage(p => p + 1);
+    }
+  };
+
+  const handlePrevReviews = () => {
+    if (reviewPage > 0) {
+      setReviewPage(p => p - 1);
+    }
+  };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
@@ -373,7 +387,7 @@ const ProductDetail: React.FC = () => {
         {/* Left Column: Images */}
         <div className="w-full lg:w-2/5 flex flex-col gap-4">
           <div 
-            className="w-full aspect-[4/4] bg-gray-100 overflow-hidden relative cursor-crosshair"
+            className="w-full aspect-[4/4] bg-gray-100 overflow-hidden relative cursor-crosshair group"
             onMouseEnter={() => setIsZoomed(true)}
             onMouseLeave={() => setIsZoomed(false)}
             onMouseMove={handleMouseMove}
@@ -384,6 +398,30 @@ const ProductDetail: React.FC = () => {
               className={`absolute inset-0 w-full h-full object-cover transition-transform duration-200 ease-out ${isZoomed ? 'scale-[2]' : 'scale-100'}`}
               style={isZoomed ? zoomStyle : { transformOrigin: 'center center' }}
             />
+            {/* Wishlist + Share buttons */}
+            <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 cursor-default opacity-100 transition-opacity">
+              <div className="relative">
+                <button
+                  onClick={handleShare}
+                  className="p-3 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-sm transition-colors"
+                  title="Share this product"
+                >
+                  <Share2 size={20} strokeWidth={1.5} className="text-gray-700" />
+                </button>
+                {shareCopied && (
+                  <span className="absolute -bottom-7 right-0 text-[10px] whitespace-nowrap bg-gray-800 text-white px-2 py-0.5 rounded">
+                    Copied!
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handleToggleWishlist}
+                className="p-3 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-sm transition-colors"
+                title="Toggle Wishlist"
+              >
+                <Heart size={20} strokeWidth={1.5} className={isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-700'} />
+              </button>
+            </div>
           </div>
 
           {/* Thumbnails */}
@@ -402,31 +440,6 @@ const ProductDetail: React.FC = () => {
 
         {/* Right Column: Details */}
         <div className="w-full lg:w-2/5 flex flex-col relative">
-          {/* Wishlist + Share buttons */}
-          <div className="absolute top-0 right-0 flex items-center gap-2 z-10">
-            <div className="relative">
-              <button
-                onClick={handleShare}
-                className="p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
-                title="Share this product"
-              >
-                <Share2 size={20} strokeWidth={1.5} className="text-gray-500" />
-              </button>
-              {shareCopied && (
-                <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] whitespace-nowrap bg-gray-800 text-white px-2 py-0.5 rounded">
-                  Copied!
-                </span>
-              )}
-            </div>
-            <button
-              onClick={handleToggleWishlist}
-              className="p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
-              title="Toggle Wishlist"
-            >
-              <Heart size={20} strokeWidth={1.5} className={isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-500'} />
-            </button>
-          </div>
-
           <p className="text-sm text-gray-500 uppercase tracking-widest mb-1 pr-12">
             {(product as any).categoryId?.name || product.category || ''}
           </p>
@@ -593,46 +606,73 @@ const ProductDetail: React.FC = () => {
 
       {/* Customer Reviews Section */}
       <div className="px-4 sm:px-8 py-16 border-t border-gray-100">
-        <h2 className="text-2xl sm:text-3xl mb-8">Customer Reviews</h2>
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl sm:text-3xl">Customer Reviews</h2>
+          {reviews.length > 5 && (
+            <div className="flex gap-2">
+              <button 
+                onClick={handlePrevReviews} 
+                disabled={reviewPage === 0}
+                className={`p-3 rounded-full border transition-colors ${reviewPage === 0 ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50 text-gray-700'}`}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button 
+                onClick={handleNextReviews} 
+                disabled={(reviewPage + 1) * 5 >= reviews.length}
+                className={`p-3 rounded-full border transition-colors ${(reviewPage + 1) * 5 >= reviews.length ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50 text-gray-700'}`}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+        </div>
 
         {isLoadingReviews ? (
           <div className="text-gray-500 animate-pulse">Loading reviews...</div>
         ) : reviews.length === 0 ? (
           <div className="text-gray-500">No reviews yet for this product.</div>
         ) : (
-          <div className="space-y-8 max-w-4xl">
-            {reviews.map((review, idx) => (
-              <div key={review._id || review.id || idx} className="border-b border-gray-100 pb-6">
-                <div className="flex items-center gap-1 mb-2">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <Star 
-                      key={star} 
-                      size={16} 
-                      className={star <= (review.rating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} 
-                    />
-                  ))}
-                </div>
-                <h4 className="font-bold text-gray-900 mb-2">{review.title}</h4>
-                <p className="text-sm text-gray-600 mb-4">{review.review || review.comment}</p>
-                {review.images && review.images.length > 0 && (
-                  <div className="flex gap-2 mb-2">
-                    {review.images.map((img: string, i: number) => (
-                      <img key={i} src={img} alt="Review" className="w-20 h-20 object-cover border border-gray-200 rounded" />
+          <div className="relative">
+            <div 
+              className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 snap-x snap-mandatory hide-scrollbar"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {reviews.slice(reviewPage * 5, (reviewPage + 1) * 5).map((review, idx) => (
+                <div key={review._id || review.id || idx} className="border border-gray-100 p-6 rounded-2xl min-w-[280px] w-[280px] sm:min-w-[320px] sm:w-[320px] shrink-0 snap-start bg-gray-50 flex flex-col">
+                  <div className="flex items-center gap-1 mb-4">
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <Star 
+                        key={star} 
+                        size={16} 
+                        className={star <= (review.rating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} 
+                      />
                     ))}
                   </div>
-                )}
-                {(() => {
-                  const reviewerName = review.userId?.firstName 
-                    ? `${review.userId.firstName} ${review.userId.lastName || ''}`.trim() 
-                    : review.user?.name || review.user?.firstName || review.reviewerName || review.author || 'Anonymous';
-                  return (
-                    <p className="text-xs text-gray-400 mt-2">
-                      By {reviewerName} on {new Date(review.createdAt || review.date || Date.now()).toLocaleDateString()}
-                    </p>
-                  );
-                })()}
-              </div>
-            ))}
+                  <h4 className="font-bold text-gray-900 mb-2 truncate">{review.title}</h4>
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-3">{review.review || review.comment}</p>
+                  {review.images && review.images.length > 0 && (
+                    <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                      {review.images.map((img: string, i: number) => (
+                        <img key={i} src={img} alt="Review" className="w-16 h-16 object-cover border border-gray-200 rounded shrink-0" />
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-auto">
+                    {(() => {
+                      const reviewerName = review.userId?.firstName 
+                        ? `${review.userId.firstName} ${review.userId.lastName || ''}`.trim() 
+                        : review.user?.name || review.user?.firstName || review.reviewerName || review.author || 'Anonymous';
+                      return (
+                        <p className="text-xs text-gray-400 pt-4 border-t border-gray-200">
+                          By <span className="font-medium text-gray-600">{reviewerName}</span> on {new Date(review.createdAt || review.date || Date.now()).toLocaleDateString()}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

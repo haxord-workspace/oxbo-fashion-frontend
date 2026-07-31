@@ -10,7 +10,7 @@ const Footer: React.FC = () => {
         <div className="flex flex-col gap-6 text-sm text-gray-700">
           <div className="space-y-1">
             <p>Kerala, India</p>
-            <p>oxbo@gmail.com</p>
+            <p>oxbostore@gmail.com</p>
           </div>
           <div className="flex gap-4">
             <a href="https://www.instagram.com/oxbo_mens_store?igsh=MTN5bHhka3RsOGE3MA==" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-gray-400 flex items-center justify-center hover:bg-gray-100 transition-colors text-primary">
