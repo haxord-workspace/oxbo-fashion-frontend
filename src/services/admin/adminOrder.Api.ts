@@ -28,5 +28,21 @@ export const adminOrderApi = {
   assignStore: async (id: string, storeId: string) => {
     const response = await api.patch(`/orders/admin/${id}/assign-store`, { storeId });
     return response.data;
+  },
+  refundPayment: async (orderId: string, amount?: number, reason?: string) => {
+    const response = await api.post('/payments/refund', { orderId, amount, reason });
+    return response.data;
+  },
+  acceptPayment: async (orderId: string) => {
+    const response = await api.post('/payments/accept', { orderId });
+    return response.data;
+  },
+  rejectPayment: async (orderId: string, reason?: string) => {
+    const response = await api.post('/payments/reject', { orderId, reason });
+    return response.data;
+  },
+  getPaymentHistory: async (params?: any) => {
+    const response = await api.get('/payments/history', { params });
+    return response.data;
   }
 };

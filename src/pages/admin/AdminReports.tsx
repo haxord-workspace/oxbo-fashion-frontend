@@ -7,6 +7,8 @@ import {
   TrendingUp, DollarSign, 
   ShoppingCart, Users, AlertTriangle, Clock, Award, Store, Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export const AdminReports = () => {
   const isStoreManager = useAppSelector(selectIsStoreManager);
@@ -122,6 +124,102 @@ export const AdminReports = () => {
     return 0;
   };
 
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text('Oxbo Fashion - Progress Report', 14, 22);
+    
+    // Subtitle / Date
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    const dateText = dateRange.startDate || dateRange.endDate 
+      ? `Reporting Period: ${dateRange.startDate || 'Start'} to ${dateRange.endDate || 'End'}` 
+      : `Reporting Period: All Time (Generated on ${new Date().toLocaleDateString()})`;
+    doc.text(dateText, 14, 30);
+    
+    // Key Metrics Table
+    autoTable(doc, {
+      startY: 40,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Revenue', `Rs. ${totalRevenue.toLocaleString()}`],
+        ['Average Order Value', `Rs. ${aov.toLocaleString()}`],
+        ['Avg. Fulfillment Time', fulfillmentRateStr],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [0, 0, 0] }
+    });
+
+    // Orders Status Breakdown Table
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [['Order Status', 'Count']],
+      body: [
+        ['Pending', pendingCount.toString()],
+        ['Shipped', shippedCount.toString()],
+        ['Cancelled', cancelledCount.toString()],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [0, 0, 0] }
+    });
+
+    // Top Selling Products Table
+    const topProductsBody = inventoryData?.topProducts?.length > 0
+      ? inventoryData.topProducts.map((item: any) => [
+          item.productName || item.name || 'Unknown Product',
+          (item.totalQuantitySold || item.sold || 0).toString(),
+        ]) 
+      : [['No data available', '']];
+    
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [['Top Selling Products', 'Sold']],
+      body: topProductsBody,
+      theme: 'grid',
+      headStyles: { fillColor: [0, 0, 0] }
+    });
+
+    // Low Stock Alerts Table
+    const lowStockBody = inventoryData?.lowStockAlerts?.length > 0
+      ? inventoryData.lowStockAlerts.map((item: any) => [
+          item.variantId?.sku || item.name || 'Unknown Product',
+          item.storeId?.name || 'Unknown Store',
+          (item.availableQuantity ?? item.quantity ?? item.stock ?? 0).toString(),
+        ]) 
+      : [['No low stock alerts', '', '']];
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [['Low Stock Alert (SKU)', 'Store', 'Quantity Left']],
+      body: lowStockBody,
+      theme: 'grid',
+      headStyles: { fillColor: [0, 0, 0] }
+    });
+
+    // Store Comparison Table (if not store manager)
+    if (!isStoreManager) {
+      const storeBody = storeData?.storePerformance?.length > 0
+        ? storeData.storePerformance.map((store: any) => [
+            store.storeInfo?.name || store.name || store.storeName || (store._id === null ? 'Online Store' : 'Unknown Store'),
+            `Rs. ${(store.totalRevenue ?? store.revenue ?? 0).toLocaleString()}`,
+            `${store.orderCount ?? store.orders ?? 0} orders`,
+          ]) 
+        : [['No store performance data available', '', '']];
+      
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 10,
+        head: [['Store Name', 'Revenue', 'Orders']],
+        body: storeBody,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 0, 0] }
+      });
+    }
+
+    doc.save(`oxbo-report-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <PageWrapper title="Analytics & Reports">
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -140,7 +238,7 @@ export const AdminReports = () => {
             onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
           />
           <button
-            onClick={() => window.print()}
+            onClick={generatePDF}
             className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
           >
             <Download size={16} />

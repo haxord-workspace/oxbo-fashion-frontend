@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router';
-import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star, Share2 } from 'lucide-react';
+import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { addToCartAsync } from '../../features/cart/cartSlice';
 import { toggleCart } from '../../features/ui/uiSlice';
 import { addToWishlistAsync, removeFromWishlistAsync, selectIsWishlisted } from '../../features/wishlist/wishlistSlice';
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
 import Accordion from '../../components/common/Accordion';
+import SizeChartModal from '../../components/common/SizeChartModal';
 
 import { productsApi } from '../../services/productsApi';
 import { userReviewsApi } from '../../services/user/reviews.Api';
 import type { Product } from '../../types';
 
-const SIZES = ['28', '30', '32', '34']; // Fallback sizes if variants have none
 const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useAppDispatch();
@@ -31,12 +31,28 @@ const ProductDetail: React.FC = () => {
 
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState(0);
+  const [currentImages, setCurrentImages] = useState<string[]>([]);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [shareCopied, setShareCopied] = useState(false);
 
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomStyle, setZoomStyle] = useState({});
+
+  const [reviewPage, setReviewPage] = useState(0);
+  const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
+
+  const handleNextReviews = () => {
+    if ((reviewPage + 1) * 5 < reviews.length) {
+      setReviewPage(p => p + 1);
+    }
+  };
+
+  const handlePrevReviews = () => {
+    if (reviewPage > 0) {
+      setReviewPage(p => p - 1);
+    }
+  };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
@@ -58,14 +74,18 @@ const ProductDetail: React.FC = () => {
           actualProduct = actualProduct.find((p: any) => p._id === id || p.id === id) || actualProduct[0];
         }
         
-        try {
-          const variantsResponse: any = await productsApi.getProductVariants(id);
-          const actualVariants = variantsResponse.data?.variants || variantsResponse.data || variantsResponse;
-          if (Array.isArray(actualVariants) && actualVariants.length > 0) {
-            actualProduct.variants = actualVariants;
+        // If the backend didn't populate the variants (e.g., they are just string IDs) or they are missing,
+        // we still need to fetch the full variant objects.
+        if (!actualProduct.variants || !actualProduct.variants[0] || typeof actualProduct.variants[0] === 'string') {
+          try {
+            const variantsResponse: any = await productsApi.getProductVariants(id);
+            const actualVariants = variantsResponse.data?.variants || variantsResponse.data || variantsResponse;
+            if (Array.isArray(actualVariants) && actualVariants.length > 0) {
+              actualProduct.variants = actualVariants;
+            }
+          } catch (variantErr) {
+            console.error('Failed to fetch variants', variantErr);
           }
-        } catch (variantErr) {
-          console.error('Failed to fetch variants', variantErr);
         }
         
         const related: any = await productsApi.getProducts({ category: actualProduct?.category || actualProduct?.categoryId, limit: 4 });
@@ -111,10 +131,15 @@ const ProductDetail: React.FC = () => {
     fetchReviews();
   }, [id]);
 
+  // Helper to extract color and size robustly, handling different backend serialization formats
+  const getVariantColor = (v: any) => v?.attributes?.color || v?.color || v?.['attributes[color]'] || '';
+  const getVariantSize = (v: any) => v?.attributes?.size || v?.size || v?.['attributes[size]'] || (v?.sku ? v.sku.split('-').slice(2).join('-') : '');
+
   // Derived state based on variants
-  const uniqueColors = Array.from(new Set(product?.variants?.map((v: any) => v.attributes?.color || v.color).filter(Boolean))) as string[];
+  const uniqueColors = Array.from(new Set(product?.variants?.map(getVariantColor).filter(Boolean))) as string[];
   
-  const variantsForColor = product?.variants?.filter((v: any) => (v.attributes?.color || v.color) === selectedColor) || [];
+  // Also match empty colors if selectedColor is empty
+  const variantsForColor = product?.variants?.filter((v: any) => getVariantColor(v) === selectedColor) || [];
   
   // Handle both flat structure (v.attributes.size) and nested structure (v.sizes)
   let availableSizes: { size: string, stock: number, variantId?: string }[] = [];
@@ -124,13 +149,39 @@ const ProductDetail: React.FC = () => {
   } else {
     // New flat structure
     availableSizes = variantsForColor.map((v: any) => ({
-      size: v.attributes?.size || v.size || '',
+      size: getVariantSize(v),
       stock: v.stock !== undefined ? v.stock : (v.quantity !== undefined ? v.quantity : (v.status === 'active' ? 10 : 0)),
       variantId: v._id || v.id
     })).filter(s => s.size);
   }
 
-  const activeVariant = variantsForColor.find((v: any) => (v.attributes?.size || v.size) === selectedSize) || variantsForColor[0] || product?.variants?.[0];
+  // Sort available sizes logically (numeric or standard alphabetic sizes)
+  const sizeOrder: Record<string, number> = {
+    'xxs': 1, 'xs': 2, 's': 3, 'm': 4, 'l': 5, 'xl': 6, 'xxl': 7, '2xl': 7, '3xl': 8, '4xl': 9
+  };
+
+  availableSizes.sort((a, b) => {
+    const aLower = String(a.size || '').toLowerCase();
+    const bLower = String(b.size || '').toLowerCase();
+    
+    // Check if both are in standard size order
+    if (sizeOrder[aLower] && sizeOrder[bLower]) {
+      return sizeOrder[aLower] - sizeOrder[bLower];
+    }
+    
+    // Check if both are numeric
+    const aNum = parseFloat(a.size);
+    const bNum = parseFloat(b.size);
+    
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return aNum - bNum; // Ascending numerical sort
+    }
+    
+    // Default alphabetical sort
+    return String(a.size).localeCompare(String(b.size));
+  });
+
+  const activeVariant = variantsForColor.find((v: any) => getVariantSize(v) === selectedSize) || variantsForColor[0] || product?.variants?.[0];
   
   let fallbackImages = ['/placeholder.png'];
   if (product?.thumbnail) {
@@ -139,9 +190,19 @@ const ProductDetail: React.FC = () => {
     fallbackImages = [product.imageUrl];
   }
 
-  const displayImages = activeVariant?.images && activeVariant.images.length > 0 
-    ? activeVariant.images 
-    : fallbackImages;
+  useEffect(() => {
+    if (selectedColor && product?.variants && product.variants.length > 0) {
+      const matchingVariant = product.variants.find((v: any) => getVariantColor(v) === selectedColor);
+      if (matchingVariant && matchingVariant.images && matchingVariant.images.length > 0) {
+        setCurrentImages(matchingVariant.images);
+      } else {
+        setCurrentImages(fallbackImages);
+      }
+      setSelectedImage(0);
+    }
+  }, [selectedColor, product]);
+
+  const displayImages = currentImages.length > 0 ? currentImages : fallbackImages;
 
   let currentStock = 0;
   if (availableSizes.length > 0) {
@@ -173,12 +234,13 @@ const ProductDetail: React.FC = () => {
     setQuantity(1);
     if (product?.variants && product.variants.length > 0) {
       const firstVariant = product.variants[0];
-      // Support both flat (attributes.color) and legacy (color) structures
-      const firstColor = firstVariant.attributes?.color || firstVariant.color || '';
+      // Support multiple structures for color
+      const firstColor = getVariantColor(firstVariant);
       setSelectedColor(firstColor);
-      // Support both flat (attributes.size / size) and nested (sizes[]) structures
-      if (firstVariant.attributes?.size || firstVariant.size) {
-        setSelectedSize(firstVariant.attributes?.size || firstVariant.size || '');
+      // Support multiple structures for size
+      const firstSize = getVariantSize(firstVariant);
+      if (firstSize) {
+        setSelectedSize(firstSize);
       } else if (firstVariant.sizes && firstVariant.sizes.length > 0) {
         setSelectedSize(firstVariant.sizes[0].size || '');
       }
@@ -373,7 +435,7 @@ const ProductDetail: React.FC = () => {
         {/* Left Column: Images */}
         <div className="w-full lg:w-2/5 flex flex-col gap-4">
           <div 
-            className="w-full aspect-[4/4] bg-gray-100 overflow-hidden relative cursor-crosshair"
+            className="w-full aspect-[4/4] bg-gray-100 overflow-hidden relative cursor-crosshair group"
             onMouseEnter={() => setIsZoomed(true)}
             onMouseLeave={() => setIsZoomed(false)}
             onMouseMove={handleMouseMove}
@@ -384,6 +446,37 @@ const ProductDetail: React.FC = () => {
               className={`absolute inset-0 w-full h-full object-cover transition-transform duration-200 ease-out ${isZoomed ? 'scale-[2]' : 'scale-100'}`}
               style={isZoomed ? zoomStyle : { transformOrigin: 'center center' }}
             />
+            
+            {/* Offer Seal */}
+            {(product as any)?.hasActiveOffer && (product as any)?.activeOfferPercentage > 0 && (
+              <div className="absolute top-5 -left-12 w-40 bg-red-600 text-white text-xs sm:text-sm font-bold py-1.5 text-center -rotate-45 z-20 shadow-md pointer-events-none">
+                {(product as any).activeOfferPercentage}% OFF
+              </div>
+            )}
+            {/* Wishlist + Share buttons */}
+            <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 cursor-default opacity-100 transition-opacity">
+              <div className="relative">
+                <button
+                  onClick={handleShare}
+                  className="p-3 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-sm transition-colors"
+                  title="Share this product"
+                >
+                  <Share2 size={20} strokeWidth={1.5} className="text-gray-700" />
+                </button>
+                {shareCopied && (
+                  <span className="absolute -bottom-7 right-0 text-[10px] whitespace-nowrap bg-gray-800 text-white px-2 py-0.5 rounded">
+                    Copied!
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handleToggleWishlist}
+                className="p-3 bg-white/90 backdrop-blur-sm hover:bg-white rounded-full shadow-sm transition-colors"
+                title="Toggle Wishlist"
+              >
+                <Heart size={20} strokeWidth={1.5} className={isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-700'} />
+              </button>
+            </div>
           </div>
 
           {/* Thumbnails */}
@@ -402,31 +495,6 @@ const ProductDetail: React.FC = () => {
 
         {/* Right Column: Details */}
         <div className="w-full lg:w-2/5 flex flex-col relative">
-          {/* Wishlist + Share buttons */}
-          <div className="absolute top-0 right-0 flex items-center gap-2 z-10">
-            <div className="relative">
-              <button
-                onClick={handleShare}
-                className="p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
-                title="Share this product"
-              >
-                <Share2 size={20} strokeWidth={1.5} className="text-gray-500" />
-              </button>
-              {shareCopied && (
-                <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] whitespace-nowrap bg-gray-800 text-white px-2 py-0.5 rounded">
-                  Copied!
-                </span>
-              )}
-            </div>
-            <button
-              onClick={handleToggleWishlist}
-              className="p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
-              title="Toggle Wishlist"
-            >
-              <Heart size={20} strokeWidth={1.5} className={isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-500'} />
-            </button>
-          </div>
-
           <p className="text-sm text-gray-500 uppercase tracking-widest mb-1 pr-12">
             {(product as any).categoryId?.name || product.category || ''}
           </p>
@@ -476,43 +544,47 @@ const ProductDetail: React.FC = () => {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm">Size: <span className="font-semibold">{selectedSize}</span></span>
-              <button className="text-sm underline flex items-center gap-1">
+              <button 
+                className="text-sm underline flex items-center gap-1 hover:text-primary transition-colors"
+                onClick={() => setIsSizeChartOpen(true)}
+              >
                 <span className="w-4 h-4 inline-block bg-primary text-white text-[10px] text-center leading-4">📏</span> Size Chart
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {SIZES.map(size => {
-                const sizeData = availableSizes.find(s => s.size === size);
-                const isOutOfStock = sizeData ? sizeData.stock === 0 : true;
+              {availableSizes.length > 0 ? (
+                availableSizes.map(sizeData => {
+                  const size = sizeData.size;
+                  const isOutOfStock = sizeData.stock === 0;
 
-                return (
-                  <button
-                    key={size}
-                    onClick={() => !isOutOfStock && setSelectedSize(size)}
-                    disabled={isOutOfStock}
-                    className={`relative w-12 h-10 border text-sm transition-colors overflow-hidden ${selectedSize === size
-                        ? 'bg-primary text-white border-primary'
-                        : isOutOfStock
-                          ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                          : 'bg-white text-primary border-gray-300 hover:border-primary'
-                      }`}
-                  >
-                    {size}
-                    {isOutOfStock && (
-                      <div className="absolute inset-0 w-full h-full pointer-events-none">
-                        <div className="absolute top-1/2 left-[-10%] w-[120%] h-px bg-gray-300 transform -translate-y-1/2 -rotate-45" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={size}
+                      onClick={() => !isOutOfStock && setSelectedSize(size)}
+                      disabled={isOutOfStock}
+                      className={`relative min-w-[3rem] px-2 h-10 border text-sm transition-colors overflow-hidden ${selectedSize === size
+                          ? 'bg-primary text-white border-primary'
+                          : isOutOfStock
+                            ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                            : 'bg-white text-primary border-gray-300 hover:border-primary'
+                        }`}
+                    >
+                      {size}
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 w-full h-full pointer-events-none">
+                          <div className="absolute top-1/2 left-[-10%] w-[120%] h-px bg-gray-300 transform -translate-y-1/2 -rotate-45" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="text-sm text-gray-500 py-2">One Size</div>
+              )}
             </div>
-            {isVariantOutOfStock && (
-              <p className="text-red-500 text-xs mt-2 font-medium">Out of Stock</p>
-            )}
-            {!isVariantOutOfStock && currentStock < 10 && (
-              <p className="text-[#e35a39] text-xs mt-2 font-medium">
-                Only {currentStock} piece{currentStock === 1 ? '' : 's'} left!
+            {currentStock < 10 && (
+              <p className="text-red-600 text-sm mt-2 font-bold">
+                avilable stock {currentStock}
               </p>
             )}
           </div>
@@ -593,46 +665,73 @@ const ProductDetail: React.FC = () => {
 
       {/* Customer Reviews Section */}
       <div className="px-4 sm:px-8 py-16 border-t border-gray-100">
-        <h2 className="text-2xl sm:text-3xl mb-8">Customer Reviews</h2>
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl sm:text-3xl">Customer Reviews</h2>
+          {reviews.length > 5 && (
+            <div className="flex gap-2">
+              <button 
+                onClick={handlePrevReviews} 
+                disabled={reviewPage === 0}
+                className={`p-3 rounded-full border transition-colors ${reviewPage === 0 ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50 text-gray-700'}`}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button 
+                onClick={handleNextReviews} 
+                disabled={(reviewPage + 1) * 5 >= reviews.length}
+                className={`p-3 rounded-full border transition-colors ${(reviewPage + 1) * 5 >= reviews.length ? 'border-gray-100 text-gray-300 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50 text-gray-700'}`}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+        </div>
 
         {isLoadingReviews ? (
           <div className="text-gray-500 animate-pulse">Loading reviews...</div>
         ) : reviews.length === 0 ? (
           <div className="text-gray-500">No reviews yet for this product.</div>
         ) : (
-          <div className="space-y-8 max-w-4xl">
-            {reviews.map((review, idx) => (
-              <div key={review._id || review.id || idx} className="border-b border-gray-100 pb-6">
-                <div className="flex items-center gap-1 mb-2">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <Star 
-                      key={star} 
-                      size={16} 
-                      className={star <= (review.rating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} 
-                    />
-                  ))}
-                </div>
-                <h4 className="font-bold text-gray-900 mb-2">{review.title}</h4>
-                <p className="text-sm text-gray-600 mb-4">{review.review || review.comment}</p>
-                {review.images && review.images.length > 0 && (
-                  <div className="flex gap-2 mb-2">
-                    {review.images.map((img: string, i: number) => (
-                      <img key={i} src={img} alt="Review" className="w-20 h-20 object-cover border border-gray-200 rounded" />
+          <div className="relative">
+            <div 
+              className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 snap-x snap-mandatory hide-scrollbar"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {reviews.slice(reviewPage * 5, (reviewPage + 1) * 5).map((review, idx) => (
+                <div key={review._id || review.id || idx} className="border border-gray-100 p-6 rounded-2xl min-w-[280px] w-[280px] sm:min-w-[320px] sm:w-[320px] shrink-0 snap-start bg-gray-50 flex flex-col">
+                  <div className="flex items-center gap-1 mb-4">
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <Star 
+                        key={star} 
+                        size={16} 
+                        className={star <= (review.rating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} 
+                      />
                     ))}
                   </div>
-                )}
-                {(() => {
-                  const reviewerName = review.userId?.firstName 
-                    ? `${review.userId.firstName} ${review.userId.lastName || ''}`.trim() 
-                    : review.user?.name || review.user?.firstName || review.reviewerName || review.author || 'Anonymous';
-                  return (
-                    <p className="text-xs text-gray-400 mt-2">
-                      By {reviewerName} on {new Date(review.createdAt || review.date || Date.now()).toLocaleDateString()}
-                    </p>
-                  );
-                })()}
-              </div>
-            ))}
+                  <h4 className="font-bold text-gray-900 mb-2 truncate">{review.title}</h4>
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-3">{review.review || review.comment}</p>
+                  {review.images && review.images.length > 0 && (
+                    <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                      {review.images.map((img: string, i: number) => (
+                        <img key={i} src={img} alt="Review" className="w-16 h-16 object-cover border border-gray-200 rounded shrink-0" />
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-auto">
+                    {(() => {
+                      const reviewerName = review.userId?.firstName 
+                        ? `${review.userId.firstName} ${review.userId.lastName || ''}`.trim() 
+                        : review.user?.name || review.user?.firstName || review.reviewerName || review.author || 'Anonymous';
+                      return (
+                        <p className="text-xs text-gray-400 pt-4 border-t border-gray-200">
+                          By <span className="font-medium text-gray-600">{reviewerName}</span> on {new Date(review.createdAt || review.date || Date.now()).toLocaleDateString()}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -682,6 +781,18 @@ const ProductDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <SizeChartModal 
+        isOpen={isSizeChartOpen} 
+        onClose={() => setIsSizeChartOpen(false)} 
+        defaultTab={
+          ((product as any)?.categoryId?.name || product?.category || '').toLowerCase().match(/jean|pant|bottom|trouser|short/i)
+            ? 'bottoms' 
+            : product?.name?.toLowerCase().includes('long') 
+              ? 'long-sleeve' 
+              : 'tops'
+        }
+      />
     </div>
   );
 };
