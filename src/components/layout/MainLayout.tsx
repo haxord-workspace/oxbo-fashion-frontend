@@ -7,6 +7,7 @@ import Footer from './Footer';
 import CartDrawer from '../../features/cart/CartDrawer';
 import MobileMenuDrawer from './MobileMenuDrawer';
 import MobileBottomNav from './MobileBottomNav';
+import WhatsAppButton from '../common/WhatsAppButton';
 
 const MainLayout: React.FC = () => {
   return (
@@ -23,6 +24,7 @@ const MainLayout: React.FC = () => {
       <CartDrawer />
       <MobileMenuDrawer />
       <MobileBottomNav />
+      <WhatsAppButton />
     </div>
   );
 };

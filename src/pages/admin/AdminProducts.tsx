@@ -17,6 +17,8 @@ interface FormErrors {
   mrp?: string;
   price?: string;
   image?: string;
+  categoryId?: string;
+  brandId?: string;
 }
 
 export const AdminProducts = () => {
@@ -140,12 +142,9 @@ export const AdminProducts = () => {
     images: string;
     imageFiles?: File[];
     applyImagesToSameColor?: boolean;
-    size28: string;
-    size30: string;
-    size32: string;
-    size34: string;
+    sizes: { size: string }[];
   }[]>([
-    { color: '', images: '', imageFiles: [], applyImagesToSameColor: false, size28: '', size30: '', size32: '', size34: '' }
+    { color: '', images: '', imageFiles: [], applyImagesToSameColor: false, sizes: [{ size: '' }] }
   ]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isFetchingVariants, setIsFetchingVariants] = useState(false);
@@ -233,14 +232,20 @@ export const AdminProducts = () => {
               images: Array.isArray(v.images) ? v.images.join(', ') : '',
               imageFiles: [],
               applyImagesToSameColor: false,
-              size28: '', size30: '', size32: '', size34: ''
+              sizes: []
             };
           }
           
-          if (size === '28') variantsByColor[color].size28 = '1';
-          if (size === '30') variantsByColor[color].size30 = '1';
-          if (size === '32') variantsByColor[color].size32 = '1';
-          if (size === '34') variantsByColor[color].size34 = '1';
+          if (size) {
+            variantsByColor[color].sizes.push({ size });
+          }
+        });
+
+        // Ensure at least one size row exists for each color
+        Object.values(variantsByColor).forEach((variantBlock: any) => {
+          if (variantBlock.sizes.length === 0) {
+            variantBlock.sizes.push({ size: '' });
+          }
         });
       }
       
@@ -281,7 +286,7 @@ export const AdminProducts = () => {
       if (mappedVariants.length > 0) {
         setVariants(mappedVariants as any);
       } else {
-        setVariants([{ color: '', images: '', imageFiles: [], applyImagesToSameColor: false, size28: '', size30: '', size32: '', size34: '' }]);
+        setVariants([{ color: '', images: '', imageFiles: [], applyImagesToSameColor: false, sizes: [{ size: '' }] }]);
       }
       
       setIsFetchingVariants(false);
@@ -304,7 +309,7 @@ export const AdminProducts = () => {
         seoKeywords: '',
         images: []
       });
-      setVariants([{ color: '', images: '', imageFiles: [], applyImagesToSameColor: false, size28: '', size30: '', size32: '', size34: '' }]);
+      setVariants([{ color: '', images: '', imageFiles: [], applyImagesToSameColor: false, sizes: [{ size: '' }] }]);
     }
     setErrors({});
     setIsModalOpen(true);
@@ -316,6 +321,8 @@ export const AdminProducts = () => {
     if (!productForm.mrp) newErrors.mrp = 'MRP is required';
     if (!productForm.price) newErrors.price = 'Discount price is required';
     if (productForm.images.length === 0) newErrors.image = 'At least one image is required';
+    if (!productForm.categoryId) newErrors.categoryId = 'Category is required';
+    if (!productForm.brandId) newErrors.brandId = 'Brand is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -400,15 +407,8 @@ export const AdminProducts = () => {
         for (const v of variants) {
           if (!v.color) continue;
           
-          const sizes = [
-            { size: '28', qty: v.size28 },
-            { size: '30', qty: v.size30 },
-            { size: '32', qty: v.size32 },
-            { size: '34', qty: v.size34 },
-          ];
-          
-          for (const s of sizes) {
-            if (s.qty && parseInt(s.qty) > 0) {
+          for (const s of v.sizes) {
+            if (s.size) {
               const variantFormData = new FormData();
               variantFormData.append('sku', `${productForm.name.substring(0, 3).toUpperCase()}-${v.color.toUpperCase().substring(0,3)}-${s.size}`);
               variantFormData.append('attributes[color]', v.color);
@@ -416,8 +416,6 @@ export const AdminProducts = () => {
               variantFormData.append('price', String(productForm.price));
               variantFormData.append('salePrice', String(productForm.price));
               variantFormData.append('costPrice', String(productForm.mrp));
-              variantFormData.append('stock', s.qty);
-              variantFormData.append('quantity', s.qty); // sending both just in case
               variantFormData.append('status', 'active');
               
               if (v.images) {
@@ -786,14 +784,18 @@ export const AdminProducts = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
               <select 
                 value={productForm.categoryId} 
-                onChange={e => setProductForm({...productForm, categoryId: e.target.value, subCategoryId: ''})} 
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white"
+                onChange={e => {
+                  setProductForm({...productForm, categoryId: e.target.value, subCategoryId: ''});
+                  if (errors.categoryId) setErrors({...errors, categoryId: undefined});
+                }} 
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 bg-white transition-colors ${errors.categoryId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`}
               >
                 <option value="">Select Category</option>
                 {categories.map(c => (
                   <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>
                 ))}
               </select>
+              {errors.categoryId && <p className="mt-1 text-xs text-red-500">{errors.categoryId}</p>}
             </div>
             {subCategories.length > 0 && (
               <div>
@@ -812,12 +814,20 @@ export const AdminProducts = () => {
             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-              <select value={productForm.brandId} onChange={e => setProductForm({...productForm, brandId: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
+              <select 
+                value={productForm.brandId} 
+                onChange={e => {
+                  setProductForm({...productForm, brandId: e.target.value});
+                  if (errors.brandId) setErrors({...errors, brandId: undefined});
+                }} 
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 bg-white transition-colors ${errors.brandId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`}
+              >
                 <option value="">Select Brand</option>
                 {brands.map(b => (
                   <option key={b.id || b._id} value={b.id || b._id}>{b.name}</option>
                 ))}
               </select>
+              {errors.brandId && <p className="mt-1 text-xs text-red-500">{errors.brandId}</p>}
             </div>
           </div>
 
@@ -1010,32 +1020,52 @@ export const AdminProducts = () => {
                     </div>
                   </div>
                 </div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">Size Inventory</label>
-                <div className="grid grid-cols-4 gap-2">
-                  <input type="number" value={v.size28} onChange={e => {
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-medium text-gray-700">Size Inventory</label>
+                  <button 
+                    type="button" 
+                    onClick={() => {
                       const newVariants = [...variants];
-                      newVariants[index].size28 = e.target.value;
+                      newVariants[index].sizes.push({ size: '' });
                       setVariants(newVariants);
-                    }} placeholder="Size 28 Qty" className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md" />
-                  <input type="number" value={v.size30} onChange={e => {
-                      const newVariants = [...variants];
-                      newVariants[index].size30 = e.target.value;
-                      setVariants(newVariants);
-                    }} placeholder="Size 30 Qty" className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md" />
-                  <input type="number" value={v.size32} onChange={e => {
-                      const newVariants = [...variants];
-                      newVariants[index].size32 = e.target.value;
-                      setVariants(newVariants);
-                    }} placeholder="Size 32 Qty" className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md" />
-                  <input type="number" value={v.size34} onChange={e => {
-                      const newVariants = [...variants];
-                      newVariants[index].size34 = e.target.value;
-                      setVariants(newVariants);
-                    }} placeholder="Size 34 Qty" className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md" />
+                    }}
+                    className="text-xs text-primary font-medium hover:underline flex items-center"
+                  >
+                    <Plus size={12} className="mr-1" /> Add Size
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {v.sizes.map((s, sIndex) => (
+                    <div key={sIndex} className="flex gap-2 items-center">
+                      <input 
+                        type="text" 
+                        value={s.size} 
+                        onChange={e => {
+                          const newVariants = [...variants];
+                          newVariants[index].sizes[sIndex].size = e.target.value;
+                          setVariants(newVariants);
+                        }} 
+                        placeholder="Size (e.g. M, 42)" 
+                        className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:border-primary" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newVariants = [...variants];
+                          newVariants[index].sizes.splice(sIndex, 1);
+                          setVariants(newVariants);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors bg-white border border-transparent hover:border-red-200"
+                        title="Remove Size"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
-            <button type="button" onClick={() => setVariants([...variants, { color: '', images: '', imageFiles: [], applyImagesToSameColor: false, size28: '', size30: '', size32: '', size34: '' }])} className="mt-2 text-xs text-[#e35a39] font-medium hover:underline flex items-center">
+            <button type="button" onClick={() => setVariants([...variants, { color: '', images: '', imageFiles: [], applyImagesToSameColor: false, sizes: [{ size: '' }] }])} className="mt-2 text-xs text-[#e35a39] font-medium hover:underline flex items-center">
               <Plus size={12} className="mr-1" /> Add Another Color Variant
             </button>
           </div>

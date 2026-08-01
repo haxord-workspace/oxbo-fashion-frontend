@@ -7,12 +7,12 @@ import { toggleCart } from '../../features/ui/uiSlice';
 import { addToWishlistAsync, removeFromWishlistAsync, selectIsWishlisted } from '../../features/wishlist/wishlistSlice';
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
 import Accordion from '../../components/common/Accordion';
+import SizeChartModal from '../../components/common/SizeChartModal';
 
 import { productsApi } from '../../services/productsApi';
 import { userReviewsApi } from '../../services/user/reviews.Api';
 import type { Product } from '../../types';
 
-const SIZES = ['28', '30', '32', '34']; 
 const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useAppDispatch();
@@ -40,6 +40,7 @@ const ProductDetail: React.FC = () => {
   const [zoomStyle, setZoomStyle] = useState({});
 
   const [reviewPage, setReviewPage] = useState(0);
+  const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
 
   const handleNextReviews = () => {
     if ((reviewPage + 1) * 5 < reviews.length) {
@@ -73,14 +74,18 @@ const ProductDetail: React.FC = () => {
           actualProduct = actualProduct.find((p: any) => p._id === id || p.id === id) || actualProduct[0];
         }
         
-        try {
-          const variantsResponse: any = await productsApi.getProductVariants(id);
-          const actualVariants = variantsResponse.data?.variants || variantsResponse.data || variantsResponse;
-          if (Array.isArray(actualVariants) && actualVariants.length > 0) {
-            actualProduct.variants = actualVariants;
+        // If the backend didn't populate the variants (e.g., they are just string IDs) or they are missing,
+        // we still need to fetch the full variant objects.
+        if (!actualProduct.variants || !actualProduct.variants[0] || typeof actualProduct.variants[0] === 'string') {
+          try {
+            const variantsResponse: any = await productsApi.getProductVariants(id);
+            const actualVariants = variantsResponse.data?.variants || variantsResponse.data || variantsResponse;
+            if (Array.isArray(actualVariants) && actualVariants.length > 0) {
+              actualProduct.variants = actualVariants;
+            }
+          } catch (variantErr) {
+            console.error('Failed to fetch variants', variantErr);
           }
-        } catch (variantErr) {
-          console.error('Failed to fetch variants', variantErr);
         }
         
         const related: any = await productsApi.getProducts({ category: actualProduct?.category || actualProduct?.categoryId, limit: 4 });
@@ -126,10 +131,15 @@ const ProductDetail: React.FC = () => {
     fetchReviews();
   }, [id]);
 
+  // Helper to extract color and size robustly, handling different backend serialization formats
+  const getVariantColor = (v: any) => v?.attributes?.color || v?.color || v?.['attributes[color]'] || '';
+  const getVariantSize = (v: any) => v?.attributes?.size || v?.size || v?.['attributes[size]'] || (v?.sku ? v.sku.split('-').slice(2).join('-') : '');
+
   // Derived state based on variants
-  const uniqueColors = Array.from(new Set(product?.variants?.map((v: any) => v.attributes?.color || v.color).filter(Boolean))) as string[];
+  const uniqueColors = Array.from(new Set(product?.variants?.map(getVariantColor).filter(Boolean))) as string[];
   
-  const variantsForColor = product?.variants?.filter((v: any) => (v.attributes?.color || v.color) === selectedColor) || [];
+  // Also match empty colors if selectedColor is empty
+  const variantsForColor = product?.variants?.filter((v: any) => getVariantColor(v) === selectedColor) || [];
   
   // Handle both flat structure (v.attributes.size) and nested structure (v.sizes)
   let availableSizes: { size: string, stock: number, variantId?: string }[] = [];
@@ -139,13 +149,39 @@ const ProductDetail: React.FC = () => {
   } else {
     // New flat structure
     availableSizes = variantsForColor.map((v: any) => ({
-      size: v.attributes?.size || v.size || '',
+      size: getVariantSize(v),
       stock: v.stock !== undefined ? v.stock : (v.quantity !== undefined ? v.quantity : (v.status === 'active' ? 10 : 0)),
       variantId: v._id || v.id
     })).filter(s => s.size);
   }
 
-  const activeVariant = variantsForColor.find((v: any) => (v.attributes?.size || v.size) === selectedSize) || variantsForColor[0] || product?.variants?.[0];
+  // Sort available sizes logically (numeric or standard alphabetic sizes)
+  const sizeOrder: Record<string, number> = {
+    'xxs': 1, 'xs': 2, 's': 3, 'm': 4, 'l': 5, 'xl': 6, 'xxl': 7, '2xl': 7, '3xl': 8, '4xl': 9
+  };
+
+  availableSizes.sort((a, b) => {
+    const aLower = String(a.size || '').toLowerCase();
+    const bLower = String(b.size || '').toLowerCase();
+    
+    // Check if both are in standard size order
+    if (sizeOrder[aLower] && sizeOrder[bLower]) {
+      return sizeOrder[aLower] - sizeOrder[bLower];
+    }
+    
+    // Check if both are numeric
+    const aNum = parseFloat(a.size);
+    const bNum = parseFloat(b.size);
+    
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return aNum - bNum; // Ascending numerical sort
+    }
+    
+    // Default alphabetical sort
+    return String(a.size).localeCompare(String(b.size));
+  });
+
+  const activeVariant = variantsForColor.find((v: any) => getVariantSize(v) === selectedSize) || variantsForColor[0] || product?.variants?.[0];
   
   let fallbackImages = ['/placeholder.png'];
   if (product?.thumbnail) {
@@ -156,7 +192,7 @@ const ProductDetail: React.FC = () => {
 
   useEffect(() => {
     if (selectedColor && product?.variants && product.variants.length > 0) {
-      const matchingVariant = product.variants.find((v: any) => (v.attributes?.color || v.color) === selectedColor);
+      const matchingVariant = product.variants.find((v: any) => getVariantColor(v) === selectedColor);
       if (matchingVariant && matchingVariant.images && matchingVariant.images.length > 0) {
         setCurrentImages(matchingVariant.images);
       } else {
@@ -198,12 +234,13 @@ const ProductDetail: React.FC = () => {
     setQuantity(1);
     if (product?.variants && product.variants.length > 0) {
       const firstVariant = product.variants[0];
-      // Support both flat (attributes.color) and legacy (color) structures
-      const firstColor = firstVariant.attributes?.color || firstVariant.color || '';
+      // Support multiple structures for color
+      const firstColor = getVariantColor(firstVariant);
       setSelectedColor(firstColor);
-      // Support both flat (attributes.size / size) and nested (sizes[]) structures
-      if (firstVariant.attributes?.size || firstVariant.size) {
-        setSelectedSize(firstVariant.attributes?.size || firstVariant.size || '');
+      // Support multiple structures for size
+      const firstSize = getVariantSize(firstVariant);
+      if (firstSize) {
+        setSelectedSize(firstSize);
       } else if (firstVariant.sizes && firstVariant.sizes.length > 0) {
         setSelectedSize(firstVariant.sizes[0].size || '');
       }
@@ -507,36 +544,43 @@ const ProductDetail: React.FC = () => {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm">Size: <span className="font-semibold">{selectedSize}</span></span>
-              <button className="text-sm underline flex items-center gap-1">
+              <button 
+                className="text-sm underline flex items-center gap-1 hover:text-primary transition-colors"
+                onClick={() => setIsSizeChartOpen(true)}
+              >
                 <span className="w-4 h-4 inline-block bg-primary text-white text-[10px] text-center leading-4">📏</span> Size Chart
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {SIZES.map(size => {
-                const sizeData = availableSizes.find(s => s.size === size);
-                const isOutOfStock = sizeData ? sizeData.stock === 0 : true;
+              {availableSizes.length > 0 ? (
+                availableSizes.map(sizeData => {
+                  const size = sizeData.size;
+                  const isOutOfStock = sizeData.stock === 0;
 
-                return (
-                  <button
-                    key={size}
-                    onClick={() => !isOutOfStock && setSelectedSize(size)}
-                    disabled={isOutOfStock}
-                    className={`relative w-12 h-10 border text-sm transition-colors overflow-hidden ${selectedSize === size
-                        ? 'bg-primary text-white border-primary'
-                        : isOutOfStock
-                          ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                          : 'bg-white text-primary border-gray-300 hover:border-primary'
-                      }`}
-                  >
-                    {size}
-                    {isOutOfStock && (
-                      <div className="absolute inset-0 w-full h-full pointer-events-none">
-                        <div className="absolute top-1/2 left-[-10%] w-[120%] h-px bg-gray-300 transform -translate-y-1/2 -rotate-45" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={size}
+                      onClick={() => !isOutOfStock && setSelectedSize(size)}
+                      disabled={isOutOfStock}
+                      className={`relative min-w-[3rem] px-2 h-10 border text-sm transition-colors overflow-hidden ${selectedSize === size
+                          ? 'bg-primary text-white border-primary'
+                          : isOutOfStock
+                            ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                            : 'bg-white text-primary border-gray-300 hover:border-primary'
+                        }`}
+                    >
+                      {size}
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 w-full h-full pointer-events-none">
+                          <div className="absolute top-1/2 left-[-10%] w-[120%] h-px bg-gray-300 transform -translate-y-1/2 -rotate-45" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="text-sm text-gray-500 py-2">One Size</div>
+              )}
             </div>
             {currentStock < 10 && (
               <p className="text-red-600 text-sm mt-2 font-bold">
@@ -737,6 +781,18 @@ const ProductDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <SizeChartModal 
+        isOpen={isSizeChartOpen} 
+        onClose={() => setIsSizeChartOpen(false)} 
+        defaultTab={
+          ((product as any)?.categoryId?.name || product?.category || '').toLowerCase().match(/jean|pant|bottom|trouser|short/i)
+            ? 'bottoms' 
+            : product?.name?.toLowerCase().includes('long') 
+              ? 'long-sleeve' 
+              : 'tops'
+        }
+      />
     </div>
   );
 };
