@@ -124,7 +124,7 @@ const AdminLayout: React.FC = () => {
             {navItems
               .filter(item => {
                 if (isStoreManager) {
-                  return !['Stores', 'Users', 'Settings', 'Banners', 'Coupons', 'Enquiries'].includes(item.name);
+                  return !['Stores', 'Users', 'Settings', 'Banners', 'Coupons', 'Enquiries', 'Offers'].includes(item.name);
                 }
                 return true;
               })

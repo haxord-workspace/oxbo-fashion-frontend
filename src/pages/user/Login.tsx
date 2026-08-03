@@ -59,7 +59,7 @@ const Login: React.FC = () => {
     dispatch(setAuthError(''));
 
     try {
-      const response = await authApi.login(identifier, password);
+      const response = await authApi.login(identifier.trim(), password);
       
       // Derived only from backend-supplied role data - checking the user's
       // own email string is bypassable by anyone registering an
