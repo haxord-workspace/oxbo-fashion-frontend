@@ -2,10 +2,12 @@ import React from 'react';
 
 const WhatsAppButton: React.FC = () => {
   // Replace with the actual phone number and message if available
-  const phoneNumber = ''; // Add your whatsapp number here e.g., '1234567890'
+  const phoneNumber = '+91 6282-856050'; // Add your whatsapp number here e.g., '1234567890'
   const message = 'Hello, I have a question about your products.'; // default message
   
-  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+  const whatsappUrl = phoneNumber 
+    ? `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`
+    : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 
   return (
   <a
