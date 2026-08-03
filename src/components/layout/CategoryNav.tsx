@@ -24,7 +24,7 @@ const CategoryNav: React.FC = () => {
       <div className="max-w-[1920px] mx-auto px-4 overflow-x-auto no-scrollbar">
         <ul className="flex items-center justify-center space-x-6 sm:space-x-10 min-w-max py-3 sm:py-4">
           {navItems.map((item) => (
-            <li key={item.name}>
+            <li key={item.name} className={item.name === 'HOME' ? 'hidden sm:block' : ''}>
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>

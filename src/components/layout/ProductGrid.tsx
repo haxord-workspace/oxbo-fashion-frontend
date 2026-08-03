@@ -102,9 +102,12 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         {/* Wishlist Button */}
         <button 
           onClick={handleToggleWishlist}
-          className="absolute top-3 right-3 p-2 bg-white/80 hover:bg-white rounded-full flex items-center justify-center text-primary shadow-sm transition-transform hover:scale-110 z-10"
+          className="absolute top-0 right-0 p-3 sm:p-2 sm:top-2 sm:right-2 z-10 group"
+          aria-label="Toggle Wishlist"
         >
-          <Heart size={16} strokeWidth={2} className={isWishlisted ? 'fill-red-500 text-red-500' : ''} />
+          <div className="bg-white/80 group-hover:bg-white rounded-full p-2 flex items-center justify-center text-primary shadow-sm transition-transform group-hover:scale-110">
+            <Heart size={16} strokeWidth={2} className={isWishlisted ? 'fill-red-500 text-red-500' : ''} />
+          </div>
         </button>
       </div>
 
@@ -219,7 +222,7 @@ const ProductGrid: React.FC<{ filters?: any; onProductCount?: (count: number) =>
     : products;
 
   return (
-    <section className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <section className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 md:pb-16">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-12 md:gap-x-4 md:gap-y-16">
         {isLoading 
           ? Array.from({ length: pageSize ?? 8 }).map((_, idx) => (

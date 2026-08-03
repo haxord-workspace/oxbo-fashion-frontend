@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router';
-import { Filter, X } from 'lucide-react';
+import { Filter, X, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import InfiniteProductGrid from '../../components/layout/InfiniteProductGrid';
 import BannerDisplay from '../../components/layout/BannerDisplay';
 import api from '../../services/api';
@@ -55,6 +55,15 @@ const Collection: React.FC = () => {
       filters = { sort: 'createdAt', order: 'desc', limit: 20 };
     } else if (categoryId === 'all-drops') {
       filters = {};
+    } else if (categoryId) {
+      const matchedCat = categories.find(
+        c => c.name.toLowerCase().replace(/\s+/g, '-') === categoryId.toLowerCase()
+      );
+      if (matchedCat) {
+        filters.category = matchedCat._id;
+      } else {
+        filters.category = categoryId;
+      }
     } else if (categoryQuery) {
       filters = { category: categoryQuery };
     }
@@ -76,7 +85,7 @@ const Collection: React.FC = () => {
       filters.order = 'desc';
     }
     return filters;
-  }, [categoryId, categoryQuery, searchQuery, selectedCategory, maxPrice, selectedColor, selectedSize, sortOption]);
+  }, [categoryId, categoryQuery, searchQuery, selectedCategory, maxPrice, selectedColor, selectedSize, sortOption, categories]);
 
   // Reset count to null (shows "Loading...") whenever filters change
   useEffect(() => {
@@ -86,20 +95,8 @@ const Collection: React.FC = () => {
   return (
     <div className="flex-1 bg-white min-h-screen">
       <BannerDisplay position="Category Top" />
-      <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-8 md:py-12">
-        <div className="mb-8 md:mb-12 text-center md:text-left">
-          <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tight text-primary italic" style={{ fontFamily: 'Impact, sans-serif' }}>
-            {title}
-          </h1>
-          <p className="mt-4 text-sm md:text-base text-gray-500 uppercase tracking-widest font-semibold">
-            {searchQuery 
-              ? `Showing all products matching "${searchQuery}"`
-              : categoryId === 'flash-sale'
-              ? 'Limited time offers. Grab them before they are gone.'
-              : 'Explore our latest drops and premium collections.'}
-          </p>
-        </div>
-
+      <div className="max-w-[1920px] mx-auto px-4 md:px-8 pt-0 pb-8 md:pt-4 md:pb-12">
+       
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar */}
           {/* Filters Modal Overlay */}
@@ -250,42 +247,53 @@ const Collection: React.FC = () => {
 
           {/* Product Grid Area */}
           <div className="flex-1 transition-all duration-300 relative">
-            <div className="sticky top-20 bg-white z-30 shadow-sm -mx-4 sm:mx-0 mb-6">
-              {/* Mobile View */}
-              <div className="flex sm:hidden w-full border-b border-gray-200 text-gray-700">
-                <button 
-                  className="flex-1 flex items-center justify-center py-3 bg-white hover:bg-gray-50 transition-colors"
-                  onClick={() => setIsFilterOpen(true)}
-                >
-                  <Filter size={16} className="mr-2" />
-                  <span className="font-bold text-sm tracking-wide uppercase">Filter</span>
-                </button>
-              </div>
-
-              {/* Desktop View */}
-              <div className="hidden sm:flex justify-between items-center py-4 px-4 sm:px-2 border-b border-gray-100">
-                <div className="flex items-center gap-4">
-                  <button
+            <div className="sticky top-14 bg-white z-30 shadow-sm sm:shadow-sm -mx-4 sm:mx-0 mb-4 sm:mb-6">
+              <div className="w-full px-4 py-3 border-b border-gray-100 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-3 min-w-max">
+                  <button 
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:border-gray-400 transition-colors bg-white font-medium"
                     onClick={() => setIsFilterOpen(true)}
-                    className="flex items-center gap-2 font-bold uppercase tracking-wider text-sm px-4 py-2 bg-white text-primary border border-gray-200 hover:border-primary transition-colors"
                   >
-                    <Filter size={16} /> Filters
+                    <SlidersHorizontal size={16} />
+                    Sort & Filter
                   </button>
-                  <span className="text-sm text-gray-500">
-                    {productCount === null ? 'Loading...' : `Showing ${productCount} product${productCount !== 1 ? 's' : ''}`}
-                  </span>
-                </div>
+                  
+                  {/* Keep the sort functionality intact but style it like the pills */}
+                  <div className="relative">
+                    <select 
+                      value={sortOption}
+                      onChange={(e) => setSortOption(e.target.value)}
+                      className="appearance-none flex items-center gap-2 px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm text-gray-700 hover:border-gray-400 transition-colors bg-white font-medium cursor-pointer outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option>Sort by: Featured</option>
+                      <option>Price: Low to High</option>
+                      <option>Price: High to Low</option>
+                      <option>Newest Arrivals</option>
+                    </select>
+                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-700 pointer-events-none" />
+                  </div>
 
-                <select 
-                  value={sortOption}
-                  onChange={(e) => setSortOption(e.target.value)}
-                  className="border border-gray-200 text-sm px-4 py-2 bg-white focus:outline-none focus:border-primary cursor-pointer rounded-none"
-                >
-                  <option>Sort by: Featured</option>
-                  <option>Price: Low to High</option>
-                  <option>Price: High to Low</option>
-                  <option>Newest Arrivals</option>
-                </select>
+                  <button 
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:border-gray-400 transition-colors bg-white font-medium"
+                    onClick={() => setIsFilterOpen(true)}
+                  >
+                    Brand <ChevronDown size={16} />
+                  </button>
+                  
+                  <button 
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:border-gray-400 transition-colors bg-white font-medium"
+                    onClick={() => setIsFilterOpen(true)}
+                  >
+                    Size <ChevronDown size={16} />
+                  </button>
+
+                  <button 
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:border-gray-400 transition-colors bg-white font-medium"
+                    onClick={() => setIsFilterOpen(true)}
+                  >
+                    Color <ChevronDown size={16} />
+                  </button>
+                </div>
               </div>
             </div>
             <InfiniteProductGrid filters={currentFilters} onProductCount={setProductCount} />
