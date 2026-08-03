@@ -54,14 +54,14 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="bg-white sticky top-0 z-40 relative">
+    <header className="bg-primary sticky top-0 z-40 relative">
       <div className="flex items-center justify-between px-4 md:px-8 h-20">
         
         {/* Left: Mobile Menu (Custom Staggered Hamburger) */}
         <div className="flex items-center flex-1">
           <button 
             onClick={() => dispatch(toggleMobileMenu())}
-            className="p-2 -ml-2 text-primary hover:opacity-70 transition-opacity"
+            className="p-2 -ml-2 text-white hover:opacity-70 transition-opacity"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 6H20" stroke="currentColor" strokeWidth="2" strokeLinecap="square"/>
@@ -73,12 +73,15 @@ const Navbar: React.FC = () => {
 
         {/* Center: Logo */}
         <div className="flex-1 text-center flex justify-center">
-          <Link to="/" className="inline-block">
+          <Link to="/" className="inline-flex items-center gap-2 sm:gap-3">
             <img
               src="/images/OxboLogo.png"
               alt="Oxbo"
-              className="h-10 sm:h-12 w-10 sm:w-12 rounded-xl object-cover"
+              className="h-12 sm:h-14 w-12 sm:w-14 rounded-xl object-cover"
             />
+            <span className="text-lg sm:text-xl md:text-2xl font-extrabold italic tracking-widest text-white uppercase hidden sm:block">
+              OXBO FASHION
+            </span>
           </Link>
         </div>
 
@@ -86,14 +89,14 @@ const Navbar: React.FC = () => {
         <div className="flex items-center justify-end flex-1 space-x-2 sm:space-x-4">
           <button 
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="p-2 text-primary hover:opacity-70 transition-opacity"
+            className="p-2 text-white hover:opacity-70 transition-opacity"
           >
             <Search className="w-6 h-6" strokeWidth={1.5} />
           </button>
 
           <Link 
             to="/wishlist" 
-            className="p-2 text-primary hover:opacity-70 transition-opacity"
+            className="p-2 text-white hover:opacity-70 transition-opacity"
             title="Wishlist"
           >
             <Heart className="w-6 h-6" strokeWidth={1.5} />
@@ -101,7 +104,7 @@ const Navbar: React.FC = () => {
           
           <Link 
             to={isAuthenticated ? "/profile" : "/login"} 
-            className="p-2 text-primary hover:opacity-70 transition-opacity hidden sm:block"
+            className="p-2 text-white hover:opacity-70 transition-opacity hidden sm:block"
             title="Account"
           >
             <User className="w-6 h-6" strokeWidth={1.5} />
@@ -110,7 +113,7 @@ const Navbar: React.FC = () => {
           {isAuthenticated && (
             <Link 
               to="/notifications" 
-              className="p-2 text-primary hover:opacity-70 transition-opacity relative"
+              className="p-2 text-white hover:opacity-70 transition-opacity relative"
               title="Notifications"
             >
               <Bell className="w-6 h-6" strokeWidth={1.5} />
@@ -123,12 +126,12 @@ const Navbar: React.FC = () => {
           )}
 
           <button 
-            className="p-2 text-primary hover:opacity-70 transition-opacity relative hidden sm:block"
+            className="p-2 text-white hover:opacity-70 transition-opacity relative hidden sm:block"
             onClick={() => dispatch(toggleCart())}
           >
             <ShoppingBag className="w-6 h-6" strokeWidth={1.5} />
             {cartCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 bg-primary text-white text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
+              <span className="absolute top-1.5 right-1.5 bg-white text-primary text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
                 {cartCount}
               </span>
             )}

@@ -66,6 +66,13 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
           className="absolute inset-0 w-full h-full object-cover"
         />
 
+        {/* Offer Seal */}
+        {prod.hasActiveOffer && prod.activeOfferPercentage > 0 && (
+          <div className="absolute top-4 -left-10 w-32 bg-red-600 text-white text-[10px] sm:text-xs font-bold py-1 text-center -rotate-45 z-20 shadow-md">
+            {prod.activeOfferPercentage}% OFF
+          </div>
+        )}
+
         {/* Hover Carousel Controls */}
         <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 

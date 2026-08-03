@@ -272,7 +272,7 @@ const Orders: React.FC = () => {
             </div>
           ) : (
             filteredOrders.map((order) => {
-              if (order.status?.toLowerCase() === 'pending') return null;
+             
               return (
               <div key={order.id || order._id} className="bg-white border border-gray-200 p-6 shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-gray-100 pb-4 mb-4 gap-4">

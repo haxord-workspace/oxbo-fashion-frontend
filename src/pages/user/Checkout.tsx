@@ -191,14 +191,14 @@ const Checkout: React.FC = () => {
     // City
     if (!addressForm.city.trim()) {
       newErrors.city = 'City is required';
-    } else if (!/^[a-zA-Z\s\-\.]+$/.test(addressForm.city.trim())) {
+    } else if (!/^[a-zA-Z\s\-.]+$/.test(addressForm.city.trim())) {
       newErrors.city = 'City must contain only letters';
     }
 
     // State
     if (!addressForm.state.trim()) {
       newErrors.state = 'State is required';
-    } else if (!/^[a-zA-Z\s\-\.]+$/.test(addressForm.state.trim())) {
+    } else if (!/^[a-zA-Z\s\-.]+$/.test(addressForm.state.trim())) {
       newErrors.state = 'State must contain only letters';
     }
 

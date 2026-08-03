@@ -6,3 +6,4 @@ export * from './category';
 export * from './brand';
 export * from './coupon';
 export * from './order';
+export * from './offer';

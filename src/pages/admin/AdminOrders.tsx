@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, FileText, Store, Eye, Truck } from 'lucide-react';
+import { Search, Filter, FileText, Store, Eye, Truck, RefreshCw } from 'lucide-react';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import AdminModal from '../../components/common/AdminModal';
@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import { useAppSelector } from '../../app/hooks';
 import { selectIsAdmin, selectIsStoreManager } from '../../features/auth/authSlice';
 
-const ORDER_STATUSES = ['All', 'Pending', 'Processing', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'];
+const ORDER_STATUSES = ['All', 'Pending', 'Processing', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
 
 export const AdminOrders = () => {
   const isAdmin = useAppSelector(selectIsAdmin);
@@ -44,6 +44,21 @@ export const AdminOrders = () => {
   });
   const [isUpdatingTracking, setIsUpdatingTracking] = useState(false);
   const [trackingError, setTrackingError] = useState('');
+
+  // Refund Modal State
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [orderToRefund, setOrderToRefund] = useState<any>(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [isProcessingRefund, setIsProcessingRefund] = useState(false);
+  const [refundError, setRefundError] = useState('');
+
+  // Reject Modal State
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [orderToReject, setOrderToReject] = useState<any>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [isProcessingReject, setIsProcessingReject] = useState(false);
+  const [rejectError, setRejectError] = useState('');
+  const [isProcessingAcceptId, setIsProcessingAcceptId] = useState<string | null>(null);
 
   // Store Stock Levels
   const [storeStockLevels, setStoreStockLevels] = useState<Record<string, number>>({});
@@ -136,12 +151,15 @@ export const AdminOrders = () => {
     }
   };
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
+  const handleStatusChange = async (order: any, newStatus: string) => {
+    const orderId = order._id || order.id;
     try {
       await adminOrderApi.updateOrderStatus(orderId, newStatus);
       fetchOrders();
-    } catch (error) {
+      toast.success(`Order status updated to ${newStatus}`);
+    } catch (error: any) {
       console.error('Failed to update status', error);
+      toast.error(error.response?.data?.message || 'Failed to update status');
     }
   };
 
@@ -259,6 +277,79 @@ export const AdminOrders = () => {
       setTrackingError(error.response?.data?.message || 'Failed to assign courier staff');
     } finally {
       setIsUpdatingTracking(false);
+    }
+  };
+
+  const openRefundModal = (order: any) => {
+    setOrderToRefund(order);
+    setRefundReason('');
+    setRefundError('');
+    setIsRefundModalOpen(true);
+  };
+
+  const handleRefundSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderToRefund) return;
+    
+    setIsProcessingRefund(true);
+    setRefundError('');
+    try {
+      const orderIdString = orderToRefund._id || orderToRefund.id;
+      
+      await adminOrderApi.refundPayment(orderIdString, undefined, refundReason);
+      toast.success('Refund processed successfully.');
+      
+      setIsRefundModalOpen(false);
+      fetchOrders(); 
+    } catch (error: any) {
+      console.error('Failed to process refund', error);
+      setRefundError(error.response?.data?.message || 'Failed to process request');
+    } finally {
+      setIsProcessingRefund(false);
+    }
+  };
+
+  const handleAcceptPayment = async (orderId: string) => {
+    setIsProcessingAcceptId(orderId);
+    try {
+      await adminOrderApi.acceptPayment(orderId);
+      toast.success('Payment accepted and captured successfully.');
+      fetchOrders();
+    } catch (error: any) {
+      console.error('Failed to accept payment', error);
+      toast.error(error.response?.data?.message || 'Failed to accept payment');
+      fetchOrders(); // Refresh in case it's already expired or actioned
+    } finally {
+      setIsProcessingAcceptId(null);
+    }
+  };
+
+  const openRejectModal = (order: any) => {
+    setOrderToReject(order);
+    setRejectReason('');
+    setRejectError('');
+    setIsRejectModalOpen(true);
+  };
+
+  const handleRejectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderToReject) return;
+    
+    setIsProcessingReject(true);
+    setRejectError('');
+    try {
+      const orderIdString = orderToReject._id || orderToReject.id;
+      
+      await adminOrderApi.rejectPayment(orderIdString, rejectReason);
+      toast.success('Payment declined. Hold will release automatically.');
+      
+      setIsRejectModalOpen(false);
+      fetchOrders(); 
+    } catch (error: any) {
+      console.error('Failed to process reject', error);
+      setRejectError(error.response?.data?.message || 'Failed to decline payment');
+    } finally {
+      setIsProcessingReject(false);
     }
   };
 
@@ -415,7 +506,7 @@ export const AdminOrders = () => {
                   <td className="py-4 px-4">
                     <select
                       value={order.status || 'Pending'}
-                      onChange={(e) => handleStatusChange(order._id || order.id, e.target.value)}
+                      onChange={(e) => handleStatusChange(order, e.target.value)}
                       className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-1 focus:ring-primary outline-none
                       ${order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
                           ['Processing', 'Confirmed', 'Packed'].includes(order.status) ? 'bg-blue-100 text-blue-700' :
@@ -430,17 +521,47 @@ export const AdminOrders = () => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex justify-end gap-2">
-                      {isAdmin && (
-                        <button onClick={() => openStoreModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-600 hover:text-white hover:bg-orange-600 bg-orange-50 rounded-md transition-colors">
-                          <Store size={14} />
-                          {order.store || order.storeId ? 'Reassign' : 'Assign'}
-                        </button>
-                      )}
-                      {isStoreManager && (
-                        <button onClick={() => openTrackingModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 hover:text-white hover:bg-teal-600 bg-teal-50 rounded-md transition-colors whitespace-nowrap">
-                          <Truck size={14} />
-                          Assign Courier
-                        </button>
+                      {order.paymentStatus === 'Authorized' ? (
+                        <>
+                          {isAdmin && (
+                            <>
+                              <button 
+                                onClick={() => handleAcceptPayment(order._id || order.id)} 
+                                disabled={isProcessingAcceptId === (order._id || order.id)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:text-white hover:bg-emerald-600 bg-emerald-50 rounded-md transition-colors disabled:opacity-50"
+                              >
+                                {isProcessingAcceptId === (order._id || order.id) ? 'Accepting...' : 'Accept'}
+                              </button>
+                              <button 
+                                onClick={() => openRejectModal(order)} 
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 rounded-md transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {isAdmin && (
+                            <button onClick={() => openStoreModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-600 hover:text-white hover:bg-orange-600 bg-orange-50 rounded-md transition-colors">
+                              <Store size={14} />
+                              {order.store || order.storeId ? 'Reassign' : 'Assign'}
+                            </button>
+                          )}
+                          {isStoreManager && (
+                            <button onClick={() => openTrackingModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 hover:text-white hover:bg-teal-600 bg-teal-50 rounded-md transition-colors whitespace-nowrap">
+                              <Truck size={14} />
+                              Assign Courier
+                            </button>
+                          )}
+                          {isAdmin && (order.status === 'Cancelled' || order.status === 'Returned') && ['Completed', 'Paid', 'Success'].includes(order.paymentStatus || '') && (
+                            <button onClick={() => openRefundModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 rounded-md transition-colors">
+                              <RefreshCw size={14} />
+                              Refund
+                            </button>
+                          )}
+                        </>
                       )}
                       <button onClick={() => openDetailsModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 hover:text-white hover:bg-indigo-600 bg-indigo-50 rounded-md transition-colors">
                         <Eye size={14} />
@@ -818,6 +939,89 @@ export const AdminOrders = () => {
               className="px-4 py-2 bg-primary text-white rounded-md hover:bg-gray-800 transition-colors"
             >
               Assign Courier
+            </LoadingButton>
+          </div>
+        </form>
+      </AdminModal>
+      <AdminModal
+        isOpen={isRefundModalOpen}
+        onClose={() => setIsRefundModalOpen(false)}
+        title="Refund Order"
+      >
+        <form className="space-y-4" onSubmit={handleRefundSubmit}>
+          {refundError && (
+            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md border border-red-100">
+              {refundError}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Refund (Optional)</label>
+            <textarea
+              value={refundReason}
+              onChange={e => setRefundReason(e.target.value)}
+              placeholder="e.g. Customer requested refund"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary h-24 resize-none"
+            />
+          </div>
+
+          <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => setIsRefundModalOpen(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Close
+            </button>
+            <LoadingButton
+              type="submit"
+              isLoading={isProcessingRefund}
+              className="px-4 py-2 bg-rose-600 text-white rounded-md hover:bg-rose-700 transition-colors"
+            >
+              Confirm Refund
+            </LoadingButton>
+          </div>
+        </form>
+      </AdminModal>
+      <AdminModal
+        isOpen={isRejectModalOpen}
+        onClose={() => setIsRejectModalOpen(false)}
+        title="Decline Payment"
+      >
+        <form className="space-y-4" onSubmit={handleRejectSubmit}>
+          {rejectError && (
+            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md border border-red-100">
+              {rejectError}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Decline (Optional)</label>
+            <textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="e.g. Suspected fraud, out of stock"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary h-24 resize-none"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Note: The payment will be declined and the hold on the customer's account will release automatically.
+            </p>
+          </div>
+
+          <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => setIsRejectModalOpen(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <LoadingButton
+              type="submit"
+              isLoading={isProcessingReject}
+              className="px-4 py-2 bg-rose-600 text-white rounded-md hover:bg-rose-700 transition-colors"
+            >
+              Decline Payment
             </LoadingButton>
           </div>
         </form>

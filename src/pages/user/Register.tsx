@@ -61,7 +61,7 @@ const Register: React.FC = () => {
       newErrors.password = 'Password is required';
     } else {
       // Must contain at least 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character
-      const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/-]).{8,}$/;
+      const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}[\]|\\:;"'<>,.?/-]).{8,}$/;
       if (!strongRegex.test(password)) {
         newErrors.password = 'Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character (e.g., Password123!)';
       }

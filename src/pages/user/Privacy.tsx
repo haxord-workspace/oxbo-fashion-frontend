@@ -165,7 +165,7 @@ const Privacy: React.FC = () => {
             <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
               <p className="font-bold text-lg mb-2">OXBO Fashion</p>
               <p className="mb-1"><strong>Website:</strong> <a href="https://oxbofashion.in/" className="text-primary hover:underline">https://oxbofashion.in/</a></p>
-              <p className="mb-1"><strong>Phone:</strong> +91 97470 43736</p>
+              <p className="mb-1"><strong>Phone:</strong> +91 6282-856050</p>
               <p className="mb-3"><strong>Email:</strong> <a href="mailto:oxbostore@gmail.com" className="text-primary hover:underline">oxbostore@gmail.com</a></p>
               <p>
                 <strong>Registered Address:</strong><br />

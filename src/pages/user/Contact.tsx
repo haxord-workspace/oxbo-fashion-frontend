@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { LoadingButton } from '../../components/common/LoadingButton';
+import api from '../../services/api';
+import toast from 'react-hot-toast';
 
 interface FormErrors {
   name?: string;
@@ -34,20 +36,23 @@ const Contact: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await api.post('/contact', formData);
       setIsSubmitted(true);
       setTimeout(() => {
         setIsSubmitted(false);
         setFormData({ name: '', email: '', message: '' });
       }, 3000);
-    }, 1000);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to send message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -74,7 +79,7 @@ const Contact: React.FC = () => {
                 </div>
                 <div>
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Phone</span>
-                  <a href="tel:+919747043736" className="text-lg font-medium hover:underline hover:text-gray-600 transition-colors">+91 97470 43736</a>
+                  <a href="tel:+916282856050" className="text-lg font-medium hover:underline hover:text-gray-600 transition-colors">+91 6282-856050</a>
                 </div>
                 <div>
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Address</span>
