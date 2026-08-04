@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg'],
+        includeAssets: ['images/Oxbo1.png'],
         manifest: {
           name: 'Oxbo Fashion',
           short_name: 'Oxbo',
@@ -21,15 +21,15 @@ export default defineConfig(({ mode }) => {
           display: 'standalone',
           icons: [
             {
-              src: '/favicon.svg',
+              src: '/images/Oxbo1.png',
               sizes: '192x192',
-              type: 'image/svg+xml',
+              type: 'image/png',
               purpose: 'any maskable'
             },
             {
-              src: '/favicon.svg',
+              src: '/images/Oxbo1.png',
               sizes: '512x512',
-              type: 'image/svg+xml',
+              type: 'image/png',
               purpose: 'any maskable'
             }
           ]
