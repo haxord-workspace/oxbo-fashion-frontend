@@ -19,7 +19,7 @@ const Collection: React.FC = () => {
   const [sortOption, setSortOption] = useState<string>('Sort by: Featured');
   const [categories, setCategories] = useState<{_id: string, name: string}[]>([]);
   const [brands, setBrands] = useState<{_id: string, name: string}[]>([]);
-  const [productCount, setProductCount] = useState<number | null>(null);
+
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -49,14 +49,7 @@ const Collection: React.FC = () => {
     fetchData();
   }, []);
 
-  const getFormattedTitle = (id: string | undefined, query: string | null) => {
-    if (query) return `SEARCH RESULTS FOR "${query.toUpperCase()}"`;
-    if (!id) return 'COLLECTION';
-    if (id === 'flash-sale') return 'FLASH SALE ⚡';
-    return id.replace(/-/g, ' ').toUpperCase();
-  };
 
-  const title = getFormattedTitle(categoryId, searchQuery);
 
   const currentFilters = useMemo(() => {
     let filters: any = {};
@@ -97,11 +90,6 @@ const Collection: React.FC = () => {
     }
     return filters;
   }, [categoryId, categoryQuery, searchQuery, selectedCategory, selectedBrand, maxPrice, selectedColor, sortOption, categories]);
-
-  // Reset count to null (shows "Loading...") whenever filters change
-  useEffect(() => {
-    setProductCount(null);
-  }, [currentFilters]);
 
   return (
     <div className="flex-1 bg-white min-h-screen">
@@ -331,7 +319,7 @@ const Collection: React.FC = () => {
                 </div>
               </div>
             </div>
-            <InfiniteProductGrid filters={currentFilters} onProductCount={setProductCount} />
+            <InfiniteProductGrid filters={currentFilters} />
           </div>
         </div>
       </div>
