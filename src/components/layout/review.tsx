@@ -93,7 +93,7 @@ const Reviews: React.FC = () => {
   };
 
   return (
-    <section className="w-full bg-white py-16">
+    <section className="w-full bg-white  pb-2 sm:py-16">
       <h2 className="text-center text-lg sm:text-xl font-oswald uppercase tracking-widest mb-6 text-primary">
         Reviews
       </h2>
@@ -134,7 +134,7 @@ const Reviews: React.FC = () => {
 
             {/* Carousel Container */}
             <div 
-              className="flex gap-4 no-scrollbar pb-4 w-full"
+              className="flex gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory no-scrollbar pb-4 w-full"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {displayedReviews.map((review, idx) => {
@@ -159,7 +159,7 @@ const Reviews: React.FC = () => {
                         navigate(`/products/${productId}`);
                       }
                     }}
-                    className={`w-full sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] flex-shrink-0 flex flex-col rounded-b-[8px] overflow-hidden ${productId ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+                    className={`w-[85%] sm:w-[calc(50%-8px)] md:w-[calc(25%-12px)] flex-shrink-0 flex flex-col rounded-b-[8px] overflow-hidden snap-center ${productId ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
                   >
                     {/* Product Image */}
                     <div className="h-[350px] w-full bg-gray-100 relative">

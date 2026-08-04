@@ -55,13 +55,13 @@ const Navbar: React.FC = () => {
 
   return (
     <header className="bg-primary sticky top-0 z-40 relative">
-      <div className="flex items-center justify-between px-4 md:px-8 h-20">
+      <div className="flex items-center justify-between px-4 md:px-8 h-14">
         
         {/* Left: Mobile Menu (Custom Staggered Hamburger) */}
         <div className="flex items-center flex-1">
           <button 
             onClick={() => dispatch(toggleMobileMenu())}
-            className="p-2 -ml-2 text-white hover:opacity-70 transition-opacity"
+            className="p-2 -ml-2 text-white hover:opacity-70 transition-opacity rounded-full"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 6H20" stroke="currentColor" strokeWidth="2" strokeLinecap="square"/>
@@ -74,12 +74,15 @@ const Navbar: React.FC = () => {
         {/* Center: Logo */}
         <div className="flex-1 text-center flex justify-center">
           <Link to="/" className="inline-flex items-center gap-2 sm:gap-3">
-            <img
-              src="/images/OxboLogo.png"
-              alt="Oxbo"
-              className="h-12 sm:h-14 w-12 sm:w-14 rounded-xl object-cover"
-            />
-            <span className="text-lg sm:text-xl md:text-2xl font-extrabold italic tracking-widest text-white uppercase hidden sm:block">
+            <div className="relative h-8 sm:h-10 w-8 sm:w-10 flex items-center justify-center">
+              <div className="absolute w-[88%] h-[88%] bg-white rounded-full"></div>
+              <img
+                src="/images/OxboLogo.png"
+                alt="Oxbo"
+                className="relative z-10 h-full w-full object-contain"
+              />
+            </div>
+            <span className="text-sm sm:text-base md:text-lg font-extrabold italic tracking-widest text-white uppercase hidden sm:block">
               OXBO FASHION
             </span>
           </Link>
@@ -89,36 +92,36 @@ const Navbar: React.FC = () => {
         <div className="flex items-center justify-end flex-1 space-x-2 sm:space-x-4">
           <button 
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="p-2 text-white hover:opacity-70 transition-opacity"
+            className="p-2 text-white hover:opacity-70 transition-opacity rounded-full"
           >
-            <Search className="w-6 h-6" strokeWidth={1.5} />
+            <Search className="w-5 h-5" strokeWidth={1.5} />
           </button>
 
           <Link 
             to="/wishlist" 
-            className="p-2 text-white hover:opacity-70 transition-opacity"
+            className="p-2 text-white hover:opacity-70 transition-opacity rounded-full"
             title="Wishlist"
           >
-            <Heart className="w-6 h-6" strokeWidth={1.5} />
+            <Heart className="w-5 h-5" strokeWidth={1.5} />
           </Link>
           
           <Link 
             to={isAuthenticated ? "/profile" : "/login"} 
-            className="p-2 text-white hover:opacity-70 transition-opacity hidden sm:block"
+            className="p-2 text-white hover:opacity-70 transition-opacity hidden sm:block rounded-full"
             title="Account"
           >
-            <User className="w-6 h-6" strokeWidth={1.5} />
+            <User className="w-5 h-5" strokeWidth={1.5} />
           </Link>
 
           {isAuthenticated && (
             <Link 
               to="/notifications" 
-              className="p-2 text-white hover:opacity-70 transition-opacity relative"
+              className="p-2 text-white hover:opacity-70 transition-opacity relative rounded-full"
               title="Notifications"
             >
-              <Bell className="w-6 h-6" strokeWidth={1.5} />
+              <Bell className="w-5 h-5" strokeWidth={1.5} />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
+                <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold h-3 w-3 rounded-full flex items-center justify-center">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -126,12 +129,12 @@ const Navbar: React.FC = () => {
           )}
 
           <button 
-            className="p-2 text-white hover:opacity-70 transition-opacity relative hidden sm:block"
+            className="p-2 text-white hover:opacity-70 transition-opacity relative hidden sm:block rounded-full"
             onClick={() => dispatch(toggleCart())}
           >
-            <ShoppingBag className="w-6 h-6" strokeWidth={1.5} />
+            <ShoppingBag className="w-5 h-5" strokeWidth={1.5} />
             {cartCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 bg-white text-primary text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
+              <span className="absolute top-1.5 right-1.5 bg-white text-primary text-[9px] font-bold h-3 w-3 rounded-full flex items-center justify-center">
                 {cartCount}
               </span>
             )}
@@ -141,7 +144,7 @@ const Navbar: React.FC = () => {
 
       {/* Search Overlay Dropdown */}
       {isSearchOpen && (
-        <div className="absolute top-20 left-0 w-full bg-white border-b border-gray-100 p-4 shadow-sm z-30 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full left-0 w-full bg-white border-b border-gray-100 p-4 shadow-sm z-30 animate-in fade-in slide-in-from-top-2 duration-200">
           <form onSubmit={handleSearch} className="max-w-2xl mx-auto flex items-center bg-gray-100 rounded-full px-4 py-2 border border-gray-200">
             <Search size={20} className="text-gray-400 mr-2 shrink-0" />
             <input 

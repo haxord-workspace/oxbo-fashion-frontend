@@ -13,9 +13,8 @@ import type { Product } from '../../types';
 
 const PAGE_SIZE = 8;
 
-// ─── Product Card ────────────────────────────────────────────────────────────
-
-const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
+// ─── Product Card ───────────────────────────────────────────────────────────
+const ProductCard: React.FC<{ product: Product; selectedColor?: string }> = ({ product, selectedColor }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -24,9 +23,25 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const isWishlisted = useAppSelector((state) => selectIsWishlisted(state, productId));
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
+
+  
   let images: string[] = [];
   const prod = product as any;
-  if (prod.thumbnail) {
+
+  let matchedVariantImages: string[] | undefined;
+  if (selectedColor && product.variants) {
+    const matchingVariant = product.variants.find((v: any) => 
+      v.color?.toLowerCase() === selectedColor.toLowerCase() ||
+      v.attributes?.color?.toLowerCase() === selectedColor.toLowerCase()
+    );
+    if (matchingVariant && matchingVariant.images && matchingVariant.images.length > 0) {
+      matchedVariantImages = matchingVariant.images;
+    }
+  }
+
+  if (matchedVariantImages) {
+    images = matchedVariantImages;
+  } else if (prod.thumbnail) {
     images = [prod.thumbnail, ...(prod.gallery || [])];
   } else if (product.variants && product.variants.length > 0 && product.variants[0].images && product.variants[0].images.length > 0) {
     images = product.variants[0].images || [];
@@ -307,11 +322,11 @@ const InfiniteProductGrid: React.FC<InfiniteProductGridProps> = ({ filters: exte
   }, [loadMore]);
 
   return (
-    <section className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <section className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 sm:py-8">
       {/* Loaded products grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-12 md:gap-x-4 md:gap-y-16">
         {products.map((product) => (
-          <ProductCard key={product.id || (product as any)._id} product={product} />
+          <ProductCard key={product.id || (product as any)._id} product={product} selectedColor={externalFilters?.color} />
         ))}
 
         {/* Skeleton cards shown while loading the next batch */}

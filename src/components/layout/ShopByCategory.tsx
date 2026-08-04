@@ -79,7 +79,7 @@ const ShopByCategory: React.FC = () => {
   if (categories.length === 0) return null;
 
   return (
-    <section className="w-full py-16 px-4 md:px-8 bg-white">
+    <section className="w-full pt-6 pb-8 px-4 md:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-end mb-8">
           <div>

@@ -3,8 +3,8 @@ import { Link } from 'react-router';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-white border-t border-gray-200 pt-16 pb-8 px-6 md:px-12 mt-auto">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between gap-12 md:gap-4 mb-16">
+    <footer className="bg-white border-t border-gray-200 pt-6 pb-4 px-6 md:px-12 mt-auto">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between gap-8 md:gap-4 mb-6">
         
         {/* Left Column */}
         <div className="flex flex-col gap-6 text-sm text-gray-700">
@@ -55,7 +55,7 @@ const Footer: React.FC = () => {
 
       </div>
 
-      <div className="max-w-7xl mx-auto pt-6 text-xs text-gray-700 mt-auto">
+      <div className="max-w-7xl mx-auto pt-4 text-xs text-gray-700 mt-auto">
         <p>&copy; 2026, <Link to="/" className="hover:underline uppercase text-primary font-medium">oxbo</Link></p>
       </div>
     </footer>
