@@ -48,8 +48,8 @@ const ResetPassword = () => {
 
     if (!newPassword) {
       newErrors.newPassword = 'New Password is required';
-    } else if (newPassword.length < 6) {
-      newErrors.newPassword = 'Password must be at least 6 characters';
+    } else if (newPassword.length < 8) {
+      newErrors.newPassword = 'Password must be at least 8 characters';
     }
 
     if (!confirmPassword) {
@@ -79,7 +79,26 @@ const ResetPassword = () => {
       toast.success('Password reset successful! Please log in with your new password.');
       navigate('/login');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to reset password';
+      const responseData = err.response?.data;
+      
+      if (responseData?.errors && Array.isArray(responseData.errors) && responseData.errors.length > 0) {
+        const backendErrors: FormErrors = {};
+        responseData.errors.forEach((error: any) => {
+          const field = error.field?.replace('body.', '');
+          if (field === 'newPassword' || field === 'email' || field === 'otp') {
+            backendErrors[field as keyof FormErrors] = error.message;
+          }
+        });
+        
+        if (Object.keys(backendErrors).length > 0) {
+          setErrors(backendErrors);
+          toast.error('Please fix the errors in the form.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const errorMessage = responseData?.message || err.message || 'Failed to reset password';
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);

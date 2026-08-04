@@ -21,8 +21,8 @@ const MobileBottomNav: React.FC = () => {
         <span className="text-[9px] font-bold">HOME</span>
       </Link>
       
-      <Link to="/collections/all-drops" className={`flex flex-col items-center px-1 ${isActive('/shop') ? 'text-black' : 'text-gray-500'}`}>
-        <LayoutGrid className="w-5 h-5 mb-0.5" strokeWidth={isActive('/shop') ? 2 : 1.5} />
+      <Link to="/collections/all-drops" className={`flex flex-col items-center px-1 ${location.pathname.startsWith('/collections') ? 'text-black' : 'text-gray-500'}`}>
+        <LayoutGrid className="w-5 h-5 mb-0.5" strokeWidth={location.pathname.startsWith('/collections') ? 2 : 1.5} />
         <span className="text-[9px] font-bold">SHOP</span>
       </Link>
 
