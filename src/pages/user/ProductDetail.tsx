@@ -412,9 +412,8 @@ const ProductDetail: React.FC = () => {
   return (
     <div className="w-full max-w-[1920px] mx-auto bg-white">
       {/* Breadcrumb / Top Bar */}
-      <div className="text-xs text-gray-500 py-4 px-4 sm:px-8 border-b border-gray-100 flex flex-wrap gap-2 items-center">
-        <Link to="/" className="hover:text-primary shrink-0">Home</Link>
-        <span className="shrink-0">/</span>
+      {/* <div className="text-xs text-gray-500 py-4 px-4 sm:px-8 border-b border-gray-100 flex flex-wrap gap-2 items-center">
+  
         {((product as any).categoryId?.name || (product as any).category?.name) && (
           <>
             <span className="shrink-0 uppercase">{(product as any).categoryId?.name || (product as any).category?.name}</span>
@@ -427,10 +426,10 @@ const ProductDetail: React.FC = () => {
             <span className="shrink-0">/</span>
           </>
         )}
-        <span className="text-primary uppercase truncate">{product.name}</span>
-      </div>
+       
+      </div> */}
 
-      <div className="flex flex-col lg:flex-row px-4 sm:px-8 py-8 lg:py-12 gap-8 lg:gap-16">
+      <div className="flex flex-col lg:flex-row px-4 sm:px-8 py-2 lg:py-12 gap-8 lg:gap-16">
 
         {/* Left Column: Images */}
         <div className="w-full lg:w-2/5 flex flex-col gap-4">
@@ -495,9 +494,7 @@ const ProductDetail: React.FC = () => {
 
         {/* Right Column: Details */}
         <div className="w-full lg:w-2/5 flex flex-col relative">
-          <p className="text-sm text-gray-500 uppercase tracking-widest mb-1 pr-12">
-            {(product as any).categoryId?.name || product.category || ''}
-          </p>
+       
           {(() => {
             const brandName = (product as any).brandId?.name || product.brand || (product as any).brand;
             return brandName ? (
@@ -506,7 +503,7 @@ const ProductDetail: React.FC = () => {
               </p>
             ) : null;
           })()}
-          <h1 className="text-3xl sm:text-4xl font-bold uppercase tracking-wide mb-4 break-words pr-12">{product.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold uppercase tracking-wide mb-4 break-words pr-12">{product.name}</h1>
 
           <div className="flex items-center gap-3 mb-6">
             <span className="text-xl text-[#e35a39]">Rs. {Number(activeVariant?.salePrice || activeVariant?.price || product.price || 1499).toLocaleString('en-IN')}.00</span>
@@ -516,27 +513,36 @@ const ProductDetail: React.FC = () => {
           </div>
 
 
-          <div className="text-sm text-gray-700 mb-6 flex flex-wrap gap-4">
-            <span>Description: <span className="font-semibold">{product.description}</span></span>
-          </div>
-
           {/* Color Selection */}
           {uniqueColors.length > 0 && (
             <div className="mb-6">
-              <span className="text-sm block mb-3">Color: <span className="font-semibold">{selectedColor}</span></span>
+              <span className="text-sm block mb-3">Selected Color: <span className="font-semibold">{selectedColor}</span></span>
               <div className="flex flex-wrap gap-3">
-                {uniqueColors.map((colorStr, idx) => (
-                  <button
-                    key={colorStr || idx}
-                    onClick={() => setSelectedColor(colorStr)}
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${selectedColor === colorStr
-                        ? 'border-primary scale-110'
-                        : 'border-transparent hover:scale-105'
+                {uniqueColors.map((colorStr, idx) => {
+                  const variant = product?.variants?.find((v: any) => getVariantColor(v) === colorStr);
+                  const imageUrl = variant?.images?.[0] || (product as any)?.thumbnail || (product as any)?.imageUrl || '/placeholder.png';
+                  
+                  return (
+                    <button
+                      key={colorStr || idx}
+                      onClick={() => setSelectedColor(colorStr)}
+                      className={`w-16 h-20 rounded-xl border-2 transition-all p-[2px] ${
+                        selectedColor === colorStr
+                          ? 'border-black'
+                          : 'border-gray-200 hover:border-gray-300'
                       }`}
-                    style={{ backgroundColor: colorStr.toLowerCase() }}
-                    title={colorStr}
-                  />
-                ))}
+                      title={colorStr}
+                    >
+                      <div className="w-full h-full rounded-lg overflow-hidden bg-gray-100">
+                        <img 
+                          src={imageUrl} 
+                          alt={colorStr} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -618,7 +624,7 @@ const ProductDetail: React.FC = () => {
                 isVariantOutOfStock ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-primary text-white hover:bg-gray-800'
               }`}
             >
-              {isVariantOutOfStock ? 'Out of Stock' : `Add to Cart - Rs. ${Number(activeVariant?.salePrice || activeVariant?.price || product.price || 0).toLocaleString('en-IN')}.00`}
+              {isVariantOutOfStock ? 'Out of Stock' : `Add to Cart - Rs. ${(Number(activeVariant?.salePrice || activeVariant?.price || product.price || 0) * quantity).toLocaleString('en-IN')}.00`}
             </button>
           </div>
 
@@ -664,9 +670,9 @@ const ProductDetail: React.FC = () => {
       </div>
 
       {/* Customer Reviews Section */}
-      <div className="px-4 sm:px-8 py-16 border-t border-gray-100">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl sm:text-3xl">Customer Reviews</h2>
+      <div className="px-4 sm:px-8 pt-8 pb-4 lg:pt-16 lg:pb-8 border-t border-gray-100">
+        <div className="flex items-center justify-between mb-6 lg:mb-8">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl">Customer Reviews</h2>
           {reviews.length > 5 && (
             <div className="flex gap-2">
               <button 
@@ -737,8 +743,8 @@ const ProductDetail: React.FC = () => {
       </div>
 
       {/* You May Also Like Section */}
-      <div className="px-4 sm:px-8 py-16 border-t border-gray-100">
-        <h2 className="text-2xl sm:text-3xl mb-8">You may also like</h2>
+      <div className="px-4 sm:px-8 pt-4 pb-8 lg:pt-8 lg:pb-16 border-t border-gray-100">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl mb-6 lg:mb-8">You may also like</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {relatedProducts.map(rp => (
             <Link key={rp.id || (rp as any)._id} to={`/products/${rp.id || (rp as any)._id}`} className="flex flex-col group">
@@ -762,7 +768,7 @@ const ProductDetail: React.FC = () => {
       </div>
 
       {/* Guarantees Footer */}
-      <div className="px-4 sm:px-8 py-16 bg-gray-50 mt-12">
+      <div className="px-4 sm:px-8 py-8 lg:py-16 bg-gray-50 mt-8 lg:mt-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center max-w-4xl mx-auto">
           <div className="flex flex-col items-center">
             <Truck className="w-8 h-8 mb-4" />

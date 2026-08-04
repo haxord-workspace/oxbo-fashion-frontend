@@ -56,9 +56,9 @@ const Contact: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 bg-white pt-12 pb-24 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-80px)]">
+    <div className="flex-1 bg-white pt-4 sm:pt-12 pb-8 sm:pb-24 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-80px)]">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-16 text-center md:text-left border-b-2 border-primary pb-8 inline-block">
+        <div className="mb-8 sm:mb-16 text-center md:text-left border-b-2 border-primary pb-8 inline-block">
           <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight text-primary italic pr-8" style={{ fontFamily: 'Impact, sans-serif' }}>
             CONTACT US
           </h1>

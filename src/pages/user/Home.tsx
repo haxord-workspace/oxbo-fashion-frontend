@@ -7,8 +7,7 @@ import BannerDisplay from '../../components/layout/BannerDisplay';
 const Home: React.FC = () => {
   return (
     <div className="w-full flex flex-col bg-white overflow-hidden">
-      
-      <BannerDisplay position="Home-Top" />
+      <BannerDisplay position="Home-Top" className="!mb-1 sm:!mb-4" />
 
       {/* Hero Section */}
       <section className="w-full">
