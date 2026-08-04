@@ -23,6 +23,8 @@ const ProductCard: React.FC<{ product: Product; selectedColor?: string }> = ({ p
   const isWishlisted = useAppSelector((state) => selectIsWishlisted(state, productId));
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
+
+  
   let images: string[] = [];
   const prod = product as any;
 
