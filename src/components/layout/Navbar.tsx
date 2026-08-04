@@ -61,7 +61,7 @@ const Navbar: React.FC = () => {
         <div className="flex items-center flex-1">
           <button 
             onClick={() => dispatch(toggleMobileMenu())}
-            className="p-2 -ml-2 text-white hover:opacity-70 transition-opacity"
+            className="p-2 -ml-2 text-white hover:opacity-70 transition-opacity rounded-full"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 6H20" stroke="currentColor" strokeWidth="2" strokeLinecap="square"/>
@@ -74,11 +74,14 @@ const Navbar: React.FC = () => {
         {/* Center: Logo */}
         <div className="flex-1 text-center flex justify-center">
           <Link to="/" className="inline-flex items-center gap-2 sm:gap-3">
-            <img
-              src="/images/OxboLogo.png"
-              alt="Oxbo"
-              className="h-8 sm:h-10 w-8 sm:w-10 rounded-xl object-cover"
-            />
+            <div className="relative h-8 sm:h-10 w-8 sm:w-10 flex items-center justify-center">
+              <div className="absolute w-[88%] h-[88%] bg-white rounded-full"></div>
+              <img
+                src="/images/OxboLogo.png"
+                alt="Oxbo"
+                className="relative z-10 h-full w-full object-contain"
+              />
+            </div>
             <span className="text-sm sm:text-base md:text-lg font-extrabold italic tracking-widest text-white uppercase hidden sm:block">
               OXBO FASHION
             </span>
@@ -89,14 +92,14 @@ const Navbar: React.FC = () => {
         <div className="flex items-center justify-end flex-1 space-x-2 sm:space-x-4">
           <button 
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="p-2 text-white hover:opacity-70 transition-opacity"
+            className="p-2 text-white hover:opacity-70 transition-opacity rounded-full"
           >
             <Search className="w-5 h-5" strokeWidth={1.5} />
           </button>
 
           <Link 
             to="/wishlist" 
-            className="p-2 text-white hover:opacity-70 transition-opacity"
+            className="p-2 text-white hover:opacity-70 transition-opacity rounded-full"
             title="Wishlist"
           >
             <Heart className="w-5 h-5" strokeWidth={1.5} />
@@ -104,7 +107,7 @@ const Navbar: React.FC = () => {
           
           <Link 
             to={isAuthenticated ? "/profile" : "/login"} 
-            className="p-2 text-white hover:opacity-70 transition-opacity hidden sm:block"
+            className="p-2 text-white hover:opacity-70 transition-opacity hidden sm:block rounded-full"
             title="Account"
           >
             <User className="w-5 h-5" strokeWidth={1.5} />
@@ -113,7 +116,7 @@ const Navbar: React.FC = () => {
           {isAuthenticated && (
             <Link 
               to="/notifications" 
-              className="p-2 text-white hover:opacity-70 transition-opacity relative"
+              className="p-2 text-white hover:opacity-70 transition-opacity relative rounded-full"
               title="Notifications"
             >
               <Bell className="w-5 h-5" strokeWidth={1.5} />
@@ -126,7 +129,7 @@ const Navbar: React.FC = () => {
           )}
 
           <button 
-            className="p-2 text-white hover:opacity-70 transition-opacity relative hidden sm:block"
+            className="p-2 text-white hover:opacity-70 transition-opacity relative hidden sm:block rounded-full"
             onClick={() => dispatch(toggleCart())}
           >
             <ShoppingBag className="w-5 h-5" strokeWidth={1.5} />
