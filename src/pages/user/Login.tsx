@@ -5,6 +5,7 @@ import { login, setAuthLoading, setAuthError, selectAuthInitialized } from '../.
 import { authApi } from '../../services/authApi';
 import toast from 'react-hot-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 
 interface FormErrors {
   identifier?: string;
@@ -90,6 +91,50 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    const { credential } = credentialResponse;
+    if (!credential) {
+      toast.error("Google login failed: No credential received.");
+      return;
+    }
+
+    dispatch(setAuthLoading(true));
+    dispatch(setAuthError(''));
+
+    try {
+      const response = await authApi.googleLogin(credential);
+
+      const roleStr = String(response.user.role || '').toLowerCase();
+      const isAdmin =
+        roleStr === 'admin' ||
+        roleStr.includes('admin') ||
+        (response.user as any).roleId?.name?.toLowerCase().includes('admin');
+      
+      if (isAdmin) {
+        dispatch(setAuthLoading(false));
+        toast.error('Admins must use the admin login page.');
+        navigate('/admin/login');
+        return;
+      }
+      
+      response.user.role = 'user';
+      
+      dispatch(login(response));
+      toast.success(response.message || 'Welcome back!');
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to login with Google';
+      dispatch(setAuthError(errorMessage));
+      toast.error(errorMessage);
+    } finally {
+      dispatch(setAuthLoading(false));
+    }
+  };
+
+  const handleGoogleError = () => {
+    toast.error('Google Login Widget Failed');
+  };
+
   return (
     <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-md w-full space-y-8">
@@ -168,6 +213,27 @@ const Login: React.FC = () => {
             >
               {isLoading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Sign In'}
             </button>
+          </div>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">OR</span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                useOneTap
+                theme="outline"
+                shape="rectangular"
+              />
+            </div>
           </div>
         </form>
       </div>

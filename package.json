@@ -13,6 +13,7 @@
     "brace-expansion": "^5.0.8"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.5",
     "@reduxjs/toolkit": "^2.12.0",
     "@types/js-cookie": "^3.0.6",
     "axios": "^1.18.1",
