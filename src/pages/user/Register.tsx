@@ -108,7 +108,26 @@ const Register: React.FC = () => {
       toast.success(response.message || 'Account created successfully!');
       navigate('/');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to register';
+      const responseData = err.response?.data;
+      
+      if (responseData?.errors && Array.isArray(responseData.errors) && responseData.errors.length > 0) {
+        const backendErrors: FormErrors = {};
+        responseData.errors.forEach((error: any) => {
+          const field = error.field?.replace('body.', '');
+          if (['firstName', 'lastName', 'email', 'password', 'phone'].includes(field)) {
+            backendErrors[field as keyof FormErrors] = error.message;
+          }
+        });
+        
+        if (Object.keys(backendErrors).length > 0) {
+          setErrors(backendErrors);
+          dispatch(setAuthError('Please fix the errors in the form.'));
+          toast.error('Please fix the errors in the form.');
+          return;
+        }
+      }
+
+      const errorMessage = responseData?.message || err.message || 'Failed to register';
       dispatch(setAuthError(errorMessage));
       toast.error(errorMessage);
     }
