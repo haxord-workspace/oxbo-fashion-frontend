@@ -60,6 +60,51 @@ export const authApi = {
     return { message: response.data.message };
   },
 
+  googleLogin: async (credential: string): Promise<AuthResponse> => {
+    const response = await api.post('/auth/google', { credential });
+
+    const responseData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+
+    // Deep search function to find keys no matter where they are nested
+    const findToken = (obj: any, key: string): string => {
+      if (!obj || typeof obj !== 'object') return '';
+      if (obj[key] && typeof obj[key] === 'string') return obj[key];
+      for (const k in obj) {
+        const result = findToken(obj[k], key);
+        if (result) return result;
+      }
+      return '';
+    };
+
+    const accessToken = findToken(responseData, 'accessToken') ||
+      findToken(responseData, 'token') ||
+      response.headers['authorization']?.replace('Bearer ', '') ||
+      response.headers['x-auth-token'] ||
+      response.headers['access-token'] ||
+      '';
+
+    const refreshToken = findToken(responseData, 'refreshToken') ||
+      response.headers['x-refresh-token'] ||
+      response.headers['refresh-token'] ||
+      '';
+
+    if (accessToken) {
+      localStorage.setItem('accessToken', accessToken);
+      Cookies.set('accessToken', accessToken, { sameSite: 'strict' });
+    }
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+      Cookies.set('refreshToken', refreshToken, { sameSite: 'strict' });
+    }
+
+    return {
+      user: responseData.data?.user || responseData.data || responseData.user,
+      accessToken,
+      refreshToken,
+      message: responseData.message,
+    };
+  },
+
   register: async (data: { firstName: string; lastName: string; email: string; password: string; phone: string }): Promise<AuthResponse> => {
     const response = await api.post('/auth/register', data);
 
