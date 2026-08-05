@@ -3,6 +3,7 @@ import { Edit2, Trash2, Search, Loader2, X, AlertTriangle, Plus, Image as ImageI
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import { ImageCropper } from '../../components/common/ImageCropper';
+import { CustomSelect } from '../../components/common/CustomSelect';
 import type { User } from '../../types';
 import toast from 'react-hot-toast';
 import { adminUserApi } from '../../services/admin/adminUser.Api';
@@ -394,9 +395,9 @@ export const AdminUsers = () => {
         </div>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex flex-1 gap-4 items-center">
-          <div className="relative w-64">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="flex flex-col sm:flex-row flex-1 gap-4 items-start sm:items-center w-full md:w-auto relative z-10">
+          <div className="relative w-full sm:w-64 shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
@@ -406,27 +407,33 @@ export const AdminUsers = () => {
               className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm"
             />
           </div>
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-white"
-          >
-            <option value="">All Roles</option>
-            <option value="CUSTOMER">Customer</option>
-            <option value="Store Manager">Store Manager</option>
-            <option value="Super Admin">Super Admin</option>
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm bg-white"
-          >
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <CustomSelect
+              name="roleFilter"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              options={[
+                { value: '', label: 'All Roles' },
+                { value: 'CUSTOMER', label: 'Customer' },
+                { value: 'Store Manager', label: 'Store Manager' },
+                { value: 'Super Admin', label: 'Super Admin' }
+              ]}
+              className="w-full sm:w-36"
+            />
+            <CustomSelect
+              name="statusFilter"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { value: '', label: 'All Status' },
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' }
+              ]}
+              className="w-full sm:w-36"
+            />
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full md:w-auto justify-end">
           {selectedUserIds.length > 0 && (
             <button
               onClick={() => {

@@ -6,9 +6,11 @@ import { addToWishlistAsync, removeFromWishlistAsync, selectIsWishlisted } from 
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
 import { productsApi } from '../../services/productsApi';
 import type { Product } from '../../types';
+import QuickAddModal from '../common/QuickAddModal';
 
 const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,7 +59,8 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   };
 
   return (
-    <Link to={`/products/${product.id || (product as any)._id}`} className="flex flex-col group cursor-pointer w-full">
+    <>
+      <Link to={`/products/${product.id || (product as any)._id}`} className="flex flex-col group cursor-pointer w-full">
       {/* Image Container */}
       <div className="relative w-full aspect-[3/4] bg-gray-100 overflow-hidden">
         <img 
@@ -109,6 +112,19 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             <Heart size={16} strokeWidth={2} className={isWishlisted ? 'fill-red-500 text-red-500' : ''} />
           </div>
         </button>
+
+        {/* Quick Add Button */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsQuickAddOpen(true);
+          }}
+          className="absolute bottom-2 right-2 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-400/90 text-white flex items-center justify-center hover:bg-gray-500 transition-colors z-20 shadow-sm"
+          aria-label="Quick add to cart"
+        >
+          <span className="text-lg sm:text-xl leading-none font-light mb-0.5">+</span>
+        </button>
       </div>
 
       {/* Product Details */}
@@ -123,7 +139,13 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
           )}
         </div>
       </div>
-    </Link>
+      </Link>
+      <QuickAddModal 
+        product={product} 
+        isOpen={isQuickAddOpen} 
+        onClose={() => setIsQuickAddOpen(false)} 
+      />
+    </>
   );
 };
 
@@ -142,7 +164,7 @@ const ProductSkeleton: React.FC = () => {
   );
 };
 
-const ProductGrid: React.FC<{ filters?: any; onProductCount?: (count: number) => void; pageSize?: number; showPagination?: boolean }> = ({ filters: externalFilters, onProductCount, pageSize, showPagination = true }) => {
+const ProductGrid: React.FC<{ filters?: any; onProductCount?: (count: number) => void; pageSize?: number; showPagination?: boolean; className?: string }> = ({ filters: externalFilters, onProductCount, pageSize, showPagination = true, className = '' }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -222,8 +244,8 @@ const ProductGrid: React.FC<{ filters?: any; onProductCount?: (count: number) =>
     : products;
 
   return (
-    <section className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 md:pb-16">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-12 md:gap-x-4 md:gap-y-16">
+    <section className={`w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 md:pb-16 ${className}`}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-6 md:gap-x-4 md:gap-y-16">
         {isLoading 
           ? Array.from({ length: pageSize ?? 8 }).map((_, idx) => (
               <ProductSkeleton key={idx} />
