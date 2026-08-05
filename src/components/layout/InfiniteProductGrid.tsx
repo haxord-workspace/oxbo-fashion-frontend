@@ -10,12 +10,14 @@ import {
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
 import { productsApi } from '../../services/productsApi';
 import type { Product } from '../../types';
+import QuickAddModal from '../common/QuickAddModal';
 
 const PAGE_SIZE = 8;
 
 // ─── Product Card ───────────────────────────────────────────────────────────
 const ProductCard: React.FC<{ product: Product; selectedColor?: string }> = ({ product, selectedColor }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -76,7 +78,8 @@ const ProductCard: React.FC<{ product: Product; selectedColor?: string }> = ({ p
   };
 
   return (
-    <Link to={`/products/${productId}`} className="flex flex-col group cursor-pointer w-full">
+    <>
+      <Link to={`/products/${productId}`} className="flex flex-col group cursor-pointer w-full">
       <div className="relative w-full aspect-[3/4] bg-gray-100 overflow-hidden">
         <img
           src={images[currentImageIndex] || images[0]}
@@ -124,6 +127,19 @@ const ProductCard: React.FC<{ product: Product; selectedColor?: string }> = ({ p
         >
           <Heart size={16} strokeWidth={2} className={isWishlisted ? 'fill-red-500 text-red-500' : ''} />
         </button>
+
+        {/* Quick Add Button */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsQuickAddOpen(true);
+          }}
+          className="absolute bottom-2 right-2 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-400/90 text-white flex items-center justify-center hover:bg-gray-500 transition-colors z-20 shadow-sm"
+          aria-label="Quick add to cart"
+        >
+          <span className="text-lg sm:text-xl leading-none font-light mb-0.5">+</span>
+        </button>
       </div>
 
       {/* Product Details */}
@@ -141,6 +157,12 @@ const ProductCard: React.FC<{ product: Product; selectedColor?: string }> = ({ p
         </div>
       </div>
     </Link>
+    <QuickAddModal 
+      product={product} 
+      isOpen={isQuickAddOpen} 
+      onClose={() => setIsQuickAddOpen(false)} 
+    />
+    </>
   );
 };
 

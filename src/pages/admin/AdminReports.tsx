@@ -224,22 +224,24 @@ export const AdminReports = () => {
     <PageWrapper title="Analytics & Reports">
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <p className="text-gray-600 print:hidden">Overview of your store's performance and key metrics.</p>
-        <div className="flex gap-2 print:hidden">
-          <input 
-            type="date" 
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary"
-            value={dateRange.startDate}
-            onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-          />
-          <input 
-            type="date" 
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary"
-            value={dateRange.endDate}
-            onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-          />
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto print:hidden">
+          <div className="flex gap-2 w-full sm:w-auto">
+            <input 
+              type="date" 
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary w-full sm:w-auto flex-1"
+              value={dateRange.startDate}
+              onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+            />
+            <input 
+              type="date" 
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary w-full sm:w-auto flex-1"
+              value={dateRange.endDate}
+              onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+            />
+          </div>
           <button
             onClick={generatePDF}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+            className="flex justify-center items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors w-full sm:w-auto"
           >
             <Download size={16} />
             Export PDF

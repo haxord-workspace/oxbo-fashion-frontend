@@ -650,8 +650,8 @@ const ProductDetail: React.FC = () => {
               </ul>
             </Accordion>
             <Accordion title="Shipping and Returns">
-              <p>Free standard shipping on all orders over Rs. 2,999.00.</p>
-              <p className="mt-2">Returns accepted within 14 days of delivery. Items must be unworn with original tags attached.</p>
+              {/* <p>Free standard shipping on all orders over Rs. 2,999.00.</p> */}
+              <p className="mt-2">Returns accepted within 7 days of delivery. Items must be unworn with original tags attached.</p>
             </Accordion>
           </div>
 

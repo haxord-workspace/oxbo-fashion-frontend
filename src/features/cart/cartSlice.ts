@@ -57,7 +57,7 @@ export const addToCartAsync = createAsyncThunk('cart/add', async (item: CartItem
 export const updateCartItemAsync = createAsyncThunk('cart/update', async ({ id, variantId, quantity }: { id: string, variantId?: string, quantity: number }, { rejectWithValue }) => {
   try {
     await cartApi.updateCartItem(variantId || id, quantity);
-    return { id, quantity };
+    return { id, variantId, quantity };
   } catch (err: any) {
     return rejectWithValue(err.response?.data?.message || err.message);
   }
@@ -66,7 +66,7 @@ export const updateCartItemAsync = createAsyncThunk('cart/update', async ({ id, 
 export const removeFromCartAsync = createAsyncThunk('cart/remove', async ({ id, variantId }: { id: string, variantId?: string }, { rejectWithValue }) => {
   try {
     await cartApi.removeFromCart(variantId || id);
-    return id;
+    return { id, variantId };
   } catch (err: any) {
     return rejectWithValue(err.response?.data?.message || err.message);
   }
@@ -129,7 +129,11 @@ const cartSlice = createSlice({
   reducers: {
     // Keep local actions for optimistic UI updates if needed, but thunks handle it
     addItemLocal(state, action: PayloadAction<CartItem>) {
-      const existingItem = state.items.find(item => item.product.id === action.payload.product.id || (item.product as any)._id === (action.payload.product as any)._id);
+      const existingItem = state.items.find(item => {
+        const isSameProduct = item.product.id === action.payload.product.id || (item.product as any)._id === (action.payload.product as any)._id;
+        const isSameVariant = item.variantId === action.payload.variantId;
+        return isSameProduct && isSameVariant;
+      });
       if (existingItem) {
         existingItem.quantity += action.payload.quantity;
       } else {
@@ -152,7 +156,7 @@ const cartSlice = createSlice({
             product: {
               id: apiItem.productId?._id || apiItem.productId?.id || 'unknown',
               name: apiItem.productId?.name || 'Unknown Product',
-              imageUrl: apiItem.productId?.thumbnail || apiItem.productId?.imageUrl,
+              imageUrl: apiItem.variantId?.images?.[0] || apiItem.productId?.thumbnail || apiItem.productId?.imageUrl,
               price: apiItem.price || apiItem.variantId?.price || apiItem.productId?.price || 0,
               mrp: apiItem.variantId?.price || apiItem.productId?.mrp || 0,
               category: apiItem.productId?.categoryId || 'Category',
@@ -187,7 +191,11 @@ const cartSlice = createSlice({
       
       // Add to Cart
       .addCase(addToCartAsync.fulfilled, (state, action) => {
-        const existingItem = state.items.find(item => item.product.id === action.payload.product.id || (item.product as any)._id === (action.payload.product as any)._id);
+        const existingItem = state.items.find(item => {
+          const isSameProduct = item.product.id === action.payload.product.id || (item.product as any)._id === (action.payload.product as any)._id;
+          const isSameVariant = item.variantId === action.payload.variantId;
+          return isSameProduct && isSameVariant;
+        });
         if (existingItem) {
           existingItem.quantity += action.payload.quantity;
         } else {
@@ -201,7 +209,11 @@ const cartSlice = createSlice({
 
       // Update Quantity
       .addCase(updateCartItemAsync.fulfilled, (state, action) => {
-        const item = state.items.find(item => item.product.id === action.payload.id || (item.product as any)._id === action.payload.id);
+        const item = state.items.find(item => {
+          const isSameProduct = item.product.id === action.payload.id || (item.product as any)._id === action.payload.id;
+          const isSameVariant = item.variantId === action.payload.variantId;
+          return isSameProduct && isSameVariant;
+        });
         if (item) {
           item.quantity = action.payload.quantity;
         }
@@ -209,7 +221,11 @@ const cartSlice = createSlice({
 
       // Remove from Cart
       .addCase(removeFromCartAsync.fulfilled, (state, action) => {
-        state.items = state.items.filter(item => item.product.id !== action.payload && (item.product as any)._id !== action.payload);
+        state.items = state.items.filter(item => {
+          const isSameProduct = item.product.id === action.payload.id || (item.product as any)._id === action.payload.id;
+          const isSameVariant = item.variantId === action.payload.variantId;
+          return !(isSameProduct && isSameVariant);
+        });
         toast.success('Removed from cart');
       })
       .addCase(removeFromCartAsync.rejected, (_state, action) => {
