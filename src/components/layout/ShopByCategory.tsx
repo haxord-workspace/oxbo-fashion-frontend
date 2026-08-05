@@ -79,14 +79,14 @@ const ShopByCategory: React.FC = () => {
   if (categories.length === 0) return null;
 
   return (
-    <section className="w-full pt-6 pb-8 px-4 md:px-8 bg-white">
+    <section className="w-full pt-6 pb-2 md:pb-8 px-4 md:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h2 className="text-3xl font-black uppercase italic tracking-tight" style={{ fontFamily: 'Impact, sans-serif' }}>
+            <h2 className="text-xl md:text-3xl font-black uppercase italic tracking-tight" style={{ fontFamily: 'Impact, sans-serif' }}>
               <span className="text-primary"> Shop by Category</span>
             </h2>
-            <p className="text-gray-500 mt-2">Explore our curated collections for your perfect style.</p>
+            <p className="text-xs md:text-base text-gray-500 mt-1 md:mt-2">Explore our curated collections for your perfect style.</p>
           </div>
           <div className="flex gap-2">
             <button 
