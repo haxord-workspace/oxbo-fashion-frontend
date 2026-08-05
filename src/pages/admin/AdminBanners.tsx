@@ -246,17 +246,17 @@ export const AdminBanners = () => {
       <PageWrapper 
         title="Banners"
         headerAction={
-          <div className="flex gap-3">
+          <div className="flex gap-3 w-full sm:w-auto">
             <button 
               onClick={handleOpenNavbarOffers}
-              className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex justify-center items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors w-full sm:w-auto"
             >
               <LayoutPanelTop size={18} />
               <span className="text-sm font-medium">Navbar Offers</span>
             </button>
             <button 
               onClick={() => openModal('add')}
-              className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+              className="flex justify-center items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors w-full sm:w-auto"
             >
               <Plus size={18} />
               <span className="text-sm font-medium">Add Banner</span>
@@ -264,8 +264,9 @@ export const AdminBanners = () => {
           </div>
         }
       >
-        <div className="grid grid-cols-1 gap-4">
-          {isLoading ? (
+        <div className="overflow-x-auto pb-4">
+          <div className="grid grid-cols-1 gap-4 min-w-[600px]">
+            {isLoading ? (
             <div className="py-12 flex justify-center items-center gap-2 text-gray-500 border border-gray-200 rounded-lg bg-white">
               <Loader2 className="w-5 h-5 animate-spin" />
               Loading banners...
@@ -319,6 +320,7 @@ export const AdminBanners = () => {
               No banners found.
             </div>
           )}
+          </div>
         </div>
         
         {totalBanners > 0 && (

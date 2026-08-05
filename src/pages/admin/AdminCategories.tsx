@@ -9,6 +9,7 @@ import { AdminPagination } from '../../components/admin/AdminPagination';
 import { adminCategoriesApi } from '../../services/admin/admincategories.Api';
 import { adminProductApi } from '../../services/admin/adminProduct.Api';
 import { ImageCropper } from '../../components/common/ImageCropper';
+import { CustomSelect } from '../../components/common/CustomSelect';
 import type { Category } from '../../types';
 
 interface FormErrors {
@@ -357,8 +358,8 @@ export const AdminCategories = () => {
         }
       >
         {viewMode === 'main' && (
-          <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="relative w-full sm:max-w-md">
+          <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="relative w-full sm:max-w-md shrink-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input 
                 type="text" 
@@ -371,20 +372,22 @@ export const AdminCategories = () => {
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/5 focus:border-primary transition-colors text-sm"
               />
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Filter size={18} className="text-gray-500" />
-              <select
+            <div className="flex items-center gap-2 w-full sm:w-auto relative z-10 shrink-0">
+              <Filter size={18} className="text-gray-500 shrink-0" />
+              <CustomSelect
+                name="statusFilter"
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value as any);
                   setCurrentPage(1);
                 }}
-                className="w-full sm:w-auto px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/5 focus:border-primary transition-colors text-sm bg-white"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+                options={[
+                  { value: 'all', label: 'All Status' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'inactive', label: 'Inactive' }
+                ]}
+                className="w-full sm:w-48"
+              />
             </div>
           </div>
         )}

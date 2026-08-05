@@ -4,6 +4,7 @@ import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import AdminModal from '../../components/common/AdminModal';
 import { LoadingButton } from '../../components/common/LoadingButton';
+import { CustomSelect } from '../../components/common/CustomSelect';
 import { adminOrderApi } from '../../services/admin/adminOrder.Api';
 import { adminStoreApi } from '../../services/admin/adminStore.Api';
 import { productsApi } from '../../services/productsApi';
@@ -388,29 +389,27 @@ export const AdminOrders = () => {
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <Filter size={16} className="text-gray-500" />
+        <div className="flex items-center gap-2 w-full sm:w-auto relative z-10">
+          <Filter size={16} className="text-gray-500 shrink-0" />
           {isAdmin && (
-            <select
+            <CustomSelect
+              name="storeFilter"
               value={storeFilter}
               onChange={(e) => setStoreFilter(e.target.value)}
-              className="border border-gray-200 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-primary cursor-pointer"
-            >
-              <option value="">All Stores</option>
-              {availableStores.map(store => (
-                <option key={store._id || store.id} value={store._id || store.id}>{store.name}</option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'All Stores' },
+                ...availableStores.map(store => ({ value: store._id || store.id, label: store.name }))
+              ]}
+              className="w-full sm:w-40"
+            />
           )}
-          <select
+          <CustomSelect
+            name="statusFilter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-gray-200 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-primary cursor-pointer"
-          >
-            {ORDER_STATUSES.map(status => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
+            options={ORDER_STATUSES.map(status => ({ value: status, label: status }))}
+            className="w-full sm:w-36"
+          />
         </div>
       </div>
 

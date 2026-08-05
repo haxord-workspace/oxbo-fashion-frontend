@@ -11,6 +11,7 @@ import { adminCategoriesApi } from '../../services/admin/admincategories.Api';
 import { adminBrandApi } from '../../services/admin/adminBrand.Api';
 import { ImageCropper } from '../../components/common/ImageCropper';
 import { LoadingButton } from '../../components/common/LoadingButton';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 interface FormErrors {
   name?: string;
@@ -586,8 +587,8 @@ export const AdminProducts = () => {
           </button>
         }
       >
-        <div className="flex justify-between items-center mb-6">
-          <div className="relative w-64">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input 
               type="text" 
@@ -597,18 +598,18 @@ export const AdminProducts = () => {
               className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Filter size={16} className="text-gray-500" />
-            <select
+          <div className="flex items-center gap-2 w-full sm:w-auto relative z-10">
+            <Filter size={16} className="text-gray-500 shrink-0" />
+            <CustomSelect
+              name="categoryFilter"
               value={selectedCategoryFilter}
               onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-              className="border border-gray-200 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-primary cursor-pointer"
-            >
-              <option value="">All Categories</option>
-              {categories.map(c => (
-                <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'All Categories' },
+                ...categories.map(c => ({ value: c.id || c._id, label: c.name }))
+              ]}
+              className="w-full sm:w-48"
+            />
           </div>
         </div>
         

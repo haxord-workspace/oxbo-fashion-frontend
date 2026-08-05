@@ -517,7 +517,7 @@ const Checkout: React.FC = () => {
                     </div>
 
                     {/* State */}
-                    <div className="relative z-[60]">
+                    <div className="relative z-30">
                       <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">State</label>
                       {addressForm.country === 'India' ? (
                         <CustomSelect
@@ -539,7 +539,7 @@ const Checkout: React.FC = () => {
                     </div>
 
                     {/* Address Type */}
-                    <div className="relative z-[50]">
+                    <div className="relative z-20">
                       <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">Address Type</label>
                       <CustomSelect
                         name="type"
@@ -550,7 +550,7 @@ const Checkout: React.FC = () => {
                     </div>
 
                     {/* Country */}
-                    <div className="relative z-[40]">
+                    <div className="relative z-10">
                       <label className="block text-xs font-medium text-gray-700 uppercase mb-1.5">Country</label>
                       <CustomSelect
                         name="country"

@@ -5,6 +5,7 @@ import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import AdminModal from '../../components/common/AdminModal';
 import { LoadingButton } from '../../components/common/LoadingButton';
+import { CustomSelect } from '../../components/common/CustomSelect';
 import { adminInventoryApi } from '../../services/admin/adminInventory.Api';
 import { adminStoreApi } from '../../services/admin/adminStore.Api';
 import { adminProductApi } from '../../services/admin/adminProduct.Api';
@@ -221,33 +222,31 @@ export const AdminInventory = () => {
       <PageWrapper 
         title="Inventory Transactions"
         headerAction={
-          <div className="flex items-center gap-4 flex-wrap justify-end">
-            <div className="flex bg-white border border-gray-300 rounded-lg overflow-hidden shrink-0">
-              <input 
-                type="text" 
-                placeholder="Search SKU or Product..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="px-3 py-2 text-sm focus:outline-none w-40 sm:w-56"
-              />
-              <button onClick={handleSearch} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 border-l border-gray-300 text-sm font-medium">Search</button>
-            </div>
-            <select
-              value={storeFilter}
-              onChange={(e) => setStoreFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-primary bg-white shrink-0"
-            >
-              <option value="">All Stores</option>
-              {stores.map(store => (
-                <option key={store._id || store.id} value={store._id || store.id}>
-                  {store.name}
-                </option>
-              ))}
-            </select>
-            <button 
-              onClick={openUpdateModal}
-              className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors shrink-0"
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto relative z-10 mt-4 sm:mt-0">
+          <div className="flex bg-white border border-gray-300 rounded-lg overflow-hidden shrink-0 w-full sm:w-auto">
+            <input 
+              type="text" 
+              placeholder="Search SKU or Product..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              className="px-3 py-2 text-sm focus:outline-none w-full sm:w-56"
+            />
+            <button onClick={handleSearch} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 border-l border-gray-300 text-sm font-medium shrink-0">Search</button>
+          </div>
+          <CustomSelect
+            name="storeFilter"
+            value={storeFilter}
+            onChange={(e) => setStoreFilter(e.target.value)}
+            options={[
+              { value: '', label: 'All Stores' },
+              ...stores.map(store => ({ value: store._id || store.id, label: store.name }))
+            ]}
+            className="w-full sm:w-48"
+          />
+          <button 
+            onClick={openUpdateModal}
+            className="flex justify-center items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors shrink-0 w-full sm:w-auto"
             >
               <span className="text-sm font-medium">Update Stock</span>
             </button>
