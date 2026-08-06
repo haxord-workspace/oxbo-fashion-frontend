@@ -72,6 +72,11 @@ export const adminProductApi = {
     return response.data;
   },
 
+  getSizeOptions: async (productId: string): Promise<any> => {
+    const response = await api.get(`/products/${productId}/size-options`);
+    return response.data;
+  },
+
   deleteProduct: async (productId: string): Promise<any> => {
     const response = await api.delete(`/products/${productId}`);
     return response.data;

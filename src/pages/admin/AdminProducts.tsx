@@ -151,6 +151,7 @@ export const AdminProducts = () => {
   const [isFetchingVariants, setIsFetchingVariants] = useState(false);
   const [existingVariants, setExistingVariants] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
+  const [sizeOptions, setSizeOptions] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchSubCategories = async () => {
@@ -169,6 +170,36 @@ export const AdminProducts = () => {
     
     fetchSubCategories();
   }, [productForm.categoryId]);
+
+  // Suggested sizes for the "Size Inventory" quick-pick chips.
+  // Prefer the authoritative /products/:id/size-options endpoint (handles the
+  // sub-category-overrides-category rule server-side) when editing an existing
+  // product; fall back to the locally-loaded category/sub-category data when
+  // adding a new product, since it has no id yet for that endpoint to target.
+  useEffect(() => {
+    if (!isModalOpen || modalMode === 'delete') return;
+
+    const deriveFromLocalCategories = () => {
+      let opts: string[] = [];
+      if (productForm.subCategoryId) {
+        opts = subCategories.find(sc => (sc.id || sc._id) === productForm.subCategoryId)?.sizeOptions || [];
+      }
+      if (opts.length === 0 && productForm.categoryId) {
+        opts = categories.find(c => (c.id || c._id) === productForm.categoryId)?.sizeOptions || [];
+      }
+      setSizeOptions(Array.isArray(opts) ? opts : []);
+    };
+
+    const productId = (selectedProduct as any)?._id || selectedProduct?.id;
+    if (modalMode === 'edit' && productId) {
+      adminProductApi.getSizeOptions(productId)
+        .then(res => setSizeOptions(res.data?.sizeOptions || res.sizeOptions || []))
+        .catch(() => deriveFromLocalCategories());
+    } else {
+      deriveFromLocalCategories();
+    }
+  }, [isModalOpen, modalMode, selectedProduct, productForm.categoryId, productForm.subCategoryId, categories, subCategories]);
+
   const handleRemoveVariantBlock = async (index: number) => {
     const variantToRemove = variants[index];
     if (variantToRemove.color && selectedProduct && modalMode === 'edit') {
@@ -454,8 +485,31 @@ export const AdminProducts = () => {
             }
           }
         }
+
+        // The per-size trash icon only removes the row from local form state — it never
+        // tells the backend anything. Diff the sizes that existed on the server against
+        // what's left in the form now, and delete whichever existing variants dropped out.
+        const currentColorSizePairs = new Set(
+          variants
+            .filter(v => v.color)
+            .flatMap(v => v.sizes.filter(s => s.size).map(s => `${v.color.toLowerCase()}|${s.size.toLowerCase()}`))
+        );
+        const removedVariants = existingVariants.filter(ev => {
+          const color = ev.attributes?.color;
+          const size = ev.attributes?.size;
+          if (!color || !size) return false;
+          return !currentColorSizePairs.has(`${color.toLowerCase()}|${size.toLowerCase()}`);
+        });
+
+        await Promise.all(removedVariants.map(async (ev) => {
+          try {
+            await adminProductApi.deleteVariant(ev._id || ev.id);
+          } catch (err: any) {
+            toast.error(`Failed to remove size ${ev.attributes?.size} (${ev.attributes?.color}): ${err.response?.data?.message || err.message}`);
+          }
+        }));
       }
-      
+
       toast.success(`Product ${modalMode === 'add' ? 'created' : 'updated'} successfully!`);
       setIsModalOpen(false);
       
@@ -1035,6 +1089,35 @@ export const AdminProducts = () => {
                     <Plus size={12} className="mr-1" /> Add Size
                   </button>
                 </div>
+                {sizeOptions.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                    <span className="text-[11px] text-gray-500 mr-1">Quick add:</span>
+                    {sizeOptions.map(opt => {
+                      const alreadyUsed = v.sizes.some(s => s.size.trim().toLowerCase() === opt.toLowerCase());
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          disabled={alreadyUsed}
+                          onClick={() => {
+                            const newVariants = [...variants];
+                            const sizes = newVariants[index].sizes;
+                            const emptyIdx = sizes.findIndex(s => !s.size);
+                            if (emptyIdx >= 0) {
+                              sizes[emptyIdx] = { size: opt };
+                            } else {
+                              sizes.push({ size: opt });
+                            }
+                            setVariants(newVariants);
+                          }}
+                          className={`px-2 py-1 text-[11px] rounded border transition-colors ${alreadyUsed ? 'bg-gray-100 text-gray-300 border-gray-100 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-300 hover:border-primary hover:text-primary'}`}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="space-y-2">
                   {v.sizes.map((s, sIndex) => (
                     <div key={sIndex} className="flex gap-2 items-center">

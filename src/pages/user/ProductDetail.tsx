@@ -213,8 +213,36 @@ const ProductDetail: React.FC = () => {
   } else if (product) {
     currentStock = (product as any).stock !== undefined ? (product as any).stock : ((product as any).quantity !== undefined ? (product as any).quantity : 10);
   }
-  
-  const isVariantOutOfStock = currentStock <= 0;
+
+  // availableStock is the primary source of truth for product-level stock
+  const productAvailableStock: number = (product as any)?.availableStock ?? 0;
+
+  // Detect if the selected size/variant has an *explicit* stock value from the API.
+  // When the API omits the stock field entirely, currentStock falls to a default (not
+  // a real 0), so we can't trust it as an out-of-stock signal unless it's explicit.
+  const activeVariantHasExplicitStock = availableSizes.length > 0
+    ? (variantsForColor.find((v: any) => getVariantSize(v) === selectedSize)?.stock !== undefined ||
+       variantsForColor.find((v: any) => getVariantSize(v) === selectedSize)?.quantity !== undefined)
+    : (activeVariant?.stock !== undefined || activeVariant?.quantity !== undefined);
+
+  // Effective stock for display:
+  // - Selected variant has explicit stock data → use the variant's own stock
+  // - Otherwise fall back to product-level availableStock
+  const effectiveStock: number = activeVariantHasExplicitStock ? currentStock : productAvailableStock;
+
+  // Buttons are disabled based on the same effective stock used for the stock
+  // message above — trust the variant's explicit stock when it has one, otherwise
+  // fall back to product-level availableStock. Keeping this in sync with
+  // stockMessageContent avoids the button disagreeing with the displayed stock.
+  const isVariantOutOfStock = effectiveStock <= 0;
+
+  // Stock message logic
+  const stockMessageContent: string | null =
+    effectiveStock === 0
+      ? 'Insufficient Stock'
+      : effectiveStock > 0 && effectiveStock <= 10
+      ? `Available Stock: ${effectiveStock}`
+      : null; // > 10 → no message
 
   // Update size if current size is out of stock in new color
   useEffect(() => {
@@ -588,9 +616,9 @@ const ProductDetail: React.FC = () => {
                 <div className="text-sm text-gray-500 py-2">One Size</div>
               )}
             </div>
-            {currentStock < 10 && (
+            {stockMessageContent !== null && (
               <p className="text-red-600 text-sm mt-2 font-bold">
-                avilable stock {currentStock}
+                {stockMessageContent}
               </p>
             )}
           </div>
