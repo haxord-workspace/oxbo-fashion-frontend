@@ -8,6 +8,7 @@ export interface Category {
   image?: string;
   parentCategory?: string | null;
   suggestions?: { title: string; description: string }[];
+  sizeOptions?: string[];
   createdAt?: string;
   updatedAt?: string;
   subCategoryCount?: number;
