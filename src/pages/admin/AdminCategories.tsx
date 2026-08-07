@@ -56,18 +56,21 @@ export const AdminCategories = () => {
     sortOrder: number;
     parentCategory: string;
     suggestions: { title: string; description: string }[];
+    sizeOptions: string[];
   }>({
     name: '',
     description: '',
     isActive: true,
     sortOrder: 0,
     parentCategory: '',
-    suggestions: []
+    suggestions: [],
+    sizeOptions: []
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [newSizeOption, setNewSizeOption] = useState('');
 
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
@@ -204,7 +207,8 @@ export const AdminCategories = () => {
         isActive: category.isActive !== false,
         sortOrder: category.sortOrder || 0,
         parentCategory: typeof category.parentCategory === 'object' ? category.parentCategory?._id || category.parentCategory?.id || '' : category.parentCategory || '',
-        suggestions: category.suggestions || []
+        suggestions: category.suggestions || [],
+        sizeOptions: category.sizeOptions || []
       });
       if (category.image) {
         setImagePreview(category.image);
@@ -216,9 +220,11 @@ export const AdminCategories = () => {
         isActive: true,
         sortOrder: 0,
         parentCategory: '',
-        suggestions: []
+        suggestions: [],
+        sizeOptions: []
       });
     }
+    setNewSizeOption('');
     setErrors({});
     setIsModalOpen(true);
   };
@@ -257,7 +263,8 @@ export const AdminCategories = () => {
       } else {
         formData.append('suggestions', JSON.stringify([]));
       }
-      
+      formData.append('sizeOptions', JSON.stringify(categoryForm.sizeOptions || []));
+
       if (imageFile) {
         formData.append('image', imageFile); // Or 'photo' depending on backend
       }
@@ -742,6 +749,106 @@ export const AdminCategories = () => {
                 <p className="text-sm text-gray-500 italic">No suggestions added yet.</p>
               )}
             </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Size Options</label>
+            <p className="text-xs text-gray-500 mb-2">
+              Suggested sizes shown when adding variants for products in this category (e.g. S, M, L, XL). Order matters — sizes appear in the picker in the order listed here. Optional; leave empty to keep a free-text size field.
+            </p>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={newSizeOption}
+                onChange={e => setNewSizeOption(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const trimmed = newSizeOption.trim();
+                    if (!trimmed) return;
+                    if (categoryForm.sizeOptions.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+                      toast.error('That size is already in the list');
+                      return;
+                    }
+                    if (categoryForm.sizeOptions.length >= 50) {
+                      toast.error('Maximum 50 sizes per category');
+                      return;
+                    }
+                    setCategoryForm({ ...categoryForm, sizeOptions: [...categoryForm.sizeOptions, trimmed] });
+                    setNewSizeOption('');
+                  }
+                }}
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                placeholder="E.g., S, M, L, XL or 28, 30, 32"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const trimmed = newSizeOption.trim();
+                  if (!trimmed) return;
+                  if (categoryForm.sizeOptions.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+                    toast.error('That size is already in the list');
+                    return;
+                  }
+                  if (categoryForm.sizeOptions.length >= 50) {
+                    toast.error('Maximum 50 sizes per category');
+                    return;
+                  }
+                  setCategoryForm({ ...categoryForm, sizeOptions: [...categoryForm.sizeOptions, trimmed] });
+                  setNewSizeOption('');
+                }}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1"
+              >
+                <Plus size={14} /> Add
+              </button>
+            </div>
+            {categoryForm.sizeOptions.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {categoryForm.sizeOptions.map((size, index) => (
+                  <span key={index} className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 rounded-full pl-3 pr-1.5 py-1 text-xs text-gray-700">
+                    {size}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (index === 0) return;
+                        const arr = [...categoryForm.sizeOptions];
+                        [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+                        setCategoryForm({ ...categoryForm, sizeOptions: arr });
+                      }}
+                      disabled={index === 0}
+                      title="Move earlier"
+                      className="disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary px-0.5"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (index === categoryForm.sizeOptions.length - 1) return;
+                        const arr = [...categoryForm.sizeOptions];
+                        [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
+                        setCategoryForm({ ...categoryForm, sizeOptions: arr });
+                      }}
+                      disabled={index === categoryForm.sizeOptions.length - 1}
+                      title="Move later"
+                      className="disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary px-0.5"
+                    >
+                      ›
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryForm({ ...categoryForm, sizeOptions: categoryForm.sizeOptions.filter((_, i) => i !== index) })}
+                      title="Remove"
+                      className="text-gray-400 hover:text-red-500 px-0.5"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 italic">No size options added yet.</p>
+            )}
           </div>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-200">
