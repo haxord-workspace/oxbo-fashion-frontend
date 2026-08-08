@@ -129,7 +129,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
 
       {/* Product Details */}
       <div className="mt-3 flex flex-col items-start text-left">
-        <h3 className="text-[11px] sm:text-xs font-bold text-primary uppercase tracking-wider mb-1">
+        <h3 className="w-full truncate text-[11px] sm:text-xs font-bold text-primary uppercase tracking-wider mb-1">
           {product.name}
         </h3>
         <div className="flex items-center gap-2 text-[11px] sm:text-xs">
@@ -245,7 +245,7 @@ const ProductGrid: React.FC<{ filters?: any; onProductCount?: (count: number) =>
 
   return (
     <section className={`w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8 md:pb-16 ${className}`}>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-6 md:gap-x-4 md:gap-y-16">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-1.5 md:gap-x-4 md:gap-y-6">
         {isLoading 
           ? Array.from({ length: pageSize ?? 8 }).map((_, idx) => (
               <ProductSkeleton key={idx} />
