@@ -108,6 +108,20 @@ export const AdminInventory = () => {
   });
 
   const [isVariantDropdownOpen, setIsVariantDropdownOpen] = useState(false);
+  const [variantSearchQuery, setVariantSearchQuery] = useState('');
+
+  const filteredVariants = variantSearchQuery.trim()
+    ? variants.filter(v => {
+        const q = variantSearchQuery.trim().toLowerCase();
+        const haystack = [
+          v.productName,
+          v.sku,
+          v.attributes?.color,
+          v.attributes?.size
+        ].filter(Boolean).join(' ').toLowerCase();
+        return haystack.includes(q);
+      })
+    : variants;
 
   const loadOptions = async () => {
     if (stores.length === 0 || variants.length === 0) {
@@ -423,27 +437,47 @@ export const AdminInventory = () => {
             
             {isVariantDropdownOpen && !isLoadingOptions && (
               <>
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setIsVariantDropdownOpen(false)}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => {
+                    setIsVariantDropdownOpen(false);
+                    setVariantSearchQuery('');
+                  }}
                 ></div>
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                  <div 
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-72 overflow-hidden flex flex-col">
+                  <div className="p-2 border-b border-gray-200 sticky top-0 bg-white">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={variantSearchQuery}
+                      onChange={e => setVariantSearchQuery(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      placeholder="Search by product, SKU, color, size..."
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm"
+                    />
+                  </div>
+                  <div className="overflow-auto">
+                  <div
                     className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-500"
                     onClick={() => {
                       setStockForm({...stockForm, variantId: ''});
                       setIsVariantDropdownOpen(false);
+                      setVariantSearchQuery('');
                     }}
                   >
                     Select a variant
                   </div>
-                  {variants.map(v => (
+                  {filteredVariants.length === 0 && (
+                    <div className="px-3 py-4 text-sm text-gray-400 text-center">No variants match "{variantSearchQuery}"</div>
+                  )}
+                  {filteredVariants.map(v => (
                     <div 
                       key={v.id}
                       className={`px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm flex items-center gap-3 ${stockForm.variantId === v.id ? 'bg-gray-50 font-medium' : ''}`}
                       onClick={() => {
                         setStockForm({...stockForm, variantId: v.id});
                         setIsVariantDropdownOpen(false);
+                        setVariantSearchQuery('');
                       }}
                     >
                       {v.image ? (
@@ -463,6 +497,7 @@ export const AdminInventory = () => {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               </>
             )}

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppSelector } from '../../app/hooks';
 import { selectIsStoreManager, selectCurrentUser } from '../../features/auth/authSlice';
-import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Filter, ChevronDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import AdminModal from '../../components/common/AdminModal';
 import PageWrapper from '../../components/admin/PageWrapper';
@@ -152,6 +152,20 @@ export const AdminProducts = () => {
   const [existingVariants, setExistingVariants] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [sizeOptions, setSizeOptions] = useState<string[]>([]);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [categoryDropUp, setCategoryDropUp] = useState(false);
+  const categoryFieldRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isCategoryDropdownOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryFieldRef.current && !categoryFieldRef.current.contains(event.target as Node)) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isCategoryDropdownOpen]);
 
   useEffect(() => {
     const fetchSubCategories = async () => {
@@ -837,19 +851,55 @@ export const AdminProducts = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select 
-                value={productForm.categoryId} 
-                onChange={e => {
-                  setProductForm({...productForm, categoryId: e.target.value, subCategoryId: ''});
-                  if (errors.categoryId) setErrors({...errors, categoryId: undefined});
-                }} 
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 bg-white transition-colors ${errors.categoryId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`}
-              >
-                <option value="">Select Category</option>
-                {categories.map(c => (
-                  <option key={c.id || c._id} value={c.id || c._id}>{c.name}</option>
-                ))}
-              </select>
+              <div className="relative" ref={categoryFieldRef}>
+                <div
+                  onClick={() => {
+                    if (categoryFieldRef.current) {
+                      const rect = categoryFieldRef.current.getBoundingClientRect();
+                      const spaceBelow = window.innerHeight - rect.bottom;
+                      const spaceAbove = rect.top;
+                      setCategoryDropUp(spaceBelow < 260 && spaceAbove > spaceBelow);
+                    }
+                    setIsCategoryDropdownOpen(o => !o);
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 bg-white transition-colors cursor-pointer flex items-center justify-between ${errors.categoryId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`}
+                >
+                  <span className={`truncate ${!productForm.categoryId ? 'text-gray-500' : ''}`}>
+                    {categories.find(c => (c.id || c._id) === productForm.categoryId)?.name || 'Select Category'}
+                  </span>
+                  <ChevronDown size={16} className={`text-gray-400 flex-shrink-0 ml-2 transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
+                </div>
+
+                {isCategoryDropdownOpen && (
+                  <div className={`absolute left-0 right-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto ${categoryDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProductForm({...productForm, categoryId: '', subCategoryId: ''});
+                        setIsCategoryDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 truncate block"
+                    >
+                      Select Category
+                    </button>
+                    {categories.map(c => (
+                      <button
+                        key={c.id || c._id}
+                        type="button"
+                        onClick={() => {
+                          setProductForm({...productForm, categoryId: c.id || c._id, subCategoryId: ''});
+                          if (errors.categoryId) setErrors({...errors, categoryId: undefined});
+                          setIsCategoryDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 truncate block ${(c.id || c._id) === productForm.categoryId ? 'bg-primary/5 text-primary font-medium' : 'text-gray-700'}`}
+                        title={c.name}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {errors.categoryId && <p className="mt-1 text-xs text-red-500">{errors.categoryId}</p>}
             </div>
             {subCategories.length > 0 && (
