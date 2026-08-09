@@ -6,6 +6,14 @@ import { userReviewsApi } from '../../services/user/reviews.Api';
 import { productsApi } from '../../services/productsApi';
 import toast from 'react-hot-toast';
 
+// The backend keeps an order's status as "Pending" until an admin accepts or
+// rejects it, but customers shouldn't see "Pending" for a payment that already
+// succeeded - show "Ordered" instead. Every other status (including the
+// "Cancelled" the backend sets on reject) is shown as-is.
+const getCustomerFacingStatus = (status: string) => {
+  return status?.toLowerCase() === 'pending' ? 'Ordered' : status;
+};
+
 const OrderItemImage: React.FC<{ item: any }> = ({ item }) => {
   const initialImage = item.image || item.imageUrl || item.product?.image || item.product?.images?.[0] || item.productId?.thumbnail || item.productId?.image || null;
   const [imageUrl, setImageUrl] = useState<string | null>(initialImage);
@@ -279,7 +287,12 @@ const Orders: React.FC = () => {
                   <div className="flex flex-wrap gap-4 md:gap-8 text-sm">
                     <div>
                       <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Order Placed</span>
-                      <span className="block mt-1 font-medium text-gray-800">{new Date(order.date || order.createdAt).toLocaleDateString()}</span>
+                      <span className="block mt-1 font-medium text-gray-800">
+                        {new Date(order.placedDate || order.orderedAt || order.date || order.createdAt).toLocaleDateString()}
+                        {order.orderedAt && (
+                          <span className="text-gray-500 font-normal"> at {new Date(order.orderedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                        )}
+                      </span>
                     </div>
                     <div>
                       <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Total</span>
@@ -295,7 +308,7 @@ const Orders: React.FC = () => {
                             order.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
                               'bg-yellow-50 text-yellow-800 border-yellow-200'}`}
                     >
-                      {order.status}
+                      {getCustomerFacingStatus(order.status)}
                     </span>
                   </div>
                 </div>
