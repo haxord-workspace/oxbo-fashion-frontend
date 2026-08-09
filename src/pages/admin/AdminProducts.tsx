@@ -1021,7 +1021,7 @@ export const AdminProducts = () => {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">MRP (Rs.)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Discount Price  (Rs.)</label>
               <input type="number" value={productForm.mrp} onChange={e => {
                 setProductForm({...productForm, mrp: e.target.value});
                 if (errors.mrp) setErrors({...errors, mrp: undefined});
@@ -1029,7 +1029,7 @@ export const AdminProducts = () => {
               {errors.mrp && <p className="mt-1 text-xs text-red-500">{errors.mrp}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Discount Price (Rs.)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">MRP (Rs.)</label>
               <input type="number" value={productForm.price} onChange={e => {
                 setProductForm({...productForm, price: e.target.value});
                 if (errors.price) setErrors({...errors, price: undefined});
