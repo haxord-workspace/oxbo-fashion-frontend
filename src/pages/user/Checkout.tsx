@@ -6,9 +6,11 @@ import toast from 'react-hot-toast';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { fetchCart, applyCouponAsync, removeCouponAsync } from '../../features/cart/cartSlice';
 import { userOrdersApi } from '../../services/user/orders.Api';
+import { cartApi } from '../../services/user/cart.Api';
 
 import { userAddressesApi } from '../../services/user/addresses.Api';
 import type { UserAddress } from '../../types/address';
+import type { CartItem } from '../../types/cart';
 import { CustomSelect, type Option } from '../../components/common/CustomSelect';
 
 const STATE_OPTIONS: Option[] = [
@@ -290,6 +292,30 @@ const Checkout: React.FC = () => {
     }
   };
 
+  // Voids a pending order left behind by a payment attempt the user backed out of.
+  // The backend removes cart items as soon as the order is created and does not
+  // restore them on cancel, so re-add the same items via the existing cart API
+  // before resyncing from the backend.
+  const cancelPendingOrder = async (orderId: string, itemsToRestore: CartItem[]) => {
+    try {
+      await userOrdersApi.cancelOrder(orderId);
+    } catch (cancelErr) {
+      console.error('Failed to cancel pending order:', cancelErr);
+    }
+    try {
+      for (const item of itemsToRestore) {
+        const productId = item.product.id || (item.product as any)._id;
+        const payload: any = { productId, quantity: item.quantity };
+        payload.variantId = item.variantId && item.variantId !== 'default' ? item.variantId : productId;
+        await cartApi.addToCart(payload);
+      }
+    } catch (restoreErr) {
+      console.error('Failed to restore cart items after cancelled payment:', restoreErr);
+    } finally {
+      dispatch(fetchCart());
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateCardForm()) return;
@@ -304,6 +330,10 @@ const Checkout: React.FC = () => {
       return;
     }
     
+    // Snapshot the cart before checkout mutates it server-side, so a cancelled/
+    // failed payment can restore exactly what the user had.
+    const cartSnapshot = cartItems;
+
     setIsSubmitting(true);
     try {
       if (paymentMethod === 'razorpay') {
@@ -337,6 +367,7 @@ const Checkout: React.FC = () => {
         if (!rzpOrderId) {
           toast.error('Failed to initialize payment gateway.');
           setIsSubmitting(false);
+          cancelPendingOrder(myOrderId, cartSnapshot);
           return;
         }
 
@@ -356,11 +387,17 @@ const Checkout: React.FC = () => {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature
               });
-              
+
               toast.success('Payment successful!');
+              // Order is confirmed server-side now — safe to resync the cart
+              // (backend removes the purchased items).
+              dispatch(fetchCart());
               navigate('/orders');
             } catch (err: any) {
+              // Verification failing doesn't mean the payment failed - leave the
+              // order/cart alone and let the user retry rather than voiding it.
               toast.error(err.response?.data?.message || 'Payment verification failed');
+              setIsSubmitting(false);
             }
           },
           prefill: {
@@ -375,6 +412,9 @@ const Checkout: React.FC = () => {
             ondismiss: function() {
               setIsSubmitting(false);
               toast.error('Payment cancelled');
+              // Void the pending order server-side and restore the cart items
+              // the backend drained when the order was created.
+              cancelPendingOrder(myOrderId, cartSnapshot);
             }
           }
         };
@@ -383,6 +423,7 @@ const Checkout: React.FC = () => {
         rzp1.on('payment.failed', function (response: any) {
           toast.error(response.error.description);
           setIsSubmitting(false);
+          cancelPendingOrder(myOrderId, cartSnapshot);
         });
         rzp1.open();
         
@@ -752,7 +793,7 @@ const Checkout: React.FC = () => {
               </LoadingButton>
               
               <p className="text-center text-xs text-gray-500 mt-4">
-                Secure checkout powered by Stripe
+                Secure checkout powered by razorpay
               </p>
             </div>
           </div>
