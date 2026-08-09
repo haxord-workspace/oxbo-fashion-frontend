@@ -313,8 +313,15 @@ export const AdminOrders = () => {
   const handleAcceptPayment = async (orderId: string) => {
     setIsProcessingAcceptId(orderId);
     try {
-      await adminOrderApi.acceptPayment(orderId);
-      toast.success('Payment accepted and captured successfully.');
+      const response: any = await adminOrderApi.acceptPayment(orderId);
+
+      if (response && response.success === false) {
+        toast.error(response.message || 'Failed to accept payment');
+        fetchOrders();
+        return;
+      }
+
+      toast.success(response?.message || 'Payment accepted and captured successfully.');
       fetchOrders();
     } catch (error: any) {
       console.error('Failed to accept payment', error);
@@ -340,12 +347,18 @@ export const AdminOrders = () => {
     setRejectError('');
     try {
       const orderIdString = orderToReject._id || orderToReject.id;
-      
-      await adminOrderApi.rejectPayment(orderIdString, rejectReason);
-      toast.success('Payment declined. Hold will release automatically.');
-      
+
+      const response: any = await adminOrderApi.rejectPayment(orderIdString, rejectReason);
+
+      if (response && response.success === false) {
+        setRejectError(response.message || 'Failed to decline payment');
+        return;
+      }
+
+      toast.success(response?.message || 'Payment declined. Hold will release automatically.');
+
       setIsRejectModalOpen(false);
-      fetchOrders(); 
+      fetchOrders();
     } catch (error: any) {
       console.error('Failed to process reject', error);
       setRejectError(error.response?.data?.message || 'Failed to decline payment');
