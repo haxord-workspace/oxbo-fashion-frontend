@@ -14,6 +14,10 @@ const MobileBottomNav: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const isProductPage = /^\/products\/[^/]+$/.test(location.pathname);
+
+  if (isProductPage) return null;
+
   return (
     <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 px-6 pt-1.5 pb-1 flex justify-between items-center pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
       <Link to="/" className={`flex flex-col items-center px-1 ${isActive('/') ? 'text-black' : 'text-gray-500'}`}>

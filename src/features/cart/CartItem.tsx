@@ -54,9 +54,7 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
             </Link>
             <div className="text-right shrink-0">
               <p className="font-bold">Rs. {Math.round(product.price).toLocaleString('en-IN')}</p>
-              <p className="text-xs text-gray-400 line-through">
-                Rs. {Math.round(product.mrp && product.mrp > product.price ? product.mrp : product.price + 100).toLocaleString('en-IN')}
-              </p>
+
             </div>
           </div>
           {(item.selectedColor || item.selectedSize) && (

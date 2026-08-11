@@ -7,6 +7,7 @@ export interface ProductVariant {
   images?: string[];
   price?: number;
   salePrice?: number;
+  costPrice?: number; // Original/MRP price for the variant
   stock?: number;
   quantity?: number;
   sizes?: {

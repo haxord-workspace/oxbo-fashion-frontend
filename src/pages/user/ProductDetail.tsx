@@ -294,7 +294,7 @@ const ProductDetail: React.FC = () => {
         id: product.id || (product as any)._id,
         imageUrl: displayImages[0],
         price: Number(activeVariant?.salePrice || activeVariant?.price || product.price || 1499),
-        mrp: Number(activeVariant?.mrp || product.mrp)
+        mrp: Number(activeVariant?.price || product.price)
       },
       quantity,
       selectedColor,
@@ -323,7 +323,7 @@ const ProductDetail: React.FC = () => {
         id: product.id || (product as any)._id,
         imageUrl: displayImages[0],
         price: Number(activeVariant?.salePrice || activeVariant?.price || product.price || 1499),
-        mrp: Number(activeVariant?.price || product.mrp)
+        mrp: Number(activeVariant?.price || product.price)
       },
       quantity,
       selectedColor,
@@ -474,12 +474,15 @@ const ProductDetail: React.FC = () => {
               style={isZoomed ? zoomStyle : { transformOrigin: 'center center' }}
             />
             
-            {/* Offer Seal */}
-            {(product as any)?.hasActiveOffer && (product as any)?.activeOfferPercentage > 0 && (
-              <div className="absolute top-5 -left-12 w-40 bg-red-600 text-white text-xs sm:text-sm font-bold py-1.5 text-center -rotate-45 z-20 shadow-md pointer-events-none">
-                {(product as any).activeOfferPercentage}% OFF
-              </div>
-            )}
+            {/* Offer Seal — prefer per-variant discountPercentage, fall back to product-level activeOfferPercentage */}
+            {(() => {
+              const discount = (activeVariant as any)?.discountPercentage ?? (product as any)?.activeOfferPercentage ?? 0;
+              return discount > 0 ? (
+                <div className="absolute top-5 -left-12 w-40 bg-red-600 text-white text-xs sm:text-sm font-bold py-1.5 text-center -rotate-45 z-20 shadow-md pointer-events-none">
+                  {discount}% OFF
+                </div>
+              ) : null;
+            })()}
             {/* Wishlist + Share buttons */}
             <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 cursor-default opacity-100 transition-opacity">
               <div className="relative">
@@ -536,7 +539,7 @@ const ProductDetail: React.FC = () => {
           <div className="flex items-center gap-3 mb-6">
             {(() => {
               const currentPrice = Number(activeVariant?.salePrice || activeVariant?.price || product.price || 1499);
-              const originalPrice = Number(activeVariant?.price || product.mrp || 0);
+              const originalPrice = Number(activeVariant?.costPrice || product.price || 0);
               return (
                 <>
                   <span className="text-xl text-[#e35a39]">Rs. {currentPrice.toLocaleString('en-IN')}.00</span>
@@ -551,31 +554,30 @@ const ProductDetail: React.FC = () => {
 
           {/* Color Selection */}
           {uniqueColors.length > 0 && (
-            <div className="mb-6">
-              <span className="text-sm block mb-3">Selected Color: <span className="font-semibold">{selectedColor}</span></span>
-              <div className="flex flex-wrap gap-3">
+            <div className="mb-5">
+              <span className="text-sm block mb-2">Selected Color: <span className="font-semibold">{selectedColor}</span></span>
+              <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {uniqueColors.map((colorStr, idx) => {
                   const variant = product?.variants?.find((v: any) => getVariantColor(v) === colorStr);
                   const imageUrl = variant?.images?.[0] || (product as any)?.thumbnail || (product as any)?.imageUrl || '/placeholder.png';
-                  
+                  const isSelected = selectedColor === colorStr;
                   return (
                     <button
                       key={colorStr || idx}
                       onClick={() => setSelectedColor(colorStr)}
-                      className={`w-16 h-20 rounded-xl border-2 transition-all p-[2px] ${
-                        selectedColor === colorStr
-                          ? 'border-black'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
                       title={colorStr}
+                      className="shrink-0 flex flex-col items-center gap-1 focus:outline-none"
                     >
-                      <div className="w-full h-full rounded-lg overflow-hidden bg-gray-100">
-                        <img 
-                          src={imageUrl} 
-                          alt={colorStr} 
-                          className="w-full h-full object-cover"
-                        />
+                      <div className={`w-[62px] h-[62px] rounded-lg overflow-hidden bg-gray-100 transition-all ${
+                        isSelected
+                          ? 'ring-2 ring-offset-1 ring-black'
+                          : 'ring-1 ring-gray-200 hover:ring-gray-400'
+                      }`}>
+                        <img src={imageUrl} alt={colorStr} className="w-full h-full object-cover" />
                       </div>
+                      <span className={`text-[10px] leading-tight max-w-[62px] truncate text-center ${
+                        isSelected ? 'font-semibold text-black' : 'text-gray-500'
+                      }`}>{colorStr}</span>
                     </button>
                   );
                 })}
@@ -583,14 +585,14 @@ const ProductDetail: React.FC = () => {
             </div>
           )}
 
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm">Size: <span className="font-semibold">{selectedSize}</span></span>
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-sm font-semibold">Select Size</span>
               <button 
-                className="text-sm underline flex items-center gap-1 hover:text-primary transition-colors"
+                className="text-xs text-primary underline underline-offset-2 flex items-center gap-1 hover:opacity-70 transition-opacity"
                 onClick={() => setIsSizeChartOpen(true)}
               >
-                <span className="w-4 h-4 inline-block bg-primary text-white text-[10px] text-center leading-4">📏</span> Size Chart
+                Size Chart
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -604,17 +606,18 @@ const ProductDetail: React.FC = () => {
                       key={size}
                       onClick={() => !isOutOfStock && setSelectedSize(size)}
                       disabled={isOutOfStock}
-                      className={`relative min-w-[3rem] px-2 h-10 border text-sm transition-colors overflow-hidden ${selectedSize === size
-                          ? 'bg-primary text-white border-primary'
+                      className={`relative min-w-[3rem] px-3 h-10 rounded-full border text-sm font-medium transition-all overflow-hidden ${
+                        selectedSize === size
+                          ? 'bg-primary text-white border-primary shadow-sm'
                           : isOutOfStock
-                            ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                            : 'bg-white text-primary border-gray-300 hover:border-primary'
-                        }`}
+                            ? 'bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-gray-600 hover:text-gray-900'
+                      }`}
                     >
                       {size}
                       {isOutOfStock && (
                         <div className="absolute inset-0 w-full h-full pointer-events-none">
-                          <div className="absolute top-1/2 left-[-10%] w-[120%] h-px bg-gray-300 transform -translate-y-1/2 -rotate-45" />
+                          <div className="absolute top-1/2 left-[-10%] w-[120%] h-px bg-gray-200 transform -translate-y-1/2 -rotate-45" />
                         </div>
                       )}
                     </button>
@@ -631,48 +634,59 @@ const ProductDetail: React.FC = () => {
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 mb-8">
-            <div className="flex border border-gray-300 w-32 shrink-0">
+          {/* Quantity — hidden on mobile (sticky bar handles it) */}
+          <div className="hidden sm:flex items-center gap-3 mb-4">
+            <span className="text-sm text-gray-500">Qty:</span>
+            <div className="flex items-center border border-gray-300 rounded-full overflow-hidden">
               <button
-                className="w-10  flex items-center justify-center hover:bg-gray-100 transition-colors"
+                className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-600"
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
               >
-                <Minus size={16} />
+                <Minus size={14} />
               </button>
               <input
                 type="number"
                 value={quantity}
                 readOnly
-                className="w-full text-center focus:outline-none"
+                className="w-10 text-center focus:outline-none text-sm font-medium bg-transparent"
               />
               <button
-                className="w-10 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-600"
                 onClick={() => setQuantity(quantity + 1)}
               >
-                <Plus size={16} />
+                <Plus size={14} />
               </button>
             </div>
+          </div>
 
+          {/* Add to Cart + Buy Now — hidden on mobile (sticky bar handles it) */}
+          <div className="hidden sm:flex gap-3 mb-10">
             <button
               onClick={handleAddToCart}
               disabled={isVariantOutOfStock}
-              className={`flex-1 rounded-xl font-medium text-base py-4 px-6 transition-colors ${
-                isVariantOutOfStock ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-primary text-white hover:bg-gray-800'
+              className={`flex-1 rounded-xl border-2 font-semibold text-sm py-4 transition-all ${
+                isVariantOutOfStock
+                  ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                  : 'border-primary text-primary hover:bg-primary hover:text-white'
               }`}
             >
-              {isVariantOutOfStock ? 'Out of Stock' : `Add to Cart - Rs. ${(Number(activeVariant?.salePrice || activeVariant?.price || product.price || 0) * quantity).toLocaleString('en-IN')}.00`}
+              {isVariantOutOfStock ? 'Out of Stock' : 'Add to cart'}
+            </button>
+            <button
+              onClick={handleBuyNow}
+              disabled={isVariantOutOfStock}
+              className={`flex-1 rounded-xl font-semibold text-sm py-4 transition-all ${
+                isVariantOutOfStock
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-[#f5a623] text-white hover:bg-[#e09510] shadow-sm'
+              }`}
+            >
+              {isVariantOutOfStock
+                ? 'Out of Stock'
+                : `Buy Now · Rs. ${(Number(activeVariant?.salePrice || activeVariant?.price || product.price || 0) * quantity).toLocaleString('en-IN')}`
+              }
             </button>
           </div>
-
-          <button 
-            onClick={handleBuyNow}
-            disabled={isVariantOutOfStock}
-            className={`w-full border rounded-xl py-4 font-medium mb-10 transition-colors ${
-              isVariantOutOfStock ? 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-primary hover:bg-gray-50'
-            }`}
-          >
-            {isVariantOutOfStock ? 'Out of Stock' : 'Buy it now'}
-          </button>
 
           {/* Accordions */}
           <div className="border-t border-gray-200">
@@ -835,6 +849,34 @@ const ProductDetail: React.FC = () => {
               : 'tops'
         }
       />
+      {/* Mobile sticky bottom CTA — replaces the bottom nav on this page */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 pb-safe flex gap-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)]">
+        <button
+          onClick={handleAddToCart}
+          disabled={isVariantOutOfStock}
+          className={`flex-1 rounded-xl border-2 font-semibold text-sm py-3.5 transition-all ${
+            isVariantOutOfStock
+              ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+              : 'border-primary text-primary hover:bg-primary hover:text-white'
+          }`}
+        >
+          {isVariantOutOfStock ? 'Out of Stock' : 'Add to cart'}
+        </button>
+        <button
+          onClick={handleBuyNow}
+          disabled={isVariantOutOfStock}
+          className={`flex-1 rounded-xl font-semibold text-sm py-3.5 transition-all ${
+            isVariantOutOfStock
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-[#f5a623] text-white hover:bg-[#e09510] shadow-sm'
+          }`}
+        >
+          {isVariantOutOfStock
+            ? 'Out of Stock'
+            : `Buy Now · Rs. ${(Number(activeVariant?.salePrice || activeVariant?.price || product.price || 0) * quantity).toLocaleString('en-IN')}`
+          }
+        </button>
+      </div>
     </div>
   );
 };
