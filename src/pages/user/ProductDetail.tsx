@@ -294,7 +294,7 @@ const ProductDetail: React.FC = () => {
         id: product.id || (product as any)._id,
         imageUrl: displayImages[0],
         price: Number(activeVariant?.salePrice || activeVariant?.price || product.price || 1499),
-        mrp: Number(activeVariant?.price || product.mrp)
+        mrp: Number(activeVariant?.mrp || product.mrp)
       },
       quantity,
       selectedColor,
@@ -534,10 +534,18 @@ const ProductDetail: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-bold uppercase tracking-wide mb-4 break-words pr-12">{product.name}</h1>
 
           <div className="flex items-center gap-3 mb-6">
-            <span className="text-xl text-[#e35a39]">Rs. {Number(activeVariant?.salePrice || activeVariant?.price || product.price || 1499).toLocaleString('en-IN')}.00</span>
-            {((activeVariant?.price && activeVariant?.salePrice) || (product.mrp && product.mrp > product.price) || (!product.price && !activeVariant?.price)) && (
-              <span className="text-sm text-gray-500 line-through">Rs. {Number(activeVariant?.price || product.mrp || 1999).toLocaleString('en-IN')}.00</span>
-            )}
+            {(() => {
+              const currentPrice = Number(activeVariant?.salePrice || activeVariant?.price || product.price || 1499);
+              const originalPrice = Number(activeVariant?.price || product.mrp || 0);
+              return (
+                <>
+                  <span className="text-xl text-[#e35a39]">Rs. {currentPrice.toLocaleString('en-IN')}.00</span>
+                  {originalPrice > currentPrice && (
+                    <span className="text-sm text-gray-500 line-through">Rs. {originalPrice.toLocaleString('en-IN')}.00</span>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
 
