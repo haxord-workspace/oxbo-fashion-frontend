@@ -148,10 +148,10 @@ const ProductCard: React.FC<{ product: Product; selectedColor?: string }> = ({ p
           {product.name}
         </h3>
         <div className="flex items-center gap-2 text-[11px] sm:text-xs">
-          <span className="text-[#e35a39]">Rs. {(product.price || 1499).toLocaleString('en-IN')}.00</span>
-          {(product.mrp || 1999) > (product.price || 1499) && (
+          <span className="text-[#e35a39]">Rs. {(product.price ?? 0).toLocaleString('en-IN')}.00</span>
+          {product.mrp && product.mrp > (product.price ?? 0) && (
             <span className="text-gray-500 line-through">
-              Rs. {(product.mrp || 1999).toLocaleString('en-IN')}.00
+              Rs. {product.mrp.toLocaleString('en-IN')}.00
             </span>
           )}
         </div>
