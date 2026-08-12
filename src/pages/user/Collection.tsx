@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { Filter, X, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import InfiniteProductGrid from '../../components/layout/InfiniteProductGrid';
-import BannerDisplay from '../../components/layout/BannerDisplay';
 import api from '../../services/api';
 
 const Collection: React.FC = () => {
@@ -93,7 +92,7 @@ const Collection: React.FC = () => {
 
   return (
     <div className="flex-1 bg-white min-h-screen">
-      <BannerDisplay position="Category Top" />
+   
       <div className="max-w-[1920px] mx-auto px-4 md:px-8 pt-0 pb-8 md:pt-4 md:pb-12">
        
         <div className="flex flex-col lg:flex-row gap-8">
