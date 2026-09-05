@@ -299,12 +299,23 @@ export const AdminInventory = () => {
                     </td>
                     <td className="py-4 px-4 font-medium text-gray-900">{item.storeId?.name || item.storeId}</td>
                     <td className="py-4 px-4">
-                      <div className="font-medium text-gray-900">{item.variantId?.sku}</div>
-                      {item.variantId?.attributes && (
-                        <div className="text-xs text-gray-500">
-                          {item.variantId.attributes.color} / {item.variantId.attributes.size}
+                      <div className="flex items-center gap-3">
+                        {item.variantId?.images && item.variantId.images.length > 0 ? (
+                          <img src={item.variantId.images[0]} alt={item.variantId?.sku || 'Product'} className="w-10 h-10 rounded-md object-cover border border-gray-200 shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs shrink-0">
+                            -
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium text-gray-900">{item.variantId?.sku}</div>
+                          {item.variantId?.attributes && (
+                            <div className="text-xs text-gray-500">
+                              {item.variantId.attributes.color} / {item.variantId.attributes.size}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium 
