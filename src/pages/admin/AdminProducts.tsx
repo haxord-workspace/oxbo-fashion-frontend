@@ -413,14 +413,22 @@ export const AdminProducts = () => {
         }
 
         const gallery = productForm.images.slice(1);
+        let hasExisting = false;
         if (gallery.length > 0) {
           gallery.forEach(img => {
             if (img.file) {
               formData.append('gallery', img.file);
             } else if (img.url && !img.url.startsWith('blob:')) {
               formData.append('existingGallery', img.url);
+              hasExisting = true;
             }
           });
+        }
+
+        // If we are editing and no existing gallery images are kept, tell the backend to clear it
+        if (!hasExisting && modalMode === 'edit') {
+          formData.append('existingGallery', ''); 
+          formData.append('clearGallery', 'true');
         }
       }
       
@@ -807,9 +815,11 @@ export const AdminProducts = () => {
                       <button 
                         type="button"
                         onClick={() => {
-                          const newImages = [...productForm.images];
-                          newImages.splice(idx, 1);
-                          setProductForm({...productForm, images: newImages});
+                          setProductForm(prev => {
+                            const newImages = [...prev.images];
+                            newImages.splice(idx, 1);
+                            return { ...prev, images: newImages };
+                          });
                         }}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                       >
@@ -828,11 +838,11 @@ export const AdminProducts = () => {
                     url: URL.createObjectURL(file),
                     file: file
                   }));
-                  setProductForm({
-                    ...productForm,
-                    images: [...productForm.images, ...newImages]
-                  });
-                  if (errors.image) setErrors({ ...errors, image: undefined });
+                  setProductForm(prev => ({
+                    ...prev,
+                    images: [...prev.images, ...newImages]
+                  }));
+                  if (errors.image) setErrors(prev => ({ ...prev, image: undefined }));
                 }
                 e.target.value = ''; 
               }} className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 transition-colors ${errors.image ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'} text-sm`} />
