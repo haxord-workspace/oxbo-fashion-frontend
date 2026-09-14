@@ -106,7 +106,7 @@ export const AdminProducts = () => {
     shortDescription: string;
     categoryId: string;
     subCategoryId: string;
-    subSubCategoryId: string;
+    nestedSubCategoryId: string;
     brandId: string;
     mrp: string;
     price: string;
@@ -124,7 +124,7 @@ export const AdminProducts = () => {
     shortDescription: '',
     categoryId: '',
     subCategoryId: '',
-    subSubCategoryId: '',
+    nestedSubCategoryId: '',
     brandId: '',
     mrp: '',
     price: '',
@@ -153,7 +153,7 @@ export const AdminProducts = () => {
   const [isFetchingVariants, setIsFetchingVariants] = useState(false);
   const [existingVariants, setExistingVariants] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
-  const [subSubCategories, setSubSubCategories] = useState<any[]>([]);
+  const [nestedSubCategories, setSubSubCategories] = useState<any[]>([]);
   const [sizeOptions, setSizeOptions] = useState<string[]>([]);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [categoryDropUp, setCategoryDropUp] = useState(false);
@@ -161,8 +161,8 @@ export const AdminProducts = () => {
   const [isSubCategoryDropdownOpen, setIsSubCategoryDropdownOpen] = useState(false);
   const [subCategoryDropUp, setSubCategoryDropUp] = useState(false);
   const subCategoryFieldRef = useRef<HTMLDivElement>(null);
-  const [isSubSubCategoryDropdownOpen, setIsSubSubCategoryDropdownOpen] = useState(false);
-  const [subSubCategoryDropUp, setSubSubCategoryDropUp] = useState(false);
+  const [isNestedSubCategoryDropdownOpen, setIsNestedSubCategoryDropdownOpen] = useState(false);
+  const [subSubCategoryDropUp, setNestedSubCategoryDropUp] = useState(false);
   const subSubCategoryFieldRef = useRef<HTMLDivElement>(null);
   const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
   const [brandDropUp, setBrandDropUp] = useState(false);
@@ -191,15 +191,15 @@ export const AdminProducts = () => {
   }, [isSubCategoryDropdownOpen]);
 
   useEffect(() => {
-    if (!isSubSubCategoryDropdownOpen) return;
+    if (!isNestedSubCategoryDropdownOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (subSubCategoryFieldRef.current && !subSubCategoryFieldRef.current.contains(event.target as Node)) {
-        setIsSubSubCategoryDropdownOpen(false);
+        setIsNestedSubCategoryDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isSubSubCategoryDropdownOpen]);
+  }, [isNestedSubCategoryDropdownOpen]);
 
   useEffect(() => {
     if (!isBrandDropdownOpen) return;
@@ -258,8 +258,8 @@ export const AdminProducts = () => {
 
     const deriveFromLocalCategories = () => {
       let opts: string[] = [];
-      if (productForm.subSubCategoryId) {
-        opts = subSubCategories.find(sc => (sc.id || sc._id) === productForm.subSubCategoryId)?.sizeOptions || [];
+      if (productForm.nestedSubCategoryId) {
+        opts = nestedSubCategories.find(sc => (sc.id || sc._id) === productForm.nestedSubCategoryId)?.sizeOptions || [];
       }
       if (opts.length === 0 && productForm.subCategoryId) {
         opts = subCategories.find(sc => (sc.id || sc._id) === productForm.subCategoryId)?.sizeOptions || [];
@@ -278,7 +278,7 @@ export const AdminProducts = () => {
     } else {
       deriveFromLocalCategories();
     }
-  }, [isModalOpen, modalMode, selectedProduct, productForm.categoryId, productForm.subCategoryId, productForm.subSubCategoryId, categories, subCategories, subSubCategories]);
+  }, [isModalOpen, modalMode, selectedProduct, productForm.categoryId, productForm.subCategoryId, productForm.nestedSubCategoryId, categories, subCategories, nestedSubCategories]);
 
   const handleRemoveVariantBlock = async (index: number) => {
     const variantToRemove = variants[index];
@@ -382,7 +382,7 @@ export const AdminProducts = () => {
         shortDescription: product.shortDescription || '',
         categoryId: product.categoryId?._id || product.categoryId || '',
         subCategoryId: product.subCategoryId?._id || product.subCategoryId || '',
-        subSubCategoryId: product.subSubCategoryId?._id || product.subSubCategoryId || '',
+        nestedSubCategoryId: product.nestedSubCategoryId?._id || product.nestedSubCategoryId || '',
         brandId: product.brandId?._id || product.brandId || '',
         mrp: initialMrp,
         price: initialPrice,
@@ -410,7 +410,7 @@ export const AdminProducts = () => {
         shortDescription: '',
         categoryId: categories.length > 0 ? (categories[0].id || categories[0]._id) : '',
         subCategoryId: '',
-        subSubCategoryId: '',
+        nestedSubCategoryId: '',
         brandId: brands.length > 0 ? (brands[0].id || brands[0]._id) : '',
         mrp: '',
         price: '',
@@ -458,8 +458,8 @@ export const AdminProducts = () => {
       if (productForm.subCategoryId) {
         formData.append('subCategoryId', productForm.subCategoryId);
       }
-      if (productForm.subSubCategoryId) {
-        formData.append('subSubCategoryId', productForm.subSubCategoryId);
+      if (productForm.nestedSubCategoryId) {
+        formData.append('nestedSubCategoryId', productForm.nestedSubCategoryId);
       }
       formData.append('brandId', productForm.brandId);
       formData.append('status', productForm.status);
@@ -1010,7 +1010,7 @@ export const AdminProducts = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          setProductForm({...productForm, subCategoryId: '', subSubCategoryId: ''});
+                          setProductForm({...productForm, subCategoryId: '', nestedSubCategoryId: ''});
                           setIsSubCategoryDropdownOpen(false);
                         }}
                         className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 truncate block"
@@ -1022,7 +1022,7 @@ export const AdminProducts = () => {
                           key={sc.id || sc._id}
                           type="button"
                           onClick={() => {
-                            setProductForm({...productForm, subCategoryId: sc.id || sc._id, subSubCategoryId: ''});
+                            setProductForm({...productForm, subCategoryId: sc.id || sc._id, nestedSubCategoryId: ''});
                             setIsSubCategoryDropdownOpen(false);
                           }}
                           className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 truncate block ${(sc.id || sc._id) === productForm.subCategoryId ? 'bg-primary/5 text-primary font-medium' : 'text-gray-700'}`}
@@ -1036,7 +1036,7 @@ export const AdminProducts = () => {
                 </div>
               </div>
             )}
-            {subSubCategories.length > 0 && (
+            {nestedSubCategories.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nested Subcategory</label>
                 <div className="relative" ref={subSubCategoryFieldRef}>
@@ -1046,39 +1046,39 @@ export const AdminProducts = () => {
                         const rect = subSubCategoryFieldRef.current.getBoundingClientRect();
                         const spaceBelow = window.innerHeight - rect.bottom;
                         const spaceAbove = rect.top;
-                        setSubSubCategoryDropUp(spaceBelow < 260 && spaceAbove > spaceBelow);
+                        setNestedSubCategoryDropUp(spaceBelow < 260 && spaceAbove > spaceBelow);
                       }
-                      setIsSubSubCategoryDropdownOpen(o => !o);
+                      setIsNestedSubCategoryDropdownOpen(o => !o);
                     }}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 bg-white transition-colors cursor-pointer flex items-center justify-between border-gray-300 focus:border-primary focus:ring-primary`}
                   >
-                    <span className={`truncate ${!productForm.subSubCategoryId ? 'text-gray-500' : ''}`}>
-                      {subSubCategories.find(ssc => (ssc.id || ssc._id) === productForm.subSubCategoryId)?.name || 'Select Nested Category'}
+                    <span className={`truncate ${!productForm.nestedSubCategoryId ? 'text-gray-500' : ''}`}>
+                      {nestedSubCategories.find(ssc => (ssc.id || ssc._id) === productForm.nestedSubCategoryId)?.name || 'Select Nested Category'}
                     </span>
-                    <ChevronDown size={16} className={`text-gray-400 flex-shrink-0 ml-2 transition-transform ${isSubSubCategoryDropdownOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={16} className={`text-gray-400 flex-shrink-0 ml-2 transition-transform ${isNestedSubCategoryDropdownOpen ? 'rotate-180' : ''}`} />
                   </div>
 
-                  {isSubSubCategoryDropdownOpen && (
+                  {isNestedSubCategoryDropdownOpen && (
                     <div className={`absolute left-0 right-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto ${subSubCategoryDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
                       <button
                         type="button"
                         onClick={() => {
-                          setProductForm({...productForm, subSubCategoryId: ''});
-                          setIsSubSubCategoryDropdownOpen(false);
+                          setProductForm({...productForm, nestedSubCategoryId: ''});
+                          setIsNestedSubCategoryDropdownOpen(false);
                         }}
                         className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 truncate block"
                       >
                         Select Nested Category
                       </button>
-                      {subSubCategories.map(ssc => (
+                      {nestedSubCategories.map(ssc => (
                         <button
                           key={ssc.id || ssc._id}
                           type="button"
                           onClick={() => {
-                            setProductForm({...productForm, subSubCategoryId: ssc.id || ssc._id});
-                            setIsSubSubCategoryDropdownOpen(false);
+                            setProductForm({...productForm, nestedSubCategoryId: ssc.id || ssc._id});
+                            setIsNestedSubCategoryDropdownOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 truncate block ${(ssc.id || ssc._id) === productForm.subSubCategoryId ? 'bg-primary/5 text-primary font-medium' : 'text-gray-700'}`}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 truncate block ${(ssc.id || ssc._id) === productForm.nestedSubCategoryId ? 'bg-primary/5 text-primary font-medium' : 'text-gray-700'}`}
                           title={ssc.name}
                         >
                           {ssc.name}

@@ -89,6 +89,18 @@ const Collection: React.FC = () => {
 
   const currentFilters = useMemo(() => {
     let filters: any = {};
+
+    const findCategoryDepth = (cats: any[], id: string, depth = 0): number | null => {
+      for (const cat of cats) {
+        if ((cat._id === id) || (cat.id === id)) return depth;
+        if (cat.children && cat.children.length > 0) {
+          const childDepth = findCategoryDepth(cat.children, id, depth + 1);
+          if (childDepth !== null) return childDepth;
+        }
+      }
+      return null;
+    };
+
     if (categoryId === 'flash-sale') {
       filters = { flashSale: true };
     } else if (categoryId === 'new-drops') {
@@ -109,7 +121,16 @@ const Collection: React.FC = () => {
     }
 
     if (searchQuery) filters.search = searchQuery;
-    if (selectedCategory) filters.category = selectedCategory;
+    if (selectedCategory) {
+      const depth = findCategoryDepth(categories, selectedCategory);
+      if (depth === 1) {
+        filters.subCategory = selectedCategory;
+      } else if (depth === 2) {
+        filters.nestedSubCategory = selectedCategory;
+      } else {
+        filters.category = selectedCategory;
+      }
+    }
     if (selectedBrand) filters.brand = selectedBrand;
     if (maxPrice < 5000) filters.maxPrice = maxPrice;
     if (selectedColor) filters.color = selectedColor;
