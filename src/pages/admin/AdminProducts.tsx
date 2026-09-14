@@ -106,6 +106,7 @@ export const AdminProducts = () => {
     shortDescription: string;
     categoryId: string;
     subCategoryId: string;
+    nestedSubCategoryId: string;
     brandId: string;
     mrp: string;
     price: string;
@@ -123,6 +124,7 @@ export const AdminProducts = () => {
     shortDescription: '',
     categoryId: '',
     subCategoryId: '',
+    nestedSubCategoryId: '',
     brandId: '',
     mrp: '',
     price: '',
@@ -151,10 +153,20 @@ export const AdminProducts = () => {
   const [isFetchingVariants, setIsFetchingVariants] = useState(false);
   const [existingVariants, setExistingVariants] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
+  const [nestedSubCategories, setSubSubCategories] = useState<any[]>([]);
   const [sizeOptions, setSizeOptions] = useState<string[]>([]);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [categoryDropUp, setCategoryDropUp] = useState(false);
   const categoryFieldRef = useRef<HTMLDivElement>(null);
+  const [isSubCategoryDropdownOpen, setIsSubCategoryDropdownOpen] = useState(false);
+  const [subCategoryDropUp, setSubCategoryDropUp] = useState(false);
+  const subCategoryFieldRef = useRef<HTMLDivElement>(null);
+  const [isNestedSubCategoryDropdownOpen, setIsNestedSubCategoryDropdownOpen] = useState(false);
+  const [subSubCategoryDropUp, setNestedSubCategoryDropUp] = useState(false);
+  const subSubCategoryFieldRef = useRef<HTMLDivElement>(null);
+  const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
+  const [brandDropUp, setBrandDropUp] = useState(false);
+  const brandFieldRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isCategoryDropdownOpen) return;
@@ -166,6 +178,39 @@ export const AdminProducts = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isCategoryDropdownOpen]);
+
+  useEffect(() => {
+    if (!isSubCategoryDropdownOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (subCategoryFieldRef.current && !subCategoryFieldRef.current.contains(event.target as Node)) {
+        setIsSubCategoryDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isSubCategoryDropdownOpen]);
+
+  useEffect(() => {
+    if (!isNestedSubCategoryDropdownOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (subSubCategoryFieldRef.current && !subSubCategoryFieldRef.current.contains(event.target as Node)) {
+        setIsNestedSubCategoryDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isNestedSubCategoryDropdownOpen]);
+
+  useEffect(() => {
+    if (!isBrandDropdownOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (brandFieldRef.current && !brandFieldRef.current.contains(event.target as Node)) {
+        setIsBrandDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isBrandDropdownOpen]);
 
   useEffect(() => {
     const fetchSubCategories = async () => {
@@ -185,6 +230,24 @@ export const AdminProducts = () => {
     fetchSubCategories();
   }, [productForm.categoryId]);
 
+  useEffect(() => {
+    const fetchSubSubCategories = async () => {
+      if (!productForm.subCategoryId) {
+        setSubSubCategories([]);
+        return;
+      }
+      try {
+        const res = await adminCategoriesApi.getCategoryChildren(productForm.subCategoryId);
+        setSubSubCategories(res.categories || []);
+      } catch (error) {
+        console.error("Failed to fetch sub-subcategories", error);
+        setSubSubCategories([]);
+      }
+    };
+    
+    fetchSubSubCategories();
+  }, [productForm.subCategoryId]);
+
   // Suggested sizes for the "Size Inventory" quick-pick chips.
   // Prefer the authoritative /products/:id/size-options endpoint (handles the
   // sub-category-overrides-category rule server-side) when editing an existing
@@ -195,7 +258,10 @@ export const AdminProducts = () => {
 
     const deriveFromLocalCategories = () => {
       let opts: string[] = [];
-      if (productForm.subCategoryId) {
+      if (productForm.nestedSubCategoryId) {
+        opts = nestedSubCategories.find(sc => (sc.id || sc._id) === productForm.nestedSubCategoryId)?.sizeOptions || [];
+      }
+      if (opts.length === 0 && productForm.subCategoryId) {
         opts = subCategories.find(sc => (sc.id || sc._id) === productForm.subCategoryId)?.sizeOptions || [];
       }
       if (opts.length === 0 && productForm.categoryId) {
@@ -212,7 +278,7 @@ export const AdminProducts = () => {
     } else {
       deriveFromLocalCategories();
     }
-  }, [isModalOpen, modalMode, selectedProduct, productForm.categoryId, productForm.subCategoryId, categories, subCategories]);
+  }, [isModalOpen, modalMode, selectedProduct, productForm.categoryId, productForm.subCategoryId, productForm.nestedSubCategoryId, categories, subCategories, nestedSubCategories]);
 
   const handleRemoveVariantBlock = async (index: number) => {
     const variantToRemove = variants[index];
@@ -316,6 +382,7 @@ export const AdminProducts = () => {
         shortDescription: product.shortDescription || '',
         categoryId: product.categoryId?._id || product.categoryId || '',
         subCategoryId: product.subCategoryId?._id || product.subCategoryId || '',
+        nestedSubCategoryId: product.nestedSubCategoryId?._id || product.nestedSubCategoryId || '',
         brandId: product.brandId?._id || product.brandId || '',
         mrp: initialMrp,
         price: initialPrice,
@@ -343,6 +410,7 @@ export const AdminProducts = () => {
         shortDescription: '',
         categoryId: categories.length > 0 ? (categories[0].id || categories[0]._id) : '',
         subCategoryId: '',
+        nestedSubCategoryId: '',
         brandId: brands.length > 0 ? (brands[0].id || brands[0]._id) : '',
         mrp: '',
         price: '',
@@ -389,6 +457,9 @@ export const AdminProducts = () => {
       formData.append('categoryId', productForm.categoryId);
       if (productForm.subCategoryId) {
         formData.append('subCategoryId', productForm.subCategoryId);
+      }
+      if (productForm.nestedSubCategoryId) {
+        formData.append('nestedSubCategoryId', productForm.nestedSubCategoryId);
       }
       formData.append('brandId', productForm.brandId);
       formData.append('status', productForm.status);
@@ -915,33 +986,160 @@ export const AdminProducts = () => {
             {subCategories.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
-                <select 
-                  value={productForm.subCategoryId} 
-                  onChange={e => setProductForm({...productForm, subCategoryId: e.target.value})} 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white"
-                >
-                  <option value="">Select Subcategory</option>
-                  {subCategories.map(sc => (
-                    <option key={sc.id || sc._id} value={sc.id || sc._id}>{sc.name}</option>
-                  ))}
-                </select>
+                <div className="relative" ref={subCategoryFieldRef}>
+                  <div
+                    onClick={() => {
+                      if (subCategoryFieldRef.current) {
+                        const rect = subCategoryFieldRef.current.getBoundingClientRect();
+                        const spaceBelow = window.innerHeight - rect.bottom;
+                        const spaceAbove = rect.top;
+                        setSubCategoryDropUp(spaceBelow < 260 && spaceAbove > spaceBelow);
+                      }
+                      setIsSubCategoryDropdownOpen(o => !o);
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 bg-white transition-colors cursor-pointer flex items-center justify-between border-gray-300 focus:border-primary focus:ring-primary`}
+                  >
+                    <span className={`truncate ${!productForm.subCategoryId ? 'text-gray-500' : ''}`}>
+                      {subCategories.find(sc => (sc.id || sc._id) === productForm.subCategoryId)?.name || 'Select Subcategory'}
+                    </span>
+                    <ChevronDown size={16} className={`text-gray-400 flex-shrink-0 ml-2 transition-transform ${isSubCategoryDropdownOpen ? 'rotate-180' : ''}`} />
+                  </div>
+
+                  {isSubCategoryDropdownOpen && (
+                    <div className={`absolute left-0 right-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto ${subCategoryDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProductForm({...productForm, subCategoryId: '', nestedSubCategoryId: ''});
+                          setIsSubCategoryDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 truncate block"
+                      >
+                        Select Subcategory
+                      </button>
+                      {subCategories.map(sc => (
+                        <button
+                          key={sc.id || sc._id}
+                          type="button"
+                          onClick={() => {
+                            setProductForm({...productForm, subCategoryId: sc.id || sc._id, nestedSubCategoryId: ''});
+                            setIsSubCategoryDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 truncate block ${(sc.id || sc._id) === productForm.subCategoryId ? 'bg-primary/5 text-primary font-medium' : 'text-gray-700'}`}
+                          title={sc.name}
+                        >
+                          {sc.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {nestedSubCategories.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nested Subcategory</label>
+                <div className="relative" ref={subSubCategoryFieldRef}>
+                  <div
+                    onClick={() => {
+                      if (subSubCategoryFieldRef.current) {
+                        const rect = subSubCategoryFieldRef.current.getBoundingClientRect();
+                        const spaceBelow = window.innerHeight - rect.bottom;
+                        const spaceAbove = rect.top;
+                        setNestedSubCategoryDropUp(spaceBelow < 260 && spaceAbove > spaceBelow);
+                      }
+                      setIsNestedSubCategoryDropdownOpen(o => !o);
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 bg-white transition-colors cursor-pointer flex items-center justify-between border-gray-300 focus:border-primary focus:ring-primary`}
+                  >
+                    <span className={`truncate ${!productForm.nestedSubCategoryId ? 'text-gray-500' : ''}`}>
+                      {nestedSubCategories.find(ssc => (ssc.id || ssc._id) === productForm.nestedSubCategoryId)?.name || 'Select Nested Category'}
+                    </span>
+                    <ChevronDown size={16} className={`text-gray-400 flex-shrink-0 ml-2 transition-transform ${isNestedSubCategoryDropdownOpen ? 'rotate-180' : ''}`} />
+                  </div>
+
+                  {isNestedSubCategoryDropdownOpen && (
+                    <div className={`absolute left-0 right-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto ${subSubCategoryDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProductForm({...productForm, nestedSubCategoryId: ''});
+                          setIsNestedSubCategoryDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 truncate block"
+                      >
+                        Select Nested Category
+                      </button>
+                      {nestedSubCategories.map(ssc => (
+                        <button
+                          key={ssc.id || ssc._id}
+                          type="button"
+                          onClick={() => {
+                            setProductForm({...productForm, nestedSubCategoryId: ssc.id || ssc._id});
+                            setIsNestedSubCategoryDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 truncate block ${(ssc.id || ssc._id) === productForm.nestedSubCategoryId ? 'bg-primary/5 text-primary font-medium' : 'text-gray-700'}`}
+                          title={ssc.name}
+                        >
+                          {ssc.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-              <select 
-                value={productForm.brandId} 
-                onChange={e => {
-                  setProductForm({...productForm, brandId: e.target.value});
-                  if (errors.brandId) setErrors({...errors, brandId: undefined});
-                }} 
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 bg-white transition-colors ${errors.brandId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`}
-              >
-                <option value="">Select Brand</option>
-                {brands.map(b => (
-                  <option key={b.id || b._id} value={b.id || b._id}>{b.name}</option>
-                ))}
-              </select>
+              <div className="relative" ref={brandFieldRef}>
+                <div
+                  onClick={() => {
+                    if (brandFieldRef.current) {
+                      const rect = brandFieldRef.current.getBoundingClientRect();
+                      const spaceBelow = window.innerHeight - rect.bottom;
+                      const spaceAbove = rect.top;
+                      setBrandDropUp(spaceBelow < 260 && spaceAbove > spaceBelow);
+                    }
+                    setIsBrandDropdownOpen(o => !o);
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 bg-white transition-colors cursor-pointer flex items-center justify-between ${errors.brandId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary'}`}
+                >
+                  <span className={`truncate ${!productForm.brandId ? 'text-gray-500' : ''}`}>
+                    {brands.find(b => (b.id || b._id) === productForm.brandId)?.name || 'Select Brand'}
+                  </span>
+                  <ChevronDown size={16} className={`text-gray-400 flex-shrink-0 ml-2 transition-transform ${isBrandDropdownOpen ? 'rotate-180' : ''}`} />
+                </div>
+
+                {isBrandDropdownOpen && (
+                  <div className={`absolute left-0 right-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto ${brandDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProductForm({...productForm, brandId: ''});
+                        setIsBrandDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 truncate block"
+                    >
+                      Select Brand
+                    </button>
+                    {brands.map(b => (
+                      <button
+                        key={b.id || b._id}
+                        type="button"
+                        onClick={() => {
+                          setProductForm({...productForm, brandId: b.id || b._id});
+                          if (errors.brandId) setErrors({...errors, brandId: undefined});
+                          setIsBrandDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 truncate block ${(b.id || b._id) === productForm.brandId ? 'bg-primary/5 text-primary font-medium' : 'text-gray-700'}`}
+                        title={b.name}
+                      >
+                        {b.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {errors.brandId && <p className="mt-1 text-xs text-red-500">{errors.brandId}</p>}
             </div>
           </div>

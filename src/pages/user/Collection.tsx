@@ -16,8 +16,45 @@ const Collection: React.FC = () => {
   const [maxPrice, setMaxPrice] = useState<number>(5000);
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [sortOption, setSortOption] = useState<string>('Sort by: Featured');
-  const [categories, setCategories] = useState<{_id: string, name: string}[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<{_id: string, name: string}[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+  const handleCategoryClick = (categoryId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedCategory(selectedCategory === categoryId ? '' : categoryId);
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
+  const renderCategories = (cats: any[], depth = 0) => {
+    if (!Array.isArray(cats)) return null;
+    return cats.map((cat) => {
+      const catId = cat._id || cat.id;
+      const isExpanded = expandedCategories[catId] || selectedCategory === catId;
+      return (
+        <li key={catId} className="w-full">
+          <div 
+            onClick={(e) => handleCategoryClick(catId, e)}
+            className={`cursor-pointer hover:pl-1 transition-all duration-200 flex justify-between items-center ${selectedCategory === catId ? 'text-primary font-bold' : 'hover:text-primary'} ${depth > 0 ? 'mt-2 text-[13px]' : ''}`}
+            style={{ paddingLeft: `${depth * 12}px` }}
+          >
+            <span>{cat.name}</span>
+            {cat.children && cat.children.length > 0 && (
+              <ChevronDown size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            )}
+          </div>
+          {isExpanded && cat.children && cat.children.length > 0 && (
+            <ul className="mt-2 space-y-2 border-l border-gray-100 ml-2 pl-2">
+              {renderCategories(cat.children, depth + 1)}
+            </ul>
+          )}
+        </li>
+      );
+    });
+  };
 
 
   useEffect(() => {
@@ -28,7 +65,7 @@ const Collection: React.FC = () => {
     const fetchData = async () => {
       try {
         const [catRes, brandRes] = await Promise.all([
-          api.get('/categories').catch(() => null),
+          api.get('/categories/tree').catch(() => null),
           api.get('/brands').catch(() => null)
         ]);
 
@@ -52,6 +89,18 @@ const Collection: React.FC = () => {
 
   const currentFilters = useMemo(() => {
     let filters: any = {};
+
+    const findCategoryDepth = (cats: any[], id: string, depth = 0): number | null => {
+      for (const cat of cats) {
+        if ((cat._id === id) || (cat.id === id)) return depth;
+        if (cat.children && cat.children.length > 0) {
+          const childDepth = findCategoryDepth(cat.children, id, depth + 1);
+          if (childDepth !== null) return childDepth;
+        }
+      }
+      return null;
+    };
+
     if (categoryId === 'flash-sale') {
       filters = { flashSale: true };
     } else if (categoryId === 'new-drops') {
@@ -72,7 +121,16 @@ const Collection: React.FC = () => {
     }
 
     if (searchQuery) filters.search = searchQuery;
-    if (selectedCategory) filters.category = selectedCategory;
+    if (selectedCategory) {
+      const depth = findCategoryDepth(categories, selectedCategory);
+      if (depth === 1) {
+        filters.subCategory = selectedCategory;
+      } else if (depth === 2) {
+        filters.nestedSubCategory = selectedCategory;
+      } else {
+        filters.category = selectedCategory;
+      }
+    }
     if (selectedBrand) filters.brand = selectedBrand;
     if (maxPrice < 5000) filters.maxPrice = maxPrice;
     if (selectedColor) filters.color = selectedColor;
@@ -157,15 +215,7 @@ const Collection: React.FC = () => {
                         Categories
                       </h3>
                       <ul className="space-y-3 text-sm text-gray-600">
-                        {categories.map((cat) => (
-                          <li
-                            key={cat._id}
-                            onClick={() => setSelectedCategory(selectedCategory === cat._id ? '' : cat._id)}
-                            className={`cursor-pointer hover:pl-1 transition-all duration-200 ${selectedCategory === cat._id ? 'text-primary font-bold' : 'hover:text-primary'}`}
-                          >
-                            {cat.name}
-                          </li>
-                        ))}
+                        {renderCategories(categories)}
                       </ul>
                     </div>
                   )}

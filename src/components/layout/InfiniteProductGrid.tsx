@@ -254,8 +254,22 @@ const InfiniteProductGrid: React.FC<InfiniteProductGridProps> = ({ filters: exte
           })
         );
 
-        // Client-side filtering (color / size / maxPrice)
+        // Client-side filtering (color / size / maxPrice / subcategories)
         let filtered = enriched;
+        if (externalFilters?.subCategory) {
+          filtered = filtered.filter((p: any) => 
+            p.subCategory === externalFilters.subCategory || 
+            p.subCategoryId?._id === externalFilters.subCategory || 
+            p.subCategoryId === externalFilters.subCategory
+          );
+        }
+        if (externalFilters?.nestedSubCategory) {
+          filtered = filtered.filter((p: any) => 
+            p.nestedSubCategory === externalFilters.nestedSubCategory || 
+            p.nestedSubCategoryId?._id === externalFilters.nestedSubCategory || 
+            p.nestedSubCategoryId === externalFilters.nestedSubCategory
+          );
+        }
         if (externalFilters?.color) {
           filtered = filtered.filter((p) =>
             p.variants?.some(
