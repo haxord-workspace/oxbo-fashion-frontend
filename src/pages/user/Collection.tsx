@@ -16,6 +16,13 @@ const Collection: React.FC = () => {
   const [maxPrice, setMaxPrice] = useState<number>(5000);
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [sortOption, setSortOption] = useState<string>('Sort by: Featured');
+  const [appliedFiltersState, setAppliedFiltersState] = useState({
+    category: '',
+    brand: '',
+    color: '',
+    maxPrice: 5000,
+    sortOption: 'Sort by: Featured'
+  });
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<{_id: string, name: string}[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
@@ -101,6 +108,32 @@ const Collection: React.FC = () => {
       return null;
     };
 
+    const getDescendantIds = (cat: any): string[] => {
+      let ids: string[] = [];
+      const id = cat._id || cat.id;
+      if (id) ids.push(String(id));
+      
+      if (cat.children) {
+        cat.children.forEach((c: any) => {
+          ids = ids.concat(getDescendantIds(c));
+        });
+      }
+      return ids;
+    };
+
+    const findCatAndGetIds = (cats: any[], targetId: string): string[] => {
+      for (const cat of cats) {
+        if ((cat._id === targetId) || (cat.id === targetId)) {
+          return getDescendantIds(cat);
+        }
+        if (cat.children) {
+          const found = findCatAndGetIds(cat.children, targetId);
+          if (found.length > 0) return found;
+        }
+      }
+      return [];
+    };
+
     if (categoryId === 'flash-sale') {
       filters = { flashSale: true };
     } else if (categoryId === 'new-drops') {
@@ -111,42 +144,48 @@ const Collection: React.FC = () => {
       const matchedCat = categories.find(
         c => c.name.toLowerCase().replace(/\s+/g, '-') === categoryId.toLowerCase()
       );
-      if (matchedCat) {
-        filters.category = matchedCat._id;
-      } else {
-        filters.category = categoryId;
+      const targetId = matchedCat ? matchedCat._id : categoryId;
+      filters.category = targetId;
+      if (!selectedCategory) {
+        filters.validCategoryIds = findCatAndGetIds(categories, targetId);
       }
     } else if (categoryQuery) {
       filters = { category: categoryQuery };
     }
 
     if (searchQuery) filters.search = searchQuery;
-    if (selectedCategory) {
-      const depth = findCategoryDepth(categories, selectedCategory);
+    if (appliedFiltersState.category) {
+      const depth = findCategoryDepth(categories, appliedFiltersState.category);
       if (depth === 1) {
-        filters.subCategory = selectedCategory;
+        filters.subCategory = appliedFiltersState.category;
       } else if (depth === 2) {
-        filters.nestedSubCategory = selectedCategory;
+        filters.nestedSubCategory = appliedFiltersState.category;
       } else {
-        filters.category = selectedCategory;
+        filters.category = appliedFiltersState.category;
       }
+      filters.validCategoryIds = findCatAndGetIds(categories, appliedFiltersState.category);
     }
-    if (selectedBrand) filters.brand = selectedBrand;
-    if (maxPrice < 5000) filters.maxPrice = maxPrice;
-    if (selectedColor) filters.color = selectedColor;
+    if (appliedFiltersState.brand) filters.brand = appliedFiltersState.brand;
+    if (appliedFiltersState.maxPrice < 5000) filters.maxPrice = appliedFiltersState.maxPrice;
+    if (appliedFiltersState.color) {
+      filters.color = appliedFiltersState.color;
+      filters.search = filters.search 
+        ? `${filters.search} ${appliedFiltersState.color}` 
+        : appliedFiltersState.color;
+    }
 
-    if (sortOption === 'Price: Low to High') {
+    if (appliedFiltersState.sortOption === 'Price: Low to High') {
       filters.sort = 'price';
       filters.order = 'asc';
-    } else if (sortOption === 'Price: High to Low') {
+    } else if (appliedFiltersState.sortOption === 'Price: High to Low') {
       filters.sort = 'price';
       filters.order = 'desc';
-    } else if (sortOption === 'Newest Arrivals') {
+    } else if (appliedFiltersState.sortOption === 'Newest Arrivals') {
       filters.sort = 'createdAt';
       filters.order = 'desc';
     }
     return filters;
-  }, [categoryId, categoryQuery, searchQuery, selectedCategory, selectedBrand, maxPrice, selectedColor, sortOption, categories]);
+  }, [categoryId, categoryQuery, searchQuery, appliedFiltersState, categories]);
 
   return (
     <div className="flex-1 bg-white min-h-screen">
@@ -193,7 +232,10 @@ const Collection: React.FC = () => {
                             <button
                               onClick={() => {
                                 setSortOption(option);
-                                if (activeFilterSection === 'sort') setIsFilterOpen(false);
+                                if (activeFilterSection === 'sort') {
+                                  setAppliedFiltersState(prev => ({ ...prev, sortOption: option }));
+                                  setIsFilterOpen(false);
+                                }
                               }}
                               className={`w-full text-left px-4 py-3 rounded-md text-sm font-medium transition-colors ${
                                 sortOption === option
@@ -229,7 +271,14 @@ const Collection: React.FC = () => {
                         {brands.map((brand) => (
                           <li
                             key={brand._id}
-                            onClick={() => setSelectedBrand(selectedBrand === brand._id ? '' : brand._id)}
+                            onClick={() => {
+                              const newVal = selectedBrand === brand._id ? '' : brand._id;
+                              setSelectedBrand(newVal);
+                              if (activeFilterSection === 'brand') {
+                                setAppliedFiltersState(prev => ({ ...prev, brand: newVal }));
+                                setIsFilterOpen(false);
+                              }
+                            }}
                             className={`cursor-pointer hover:pl-1 transition-all duration-200 ${selectedBrand === brand._id ? 'text-primary font-bold' : 'hover:text-primary'}`}
                           >
                             {brand.name}
@@ -289,7 +338,14 @@ const Collection: React.FC = () => {
                           <button
                             key={c.name}
                             title={c.name}
-                            onClick={() => setSelectedColor(selectedColor === c.name.toLowerCase() ? '' : c.name.toLowerCase())}
+                            onClick={() => {
+                              const newVal = selectedColor === c.name.toLowerCase() ? '' : c.name.toLowerCase();
+                              setSelectedColor(newVal);
+                              if (activeFilterSection === 'color') {
+                                setAppliedFiltersState(prev => ({ ...prev, color: newVal }));
+                                setIsFilterOpen(false);
+                              }
+                            }}
                             className={`w-7 h-7 rounded-full ${c.class} ring-offset-2 hover:ring-2 hover:ring-primary
                                        hover:scale-110 active:scale-95 transition-all duration-200 ${selectedColor === c.name.toLowerCase() ? 'ring-2 ring-primary scale-110' : ''}`}
                           />
@@ -308,25 +364,45 @@ const Collection: React.FC = () => {
 
                 </div>
 
-                <div className="mt-auto border-t border-gray-200 p-6 bg-gray-50 sticky bottom-0">
-                  <button
-                    onClick={() => {
-                      setSelectedCategory('');
-                      setSelectedBrand('');
-                      setMaxPrice(5000);
-                      setSelectedColor('');
-                    }}
-                    className="w-full bg-white text-gray-900 border border-gray-300 font-bold uppercase tracking-widest py-3 text-sm hover:bg-gray-50 transition-colors mb-3"
-                  >
-                    Clear Filters
-                  </button>
-                  <button
-                    onClick={() => setIsFilterOpen(false)}
-                    className="w-full bg-primary text-white font-bold uppercase tracking-widest py-4 text-sm hover:bg-gray-900 transition-colors"
-                  >
-                    Apply Filters
-                  </button>
-                </div>
+                {(activeFilterSection === 'all' || activeFilterSection === 'category') && (
+                  <div className="mt-auto border-t border-gray-200 p-6 bg-gray-50 sticky bottom-0 z-20">
+                    <button
+                      onClick={() => {
+                        setSelectedCategory('');
+                        setSelectedBrand('');
+                        setMaxPrice(5000);
+                        setSelectedColor('');
+                        setSortOption('Sort by: Featured');
+                        setAppliedFiltersState({
+                          category: '',
+                          brand: '',
+                          color: '',
+                          maxPrice: 5000,
+                          sortOption: 'Sort by: Featured'
+                        });
+                      }}
+                      className="w-full bg-white text-gray-900 border border-gray-300 font-bold uppercase tracking-widest py-3 text-sm hover:bg-gray-50 transition-colors mb-3"
+                    >
+                      Clear Filters
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAppliedFiltersState({
+                          category: selectedCategory,
+                          brand: selectedBrand,
+                          color: selectedColor,
+                          maxPrice,
+                          sortOption
+                        });
+                        setIsFilterOpen(false);
+                      }}
+                      className="w-full bg-primary text-white font-bold uppercase tracking-widest py-4 text-sm hover:bg-gray-900 transition-colors"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
+                )}
+
               </aside>
             </>
           )}

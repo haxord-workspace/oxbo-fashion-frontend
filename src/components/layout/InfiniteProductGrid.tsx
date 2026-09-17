@@ -12,7 +12,7 @@ import { productsApi } from '../../services/productsApi';
 import type { Product } from '../../types';
 import QuickAddModal from '../common/QuickAddModal';
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 20;
 
 // ─── Product Card ───────────────────────────────────────────────────────────
 const ProductCard: React.FC<{ product: Product; selectedColor?: string }> = ({ product, selectedColor }) => {
@@ -33,8 +33,8 @@ const ProductCard: React.FC<{ product: Product; selectedColor?: string }> = ({ p
   let matchedVariantImages: string[] | undefined;
   if (selectedColor && product.variants) {
     const matchingVariant = product.variants.find((v: any) => 
-      v.color?.toLowerCase() === selectedColor.toLowerCase() ||
-      v.attributes?.color?.toLowerCase() === selectedColor.toLowerCase()
+      v.color?.toLowerCase().includes(selectedColor.toLowerCase()) ||
+      v.attributes?.color?.toLowerCase().includes(selectedColor.toLowerCase())
     );
     if (matchingVariant && matchingVariant.images && matchingVariant.images.length > 0) {
       matchedVariantImages = matchingVariant.images;
@@ -256,29 +256,29 @@ const InfiniteProductGrid: React.FC<InfiniteProductGridProps> = ({ filters: exte
 
         // Client-side filtering (color / size / maxPrice / subcategories)
         let filtered = enriched;
-        if (externalFilters?.subCategory) {
+        if (externalFilters?.validCategoryIds && externalFilters.validCategoryIds.length > 0) {
+          filtered = filtered.filter((p: any) => {
+            const pid1 = p.category?._id || p.category;
+            const pid2 = p.categoryId?._id || p.categoryId;
+            const pid3 = p.subCategoryId?._id || p.subCategoryId;
+            const pid4 = p.nestedSubCategoryId?._id || p.nestedSubCategoryId;
+            
+            return (pid1 && externalFilters.validCategoryIds.includes(String(pid1))) ||
+                   (pid2 && externalFilters.validCategoryIds.includes(String(pid2))) ||
+                   (pid3 && externalFilters.validCategoryIds.includes(String(pid3))) ||
+                   (pid4 && externalFilters.validCategoryIds.includes(String(pid4)));
+          });
+        }
+        if (externalFilters?.brand) {
           filtered = filtered.filter((p: any) => 
-            p.subCategory === externalFilters.subCategory || 
-            p.subCategoryId?._id === externalFilters.subCategory || 
-            p.subCategoryId === externalFilters.subCategory
+            String(p.brand) === String(externalFilters.brand) || 
+            String(p.brandId?._id) === String(externalFilters.brand) || 
+            String(p.brandId) === String(externalFilters.brand) ||
+            String(p.brand?._id) === String(externalFilters.brand)
           );
         }
-        if (externalFilters?.nestedSubCategory) {
-          filtered = filtered.filter((p: any) => 
-            p.nestedSubCategory === externalFilters.nestedSubCategory || 
-            p.nestedSubCategoryId?._id === externalFilters.nestedSubCategory || 
-            p.nestedSubCategoryId === externalFilters.nestedSubCategory
-          );
-        }
-        if (externalFilters?.color) {
-          filtered = filtered.filter((p) =>
-            p.variants?.some(
-              (v: any) =>
-                v.color?.toLowerCase() === externalFilters.color.toLowerCase() ||
-                v.attributes?.color?.toLowerCase() === externalFilters.color.toLowerCase()
-            )
-          );
-        }
+
+
         if (externalFilters?.size) {
           filtered = filtered.filter((p) =>
             p.variants?.some((v: any) =>
@@ -290,12 +290,7 @@ const InfiniteProductGrid: React.FC<InfiniteProductGridProps> = ({ filters: exte
           filtered = filtered.filter((p) => p.price <= externalFilters.maxPrice);
         }
 
-        // Client-side sort
-        if (externalFilters?.sort === 'price') {
-          filtered.sort((a, b) =>
-            externalFilters.order === 'asc' ? a.price - b.price : b.price - a.price
-          );
-        }
+
 
         setProducts((prev) => {
           const next = pageNum === 1 ? filtered : [...prev, ...filtered];
