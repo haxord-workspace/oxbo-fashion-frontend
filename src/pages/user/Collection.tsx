@@ -10,7 +10,7 @@ const Collection: React.FC = () => {
   const categoryQuery = searchParams.get('category');
   const searchQuery = searchParams.get('search');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [activeFilterSection, setActiveFilterSection] = useState<'all' | 'brand' | 'color' | 'sort'>('all');
+  const [activeFilterSection, setActiveFilterSection] = useState<'all' | 'brand' | 'color' | 'sort' | 'category'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedBrand, setSelectedBrand] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<number>(5000);
@@ -209,7 +209,7 @@ const Collection: React.FC = () => {
                     </div>
                   )}
 
-                  {(activeFilterSection === 'all') && (
+                  {(activeFilterSection === 'all' || activeFilterSection === 'category') && (
                     <div>
                       <h3 className="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4 pb-2 border-b border-gray-200">
                         Categories
@@ -364,6 +364,13 @@ const Collection: React.FC = () => {
                     onClick={() => { setActiveFilterSection('color'); setIsFilterOpen(true); }}
                   >
                     Color <ChevronDown size={16} />
+                  </button>
+                  
+                  <button 
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:border-gray-400 transition-colors bg-white font-medium"
+                    onClick={() => { setActiveFilterSection('category'); setIsFilterOpen(true); }}
+                  >
+                    Category <ChevronDown size={16} />
                   </button>
                 </div>
               </div>
