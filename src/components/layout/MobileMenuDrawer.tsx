@@ -1,12 +1,29 @@
-import React, { useEffect } from 'react';
-import { X, ChevronRight, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ChevronRight, ChevronDown, User } from 'lucide-react';
 import { Link } from 'react-router';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { toggleMobileMenu } from '../../features/ui/uiSlice';
+import api from '../../services/api';
 
 const MobileMenuDrawer: React.FC = () => {
   const isOpen = useAppSelector(state => state.ui.isMobileMenuOpen);
   const dispatch = useAppDispatch();
+
+  const [categories, setCategories] = useState<any[]>([]);
+  const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/categories/tree');
+        const catData = res.data?.data?.categories || res.data?.data || res.data;
+        if (Array.isArray(catData)) setCategories(catData);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // Prevent background scrolling when menu is open
   useEffect(() => {
@@ -26,10 +43,43 @@ const MobileMenuDrawer: React.FC = () => {
     }
   };
 
+  const handleMenuClick = (item: any, e: React.MouseEvent) => {
+    if (item.id === 'category') {
+      e.preventDefault();
+      setExpandedMenu(expandedMenu === item.id ? null : item.id);
+    } else {
+      closeMenu();
+    }
+  };
+
+  const renderCategories = (cats: any[], depth = 0) => {
+    if (!Array.isArray(cats)) return null;
+    return cats.map((cat) => {
+      const catId = cat._id || cat.id;
+      return (
+        <React.Fragment key={catId}>
+          <Link
+            to={`/collections/${cat.name.toLowerCase().replace(/\s+/g, '-')}`}
+            onClick={closeMenu}
+            className={`block text-gray-400 hover:text-white py-1.5 text-sm ${depth > 0 ? 'ml-4' : ''}`}
+          >
+            {cat.name}
+          </Link>
+          {cat.children && cat.children.length > 0 && (
+            <div className="pl-2 border-l border-white/10 ml-2 mt-1 mb-2">
+              {renderCategories(cat.children, depth + 1)}
+            </div>
+          )}
+        </React.Fragment>
+      );
+    });
+  };
+
   const menuItems = [
     { label: 'HOME', to: '/' },
     { label: 'FLASH SALE ⚡', to: '/collections/flash-sale' },
-    { label: 'SHOP ALL', to: '/collections/shop-all' },
+    { label: 'SHOP ALL', to: '/collections/all-drops' },
+    { label: 'CATEGORY', to: '#', hasSubmenu: true, id: 'category' },
     { label: 'DENIMS', to: '/collections/denims', hasSubmenu: true },
     { label: 'NEW DROPS', to: '/collections/new-drops' },
     { label: 'ACCESSORIES', to: '/collections/accessories', hasSubmenu: true },
@@ -70,15 +120,25 @@ const MobileMenuDrawer: React.FC = () => {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <nav className="flex flex-col space-y-6">
             {menuItems.map((item, idx) => (
-              <Link
-                key={idx}
-                to={item.to}
-                onClick={closeMenu}
-                className="text-[15px] font-medium tracking-wide flex items-center justify-between text-gray-300 hover:text-white transition-colors"
-              >
-                <span>{item.label}</span>
-                {item.hasSubmenu && <ChevronRight size={18} className="text-gray-400" />}
-              </Link>
+              <div key={idx} className="flex flex-col">
+                <Link
+                  to={item.to}
+                  onClick={(e) => handleMenuClick(item, e)}
+                  className="text-[15px] font-medium tracking-wide flex items-center justify-between text-gray-300 hover:text-white transition-colors"
+                >
+                  <span>{item.label}</span>
+                  {item.hasSubmenu && (
+                    item.id === 'category' && expandedMenu === 'category'
+                      ? <ChevronDown size={18} className="text-gray-400" />
+                      : <ChevronRight size={18} className="text-gray-400" />
+                  )}
+                </Link>
+                {item.id === 'category' && expandedMenu === 'category' && (
+                  <div className="mt-4 pl-2 border-l border-white/10 flex flex-col space-y-1">
+                    {renderCategories(categories)}
+                  </div>
+                )}
+              </div>
             ))}
           </nav>
         </div>
