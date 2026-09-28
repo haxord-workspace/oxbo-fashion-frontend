@@ -54,7 +54,8 @@ export const addToWishlistAsync = createAsyncThunk('wishlist/add', async (produc
     console.log("Sending payload to wishlist API:", payload);
     const response = await wishlistApi.addToWishlist(payload);
     console.log("addToWishlist response:", response);
-    return product;
+    // Return the product with the variantId so the reducer stores it correctly
+    return { ...product, variantId: payload.variantId };
   } catch (err: any) {
     console.error("addToWishlist error:", err.response?.data || err.message);
     return rejectWithValue(err.response?.data?.message || err.message);

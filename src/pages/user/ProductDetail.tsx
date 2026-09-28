@@ -691,13 +691,9 @@ const ProductDetail: React.FC = () => {
           {/* Accordions */}
           <div className="border-t border-gray-200">
             <Accordion title="Description">
-              <p>Premium relaxed fit denim designed for everyday comfort and style. Features specialized wash treatments and reinforced stitching.</p>
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>100% Cotton</li>
-                <li>Machine wash cold</li>
-                <li>Relaxed baggy fit</li>
-                <li>Imported</li>
-              </ul>
+              <div className="whitespace-pre-line text-gray-700 text-sm">
+                {product?.description || 'No description available.'}
+              </div>
             </Accordion>
             <Accordion title="Shipping and Returns">
               {/* <p>Free standard shipping on all orders over Rs. 2,999.00.</p> */}
