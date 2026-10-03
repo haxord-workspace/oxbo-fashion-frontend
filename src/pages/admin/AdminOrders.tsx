@@ -9,17 +9,20 @@ import { adminOrderApi } from '../../services/admin/adminOrder.Api';
 import { adminStoreApi } from '../../services/admin/adminStore.Api';
 import { productsApi } from '../../services/productsApi';
 import { adminInventoryApi } from '../../services/admin/adminInventory.Api';
+import { adminNotificationApi } from '../../services/admin/adminNotification.Api';
 import toast from 'react-hot-toast';
 import { useAppSelector } from '../../app/hooks';
 import { selectIsAdmin, selectIsStoreManager, selectCurrentUser } from '../../features/auth/authSlice';
 
 const ORDER_STATUSES = ['All', 'Pending', 'Processing', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
+const PAYMENT_STATUSES = ['All', 'Pending', 'Authorized', 'Captured', 'Success', 'Paid', 'Failed', 'Refunded'];
 
 export const AdminOrders = () => {
   const isAdmin = useAppSelector(selectIsAdmin);
   const isStoreManager = useAppSelector(selectIsStoreManager);
   const currentUser = useAppSelector(selectCurrentUser) as any;
   const [statusFilter, setStatusFilter] = useState('All');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('All');
   const [storeFilter, setStoreFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -63,6 +66,13 @@ export const AdminOrders = () => {
   const [isProcessingReject, setIsProcessingReject] = useState(false);
   const [rejectError, setRejectError] = useState('');
   const [isProcessingAcceptId, setIsProcessingAcceptId] = useState<string | null>(null);
+
+  // Reminder Modal State
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [orderToRemind, setOrderToRemind] = useState<any>(null);
+  const [reminderMessage, setReminderMessage] = useState('');
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
+  const [reminderError, setReminderError] = useState('');
 
   // Store Stock Levels
   const [storeStockLevels, setStoreStockLevels] = useState<Record<string, number>>({});
@@ -150,6 +160,7 @@ export const AdminOrders = () => {
         page: currentPage,
         limit: itemsPerPage,
         status: statusFilter !== 'All' ? statusFilter : undefined,
+        paymentStatus: paymentStatusFilter !== 'All' ? paymentStatusFilter : undefined,
         store: activeStoreFilter,
         search: searchQuery || undefined
       });
@@ -377,6 +388,45 @@ export const AdminOrders = () => {
     }
   };
 
+  const openReminderModal = (order: any) => {
+    setOrderToRemind(order);
+    setReminderMessage(`Dear ${order.userId?.firstName || 'Customer'}, your payment for Order #${order.orderNumber || 'recent purchase'} is still pending. Please complete the payment to proceed with your order.`);
+    setIsReminderModalOpen(true);
+    setReminderError('');
+  };
+
+  const handleReminderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderToRemind || !reminderMessage.trim()) return;
+
+    const userId = orderToRemind.userId?._id || orderToRemind.userId?.id || orderToRemind.userId;
+    
+    if (!userId) {
+      setReminderError('Customer user ID is missing. Cannot send notification.');
+      return;
+    }
+
+    setIsSendingReminder(true);
+    setReminderError('');
+    try {
+      await adminNotificationApi.sendNotification({
+        userId,
+        title: `Payment Reminder for Order #${orderToRemind.orderNumber || ''}`,
+        message: reminderMessage,
+        type: 'system',
+        channel: 'email',
+        priority: 'normal'
+      });
+      toast.success('Reminder sent successfully.');
+      setIsReminderModalOpen(false);
+    } catch (error: any) {
+      console.error('Failed to send reminder', error);
+      setReminderError(error.message || 'Failed to send reminder');
+    } finally {
+      setIsSendingReminder(false);
+    }
+  };
+
   useEffect(() => {
     const fetchStores = async () => {
       try {
@@ -408,7 +458,7 @@ export const AdminOrders = () => {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [currentPage, statusFilter, storeFilter, searchQuery]);
+  }, [currentPage, statusFilter, paymentStatusFilter, storeFilter, searchQuery]);
 
   const totalPages = Math.ceil(totalOrders / itemsPerPage) || 1;
 
@@ -446,6 +496,13 @@ export const AdminOrders = () => {
             options={ORDER_STATUSES.map(status => ({ value: status, label: status }))}
             className="w-full sm:w-36"
           />
+          <CustomSelect
+            name="paymentStatusFilter"
+            value={paymentStatusFilter}
+            onChange={(e) => setPaymentStatusFilter(e.target.value)}
+            options={PAYMENT_STATUSES.map(status => ({ value: status, label: status }))}
+            className="w-full sm:w-40"
+          />
         </div>
       </div>
 
@@ -459,13 +516,14 @@ export const AdminOrders = () => {
               <th className="pb-3 font-medium px-4">Products</th>
               <th className="pb-3 font-medium px-4">Total</th>
               <th className="pb-3 font-medium px-4">Status</th>
+              <th className="pb-3 font-medium px-4">Pay Status</th>
               <th className="pb-3 font-medium px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="text-sm">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="py-12">
+                <td colSpan={8} className="py-12">
                   <div className="flex justify-center items-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
@@ -473,7 +531,7 @@ export const AdminOrders = () => {
               </tr>
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-gray-500">No orders found matching your filters.</td>
+                <td colSpan={8} className="py-8 text-center text-gray-500">No orders found matching your filters.</td>
               </tr>
             ) : (
               orders.map(order => (
@@ -542,7 +600,9 @@ export const AdminOrders = () => {
                     <select
                       value={order.status || 'Pending'}
                       onChange={(e) => handleStatusChange(order, e.target.value)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-1 focus:ring-primary outline-none
+                      disabled={['Pending', 'Authorized'].includes(order.paymentStatus) && order.status === 'Pending'}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 focus:ring-1 focus:ring-primary outline-none
+                      ${['Pending', 'Authorized'].includes(order.paymentStatus) && order.status === 'Pending' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
                       ${order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
                           ['Processing', 'Confirmed', 'Packed'].includes(order.status) ? 'bg-blue-100 text-blue-700' :
                             ['Shipped', 'Out for Delivery'].includes(order.status) ? 'bg-purple-100 text-purple-700' :
@@ -555,24 +615,45 @@ export const AdminOrders = () => {
                     </select>
                   </td>
                   <td className="py-4 px-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium border-0
+                      ${['Paid', 'Success', 'Captured'].includes(order.paymentStatus) ? 'bg-green-100 text-green-700' :
+                        ['Failed', 'Refunded'].includes(order.paymentStatus) ? 'bg-red-100 text-red-700' :
+                        order.paymentStatus === 'Authorized' ? 'bg-blue-100 text-blue-700' :
+                        'bg-yellow-100 text-yellow-800'}`}
+                    >
+                      {order.paymentStatus || 'Pending'}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4">
                     <div className="flex justify-end gap-2">
-                      {['Authorized', 'Pending'].includes(order.paymentStatus) ? (
+                      {['Authorized', 'Pending'].includes(order.paymentStatus) && order.status === 'Pending' ? (
                         <>
                           {isAdmin && (
                             <>
-                              <button
-                                onClick={() => handleAcceptPayment(order._id || order.id, order.paymentReference || order.paymentId || '')}
-                                disabled={isProcessingAcceptId === (order._id || order.id)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:text-white hover:bg-emerald-600 bg-emerald-50 rounded-md transition-colors disabled:opacity-50"
-                              >
-                                {isProcessingAcceptId === (order._id || order.id) ? 'Accepting...' : 'Accept'}
-                              </button>
-                              <button
-                                onClick={() => openRejectModal(order)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 rounded-md transition-colors"
-                              >
-                                Reject
-                              </button>
+                              {order.paymentStatus === 'Pending' ? (
+                                <button
+                                  onClick={() => openReminderModal(order)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-white hover:bg-blue-600 bg-blue-50 rounded-md transition-colors whitespace-nowrap"
+                                >
+                                  Send Reminder
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleAcceptPayment(order._id || order.id, order.paymentReference || order.paymentId || '')}
+                                    disabled={isProcessingAcceptId === (order._id || order.id)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:text-white hover:bg-emerald-600 bg-emerald-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {isProcessingAcceptId === (order._id || order.id) ? 'Accepting...' : 'Accept'}
+                                  </button>
+                                  <button
+                                    onClick={() => openRejectModal(order)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
                             </>
                           )}
                         </>
@@ -1057,6 +1138,54 @@ export const AdminOrders = () => {
               className="px-4 py-2 bg-rose-600 text-white rounded-md hover:bg-rose-700 transition-colors"
             >
               Decline Payment
+            </LoadingButton>
+          </div>
+        </form>
+      </AdminModal>
+
+      {/* Reminder Modal */}
+      <AdminModal
+        isOpen={isReminderModalOpen}
+        onClose={() => !isSendingReminder && setIsReminderModalOpen(false)}
+        title="Send Payment Reminder"
+      >
+        <form onSubmit={handleReminderSubmit} className="p-6">
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Send a message to the customer to remind them to complete their payment.
+            </p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Message
+            </label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary min-h-[100px]"
+              rows={4}
+              value={reminderMessage}
+              onChange={(e) => setReminderMessage(e.target.value)}
+              required
+            ></textarea>
+          </div>
+          {reminderError && (
+            <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-md">
+              {reminderError}
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsReminderModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              disabled={isSendingReminder}
+            >
+              Cancel
+            </button>
+            <LoadingButton
+              type="submit"
+              isLoading={isSendingReminder}
+              loadingText="Sending..."
+              className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            >
+              Send Reminder
             </LoadingButton>
           </div>
         </form>
