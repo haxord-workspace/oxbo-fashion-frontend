@@ -33,8 +33,8 @@ export const adminOrderApi = {
     const response = await api.post('/payments/refund', { orderId, amount, reason });
     return response.data;
   },
-  acceptPayment: async (orderId: string) => {
-    const response = await api.post('/payments/accept', { orderId });
+  acceptPayment: async (orderId: string, paymentId: string) => {
+    const response = await api.post('/payments/accept', { orderId, paymentId });
     return response.data;
   },
   rejectPayment: async (orderId: string, reason?: string) => {
