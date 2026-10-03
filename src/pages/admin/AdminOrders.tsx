@@ -11,16 +11,19 @@ import { productsApi } from '../../services/productsApi';
 import { adminInventoryApi } from '../../services/admin/adminInventory.Api';
 import toast from 'react-hot-toast';
 import { useAppSelector } from '../../app/hooks';
-import { selectIsAdmin, selectIsStoreManager } from '../../features/auth/authSlice';
+import { selectIsAdmin, selectIsStoreManager, selectCurrentUser } from '../../features/auth/authSlice';
 
 const ORDER_STATUSES = ['All', 'Pending', 'Processing', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
 
 export const AdminOrders = () => {
   const isAdmin = useAppSelector(selectIsAdmin);
   const isStoreManager = useAppSelector(selectIsStoreManager);
+  const currentUser = useAppSelector(selectCurrentUser) as any;
   const [statusFilter, setStatusFilter] = useState('All');
   const [storeFilter, setStoreFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const userStoreId = currentUser?.storeId?._id || currentUser?.storeId?.id || currentUser?.storeId || currentUser?.store?._id || currentUser?.store?.id || currentUser?.store || '';
 
   // State for Orders
   const [orders, setOrders] = useState<any[]>([]);
@@ -136,11 +139,18 @@ export const AdminOrders = () => {
   const fetchOrders = async () => {
     setIsLoading(true);
     try {
+      if (isStoreManager && storeFilter === '') {
+        setIsLoading(false);
+        return;
+      }
+
+      const activeStoreFilter = storeFilter !== '' ? storeFilter : undefined;
+
       const response = await adminOrderApi.getOrders({
         page: currentPage,
         limit: itemsPerPage,
         status: statusFilter !== 'All' ? statusFilter : undefined,
-        store: storeFilter !== '' ? storeFilter : undefined,
+        store: activeStoreFilter,
         search: searchQuery || undefined
       });
       setOrders(response.orders);
@@ -291,17 +301,17 @@ export const AdminOrders = () => {
   const handleRefundSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderToRefund) return;
-    
+
     setIsProcessingRefund(true);
     setRefundError('');
     try {
       const orderIdString = orderToRefund._id || orderToRefund.id;
-      
+
       await adminOrderApi.refundPayment(orderIdString, undefined, refundReason);
       toast.success('Refund processed successfully.');
-      
+
       setIsRefundModalOpen(false);
-      fetchOrders(); 
+      fetchOrders();
     } catch (error: any) {
       console.error('Failed to process refund', error);
       setRefundError(error.response?.data?.message || 'Failed to process request');
@@ -310,10 +320,10 @@ export const AdminOrders = () => {
     }
   };
 
-  const handleAcceptPayment = async (orderId: string) => {
+  const handleAcceptPayment = async (orderId: string, paymentId: string) => {
     setIsProcessingAcceptId(orderId);
     try {
-      const response: any = await adminOrderApi.acceptPayment(orderId);
+      const response: any = await adminOrderApi.acceptPayment(orderId, paymentId);
 
       if (response && response.success === false) {
         toast.error(response.message || 'Failed to accept payment');
@@ -342,7 +352,7 @@ export const AdminOrders = () => {
   const handleRejectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderToReject) return;
-    
+
     setIsProcessingReject(true);
     setRejectError('');
     try {
@@ -378,6 +388,19 @@ export const AdminOrders = () => {
     };
     fetchStores();
   }, []);
+
+  useEffect(() => {
+    if (isStoreManager && storeFilter === '') {
+      if (userStoreId) {
+        setStoreFilter(userStoreId);
+      } else if (availableStores.length > 0 && currentUser?.email) {
+        const matchedStore = availableStores.find((s: any) => s.email === currentUser.email);
+        if (matchedStore) {
+          setStoreFilter(matchedStore._id || matchedStore.id);
+        }
+      }
+    }
+  }, [isStoreManager, userStoreId, availableStores, currentUser, storeFilter]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -533,19 +556,19 @@ export const AdminOrders = () => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex justify-end gap-2">
-                      {order.paymentStatus === 'Authorized' ? (
+                      {['Authorized', 'Pending'].includes(order.paymentStatus) ? (
                         <>
                           {isAdmin && (
                             <>
-                              <button 
-                                onClick={() => handleAcceptPayment(order._id || order.id)} 
+                              <button
+                                onClick={() => handleAcceptPayment(order._id || order.id, order.paymentReference || order.paymentId || '')}
                                 disabled={isProcessingAcceptId === (order._id || order.id)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:text-white hover:bg-emerald-600 bg-emerald-50 rounded-md transition-colors disabled:opacity-50"
                               >
                                 {isProcessingAcceptId === (order._id || order.id) ? 'Accepting...' : 'Accept'}
                               </button>
-                              <button 
-                                onClick={() => openRejectModal(order)} 
+                              <button
+                                onClick={() => openRejectModal(order)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 rounded-md transition-colors"
                               >
                                 Reject
@@ -815,8 +838,8 @@ export const AdminOrders = () => {
       >
         {selectedProduct && (() => {
           const displayProduct = fullProductDetails || selectedProduct.product || selectedProduct.productId || selectedProduct;
-          
-          const image = 
+
+          const image =
             selectedProduct.image ||
             selectedProduct.imageUrl ||
             selectedProduct.thumbnail ||
@@ -829,21 +852,21 @@ export const AdminOrders = () => {
             selectedProduct.variant?.images?.[0] ||
             selectedProduct.variant?.image ||
             null;
-            
-          const name = 
-            selectedProduct.productName || 
-            selectedProduct.name || 
-            displayProduct?.name || 
-            displayProduct?.productName || 
+
+          const name =
+            selectedProduct.productName ||
+            selectedProduct.name ||
+            displayProduct?.name ||
+            displayProduct?.productName ||
             'Unknown Item';
-            
-          const sku = 
-            selectedProduct.sku || 
-            selectedProduct.variantId?.sku || 
-            selectedProduct.variant?.sku || 
-            displayProduct?.sku || 
+
+          const sku =
+            selectedProduct.sku ||
+            selectedProduct.variantId?.sku ||
+            selectedProduct.variant?.sku ||
+            displayProduct?.sku ||
             'N/A';
-            
+
           const price = selectedProduct.price || displayProduct?.price || 0;
 
           return (

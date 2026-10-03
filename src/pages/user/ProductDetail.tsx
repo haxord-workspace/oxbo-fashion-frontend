@@ -556,7 +556,7 @@ const ProductDetail: React.FC = () => {
           {uniqueColors.length > 0 && (
             <div className="mb-5">
               <span className="text-sm block mb-2">Selected Color: <span className="font-semibold">{selectedColor}</span></span>
-              <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <div className="flex gap-2 overflow-x-auto py-1 px-1 -mx-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {uniqueColors.map((colorStr, idx) => {
                   const variant = product?.variants?.find((v: any) => getVariantColor(v) === colorStr);
                   const imageUrl = variant?.images?.[0] || (product as any)?.thumbnail || (product as any)?.imageUrl || '/placeholder.png';
