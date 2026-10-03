@@ -1,7 +1,7 @@
 import api from '../api';
 
 export const adminOrderApi = {
-  getOrders: async (params?: { page?: number; limit?: number; search?: string; status?: string; store?: string }) => {
+  getOrders: async (params?: { page?: number; limit?: number; search?: string; status?: string; store?: string; paymentStatus?: string }) => {
     const response = await api.get('/orders/admin', { params });
     const data = response.data.data || response.data;
     return {
@@ -43,6 +43,10 @@ export const adminOrderApi = {
   },
   getPaymentHistory: async (params?: any) => {
     const response = await api.get('/payments/history', { params });
+    return response.data;
+  },
+  sendPaymentReminder: async (orderId: string, message: string) => {
+    const response = await api.post(`/orders/admin/${orderId}/reminder`, { message });
     return response.data;
   }
 };
