@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router';
 import { Minus, Plus, Link as LinkIcon, ShieldCheck, Truck, MessageCircle, Heart, Star, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
@@ -203,6 +203,75 @@ const ProductDetail: React.FC = () => {
   }, [selectedColor, product]);
 
   const displayImages = currentImages.length > 0 ? currentImages : fallbackImages;
+
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const isSwipingTouch = useRef(false);
+
+  const pointerStartX = useRef<number | null>(null);
+  const pointerStartY = useRef<number | null>(null);
+  const isPointerDown = useRef(false);
+
+  const handlePrevImage = () => {
+    if (displayImages.length <= 1) return;
+    setSelectedImage((prev) => (prev === 0 ? displayImages.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    if (displayImages.length <= 1) return;
+    setSelectedImage((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1));
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    setIsZoomed(false);
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isSwipingTouch.current = true;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isSwipingTouch.current || touchStartX.current === null) return;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const deltaX = touchStartX.current - endX;
+    const deltaY = (touchStartY.current ?? 0) - endY;
+
+    if (Math.abs(deltaX) > 35 && Math.abs(deltaX) > Math.abs(deltaY) && displayImages.length > 1) {
+      if (deltaX > 0) {
+        handleNextImage();
+      } else {
+        handlePrevImage();
+      }
+    }
+    isSwipingTouch.current = false;
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return;
+    if (e.button !== 0) return;
+    pointerStartX.current = e.clientX;
+    pointerStartY.current = e.clientY;
+    isPointerDown.current = true;
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch' || !isPointerDown.current || pointerStartX.current === null) return;
+    const deltaX = pointerStartX.current - e.clientX;
+    const deltaY = (pointerStartY.current ?? 0) - e.clientY;
+
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) && displayImages.length > 1) {
+      if (deltaX > 0) {
+        handleNextImage();
+      } else {
+        handlePrevImage();
+      }
+    }
+    isPointerDown.current = false;
+    pointerStartX.current = null;
+    pointerStartY.current = null;
+  };
 
   let currentStock = 0;
   if (availableSizes.length > 0) {
@@ -462,17 +531,34 @@ const ProductDetail: React.FC = () => {
         {/* Left Column: Images */}
         <div className="w-full lg:w-2/5 flex flex-col gap-4">
           <div 
-            className="w-full aspect-[4/4] bg-gray-100 overflow-hidden relative cursor-crosshair group"
+            className="w-full aspect-[4/4] bg-gray-100 overflow-hidden relative cursor-crosshair group select-none touch-pan-y"
             onMouseEnter={() => setIsZoomed(true)}
-            onMouseLeave={() => setIsZoomed(false)}
+            onMouseLeave={() => { setIsZoomed(false); isPointerDown.current = false; }}
             onMouseMove={handleMouseMove}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
           >
-            <img
-              src={displayImages[selectedImage] || displayImages[0]}
-              alt={product.name}
-              className={`absolute inset-0 w-full h-full object-cover transition-transform duration-200 ease-out ${isZoomed ? 'scale-[2]' : 'scale-100'}`}
-              style={isZoomed ? zoomStyle : { transformOrigin: 'center center' }}
-            />
+            {/* Sliding Image Track */}
+            <div 
+              className="flex h-full w-full transition-transform duration-300 ease-out"
+              style={{ transform: `translateX(-${selectedImage * 100}%)` }}
+            >
+              {displayImages.map((img, idx) => (
+                <div key={idx} className="w-full h-full shrink-0 relative overflow-hidden">
+                  <img
+                    src={img}
+                    alt={`${product.name} ${idx + 1}`}
+                    className={`w-full h-full object-cover select-none pointer-events-none transition-transform duration-200 ease-out ${
+                      isZoomed && selectedImage === idx ? 'scale-[2]' : 'scale-100'
+                    }`}
+                    style={isZoomed && selectedImage === idx ? zoomStyle : { transformOrigin: 'center center' }}
+                    draggable={false}
+                  />
+                </div>
+              ))}
+            </div>
             
             {/* Offer Seal — prefer per-variant discountPercentage, fall back to product-level activeOfferPercentage */}
             {(() => {
@@ -483,8 +569,48 @@ const ProductDetail: React.FC = () => {
                 </div>
               ) : null;
             })()}
+
+            {/* Previous & Next Navigation Arrows */}
+            {displayImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
+                  aria-label="Previous image"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-md transition-all sm:opacity-0 sm:group-hover:opacity-100 z-20 backdrop-blur-sm active:scale-95"
+                >
+                  <ChevronLeft size={20} strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
+                  aria-label="Next image"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-md transition-all sm:opacity-0 sm:group-hover:opacity-100 z-20 backdrop-blur-sm active:scale-95"
+                >
+                  <ChevronRight size={20} strokeWidth={2} />
+                </button>
+
+                {/* Indicator Dots */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-auto">
+                  {displayImages.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSelectedImage(idx); }}
+                      aria-label={`Go to image ${idx + 1}`}
+                      className={`transition-all rounded-full ${
+                        selectedImage === idx
+                          ? 'w-4 h-1.5 bg-white'
+                          : 'w-1.5 h-1.5 bg-white/60 hover:bg-white/90'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
             {/* Wishlist + Share buttons */}
-            <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 cursor-default opacity-100 transition-opacity">
+            <div className="absolute top-4 right-4 flex flex-col gap-2 z-20 cursor-default opacity-100 transition-opacity">
               <div className="relative">
                 <button
                   onClick={handleShare}

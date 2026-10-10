@@ -66,6 +66,8 @@ const Collection: React.FC = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    setSelectedCategory('');
+    setAppliedFiltersState(prev => ({ ...prev, category: '' }));
   }, [categoryId, categoryQuery, searchQuery]);
 
   useEffect(() => {
@@ -134,23 +136,54 @@ const Collection: React.FC = () => {
       return [];
     };
 
+    const findCatInTree = (cats: any[], target: string): any => {
+      if (!Array.isArray(cats)) return null;
+      for (const cat of cats) {
+        const id = String(cat._id || cat.id || '');
+        const slug = String(cat.slug || '').toLowerCase();
+        const nameSlug = String(cat.name || '').toLowerCase().replace(/\s+/g, '-');
+        const name = String(cat.name || '').toLowerCase();
+        const t = target.toLowerCase();
+
+        if (id === target || slug === t || nameSlug === t || name === t) {
+          return cat;
+        }
+        if (cat.children && cat.children.length > 0) {
+          const found = findCatInTree(cat.children, target);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
     if (categoryId === 'flash-sale') {
       filters = { flashSale: true };
     } else if (categoryId === 'new-drops') {
       filters = { sort: 'createdAt', order: 'desc', limit: 20 };
     } else if (categoryId === 'all-drops') {
       filters = {};
-    } else if (categoryId) {
-      const matchedCat = categories.find(
-        c => c.name.toLowerCase().replace(/\s+/g, '-') === categoryId.toLowerCase()
-      );
-      const targetId = matchedCat ? matchedCat._id : categoryId;
-      filters.category = targetId;
-      if (!selectedCategory) {
-        filters.validCategoryIds = findCatAndGetIds(categories, targetId);
+    } else if (categoryId || categoryQuery) {
+      const lookupKey = categoryQuery || categoryId || '';
+      const matchedCat = findCatInTree(categories, lookupKey) || (categoryId ? findCatInTree(categories, categoryId) : null);
+      const effectiveId = categoryQuery || (matchedCat ? (matchedCat._id || matchedCat.id) : categoryId);
+
+      const depth = effectiveId ? findCategoryDepth(categories, effectiveId) : null;
+      if (depth === 1) {
+        filters.subCategory = effectiveId;
+      } else if (depth === 2) {
+        filters.nestedSubCategory = effectiveId;
+      } else {
+        filters.category = effectiveId;
       }
-    } else if (categoryQuery) {
-      filters = { category: categoryQuery };
+
+      if (!selectedCategory && effectiveId) {
+        const ids = findCatAndGetIds(categories, effectiveId);
+        if (ids.length > 0) {
+          filters.validCategoryIds = ids;
+        } else {
+          filters.validCategoryIds = [String(effectiveId)];
+        }
+      }
     }
 
     if (searchQuery) filters.search = searchQuery;
