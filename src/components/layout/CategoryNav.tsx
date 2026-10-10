@@ -18,7 +18,8 @@ const staticNavItems = [
 const CategoryNav: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const isDragging = useRef(false);
+  const isPointerDown = useRef(false);
+  const hasDragged = useRef(false);
   const dragStartX = useRef(0);
   const scrollStartX = useRef(0);
 
@@ -38,22 +39,52 @@ const CategoryNav: React.FC = () => {
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     const el = scrollRef.current;
     if (!el) return;
-    isDragging.current = true;
+    isPointerDown.current = true;
+    hasDragged.current = false;
     dragStartX.current = e.clientX;
     scrollStartX.current = el.scrollLeft;
-    el.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = scrollRef.current;
-    if (!el || !isDragging.current) return;
-    el.scrollLeft = scrollStartX.current - (e.clientX - dragStartX.current);
+    if (!el || !isPointerDown.current) return;
+    const dx = e.clientX - dragStartX.current;
+    if (!hasDragged.current && Math.abs(dx) > 6) {
+      hasDragged.current = true;
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+    }
+    if (hasDragged.current) {
+      el.scrollLeft = scrollStartX.current - dx;
+    }
   };
 
-  const stopDragging = () => {
-    isDragging.current = false;
+  const stopDragging = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    if (el && el.hasPointerCapture(e.pointerId)) {
+      try {
+        el.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+    }
+    isPointerDown.current = false;
+    setTimeout(() => {
+      hasDragged.current = false;
+    }, 50);
+  };
+
+  const handleClickCapture = (e: React.MouseEvent) => {
+    if (hasDragged.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   };
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -79,7 +110,8 @@ const CategoryNav: React.FC = () => {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={stopDragging}
-        onPointerLeave={stopDragging}
+        onPointerCancel={stopDragging}
+        onClickCapture={handleClickCapture}
         onWheel={handleWheel}
       >
         <ul className="flex items-center space-x-6 sm:space-x-10 min-w-max py-3 sm:py-4">
@@ -88,7 +120,7 @@ const CategoryNav: React.FC = () => {
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
-                  `text-[10px] sm:text-xs tracking-widest font-semibold uppercase transition-colors whitespace-nowrap ${
+                  `text-[10px] sm:text-xs tracking-widest font-semibold uppercase transition-colors whitespace-nowrap cursor-pointer ${
                     isActive
                       ? 'text-primary border-b border-primary pb-1'
                       : 'text-gray-500 hover:text-primary'
