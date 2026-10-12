@@ -25,8 +25,30 @@ const initialState: CartState = {
 export const fetchCart = createAsyncThunk('cart/fetchCart', async (_, { rejectWithValue }) => {
   try {
     const response = await cartApi.getCart();
-    // Map response if necessary. Assuming response.data returns the cart items and potentially coupon.
-    return response.data || response;
+    const data = response.data || response;
+
+    // Auto-clean corrupted / orphaned items from server cart (where product was deleted in database)
+    const rawItems = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+    const orphanedItems = rawItems.filter((item: any) => {
+      if (item.product) return false;
+      return !item.productId || (!item.productId._id && typeof item.productId !== 'string' && !item.productId.name);
+    });
+
+    if (orphanedItems.length > 0) {
+      for (const badItem of orphanedItems) {
+        // Try removing using MongoDB cart item _id, or variantId
+        const deleteKey = badItem._id || badItem.id || badItem.variantId?._id || badItem.variantId;
+        if (deleteKey && deleteKey !== 'unknown') {
+          try {
+            await cartApi.removeFromCart(deleteKey);
+          } catch (cleanErr) {
+            console.warn('Could not auto-clean corrupted cart item:', cleanErr);
+          }
+        }
+      }
+    }
+
+    return data;
   } catch (err: any) {
     return rejectWithValue(err.response?.data?.message || err.message);
   }
@@ -54,18 +76,29 @@ export const addToCartAsync = createAsyncThunk('cart/add', async (item: CartItem
   }
 });
 
-export const updateCartItemAsync = createAsyncThunk('cart/update', async ({ id, variantId, quantity }: { id: string, variantId?: string, quantity: number }, { rejectWithValue }) => {
+export const updateCartItemAsync = createAsyncThunk('cart/update', async ({ id, variantId, quantity }: { id?: string, variantId?: string, quantity: number }, { rejectWithValue }) => {
   try {
-    await cartApi.updateCartItem(variantId || id, quantity);
+    const targetId = (variantId && variantId !== 'default' && variantId !== 'unknown') ? variantId : id;
+    if (!targetId || targetId === 'unknown') {
+      return rejectWithValue('Invalid item ID for update');
+    }
+    await cartApi.updateCartItem(targetId, quantity);
     return { id, variantId, quantity };
   } catch (err: any) {
     return rejectWithValue(err.response?.data?.message || err.message);
   }
 });
 
-export const removeFromCartAsync = createAsyncThunk('cart/remove', async ({ id, variantId }: { id: string, variantId?: string }, { rejectWithValue }) => {
+export const removeFromCartAsync = createAsyncThunk('cart/remove', async ({ id, variantId }: { id?: string, variantId?: string }, { rejectWithValue }) => {
   try {
-    await cartApi.removeFromCart(variantId || id);
+    const targetId = (variantId && variantId !== 'default' && variantId !== 'unknown')
+      ? variantId
+      : (id && id !== 'unknown' ? id : undefined);
+
+    if (!targetId) {
+      return rejectWithValue('Invalid item ID for removal');
+    }
+    await cartApi.removeFromCart(targetId);
     return { id, variantId };
   } catch (err: any) {
     return rejectWithValue(err.response?.data?.message || err.message);
@@ -150,13 +183,24 @@ const cartSlice = createSlice({
         const data = action.payload;
 
         const mapApiItemToCartItem = (apiItem: any) => {
-          if (apiItem.product) return apiItem;
+          if (apiItem.product) {
+            return {
+              ...apiItem,
+              id: apiItem.id || apiItem._id,
+            };
+          }
+
+          const rawId = apiItem._id || apiItem.id;
+          const prodId = apiItem.productId?._id || apiItem.productId?.id || (typeof apiItem.productId === 'string' ? apiItem.productId : undefined);
+          const varId = apiItem.variantId?._id || apiItem.variantId?.id || (typeof apiItem.variantId === 'string' ? apiItem.variantId : undefined);
+          const isMissingProduct = !apiItem.productId || (!apiItem.productId?._id && typeof apiItem.productId !== 'string' && !apiItem.productId?.name);
           
           return {
+            id: rawId,
             product: {
-              id: apiItem.productId?._id || apiItem.productId?.id || 'unknown',
-              name: apiItem.productId?.name || 'Unknown Product',
-              imageUrl: apiItem.variantId?.images?.[0] || apiItem.productId?.thumbnail || apiItem.productId?.imageUrl,
+              id: prodId || rawId || 'unknown',
+              name: isMissingProduct ? 'Unavailable Product' : (apiItem.productId?.name || 'Unknown Product'),
+              imageUrl: apiItem.variantId?.images?.[0] || apiItem.productId?.thumbnail || apiItem.productId?.imageUrl || '',
               price: apiItem.price || apiItem.variantId?.price || apiItem.productId?.price || 0,
               mrp: apiItem.variantId?.price || apiItem.productId?.mrp || 0,
               category: apiItem.productId?.categoryId || 'Category',
@@ -164,24 +208,28 @@ const cartSlice = createSlice({
             quantity: apiItem.quantity || 1,
             selectedColor: apiItem.variantId?.attributes?.color,
             selectedSize: apiItem.variantId?.attributes?.size,
-            variantId: apiItem.variantId?._id || apiItem.variantId?.id || (typeof apiItem.variantId === 'string' ? apiItem.variantId : undefined),
+            variantId: varId,
+            isUnavailable: isMissingProduct,
           };
         };
 
-        if (data.items) {
-          state.items = data.items.map(mapApiItemToCartItem);
-          state.couponCode = data.couponCode || null;
-          if (data.coupon) {
-            state.appliedCoupon = data.coupon;
-          } else if (data.discountPercent) {
-            state.appliedCoupon = { code: data.couponCode || '', type: 'percentage', value: data.discountPercent, isActive: true };
-          } else if (data.discount !== undefined) {
-            state.appliedCoupon = { code: data.couponCode || '', type: 'fixed', value: data.discount, isActive: true };
-          } else {
-            state.appliedCoupon = null;
-          }
-        } else if (Array.isArray(data)) {
-          state.items = data.map(mapApiItemToCartItem);
+        const rawList = Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []);
+        // Filter out corrupted items whose product no longer exists so they don't block cart operations
+        const validList = rawList.filter((apiItem: any) => {
+          if (apiItem.product) return true;
+          return !!(apiItem.productId && (apiItem.productId._id || typeof apiItem.productId === 'string' || apiItem.productId.name));
+        });
+
+        state.items = validList.map(mapApiItemToCartItem);
+        state.couponCode = data.couponCode || null;
+        if (data.coupon) {
+          state.appliedCoupon = data.coupon;
+        } else if (data.discountPercent) {
+          state.appliedCoupon = { code: data.couponCode || '', type: 'percentage', value: data.discountPercent, isActive: true };
+        } else if (data.discount !== undefined) {
+          state.appliedCoupon = { code: data.couponCode || '', type: 'fixed', value: data.discount, isActive: true };
+        } else {
+          state.appliedCoupon = null;
         }
       })
       .addCase(fetchCart.rejected, (state, action) => {
@@ -210,9 +258,10 @@ const cartSlice = createSlice({
       // Update Quantity
       .addCase(updateCartItemAsync.fulfilled, (state, action) => {
         const item = state.items.find(item => {
+          const isSameItem = item.id && (item.id === action.payload.id || item.id === action.payload.variantId);
           const isSameProduct = item.product.id === action.payload.id || (item.product as any)._id === action.payload.id;
           const isSameVariant = item.variantId === action.payload.variantId;
-          return isSameProduct && isSameVariant;
+          return isSameItem || (isSameProduct && isSameVariant);
         });
         if (item) {
           item.quantity = action.payload.quantity;
@@ -222,9 +271,10 @@ const cartSlice = createSlice({
       // Remove from Cart
       .addCase(removeFromCartAsync.fulfilled, (state, action) => {
         state.items = state.items.filter(item => {
+          const isSameItem = item.id && (item.id === action.payload.id || item.id === action.payload.variantId);
           const isSameProduct = item.product.id === action.payload.id || (item.product as any)._id === action.payload.id;
           const isSameVariant = item.variantId === action.payload.variantId;
-          return !(isSameProduct && isSameVariant);
+          return !(isSameItem || (isSameProduct && isSameVariant));
         });
         toast.success('Removed from cart');
       })

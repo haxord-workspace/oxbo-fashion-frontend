@@ -117,7 +117,7 @@ export default function CartPage() {
                   onClick={() =>
                     dispatch(
                       removeFromCartAsync({
-                        id: item.product.id,
+                        id: item.id || item.product.id,
                         variantId: item.variantId,
                       })
                     )

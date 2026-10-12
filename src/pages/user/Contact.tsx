@@ -96,9 +96,30 @@ const Contact: React.FC = () => {
             <div>
               <h3 className="text-xl font-black uppercase tracking-wider mb-6">Follow Us</h3>
               <div className="flex space-x-6">
-                <a href="#" className="text-primary hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4">Instagram</a>
-                <a href="#" className="text-primary hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4">Twitter</a>
-                <a href="#" className="text-primary hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4">TikTok</a>
+                <a
+                  href="https://www.instagram.com/oxbo_mens_store?igsh=MTN5bHhka3RsOGE3MA=="
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4"
+                >
+                  Instagram
+                </a>
+                <a
+                  href="https://www.youtube.com/@Oxbofashion/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4"
+                >
+                  YouTube
+                </a>
+                <a
+                  href="https://www.facebook.com/share/187BQwuuRT/?mibextid=wwXIfr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:text-gray-500 transition-colors uppercase font-bold text-sm tracking-widest underline decoration-2 underline-offset-4"
+                >
+                  Facebook
+                </a>
               </div>
             </div>
           </div>

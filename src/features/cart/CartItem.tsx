@@ -25,7 +25,7 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
   };
 
   const handleRemove = () => {
-    dispatch(removeFromCartAsync({ id: product.id, variantId: item.variantId }));
+    dispatch(removeFromCartAsync({ id: item.id || product.id, variantId: item.variantId }));
   };
 
   return (
