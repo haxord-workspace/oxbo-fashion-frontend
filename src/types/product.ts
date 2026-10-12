@@ -25,6 +25,7 @@ export interface ProductVariant {
 
 export interface Product {
   id: string;
+  _id?: string;
   name: string;
   description: string;
   price: number; // Discounted/Current price

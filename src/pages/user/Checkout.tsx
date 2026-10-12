@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ChevronLeft, Edit2, Trash2 } from 'lucide-react';
+import { ChevronLeft, Edit2, Trash2, X, Minus, Plus } from 'lucide-react';
 import { LoadingButton } from '../../components/common/LoadingButton';
 import toast from 'react-hot-toast';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
-import { fetchCart, applyCouponAsync, removeCouponAsync } from '../../features/cart/cartSlice';
+import { fetchCart, applyCouponAsync, removeCouponAsync, updateCartItemAsync } from '../../features/cart/cartSlice';
 import { userOrdersApi } from '../../services/user/orders.Api';
 import { cartApi } from '../../services/user/cart.Api';
 
@@ -113,6 +113,69 @@ const Checkout: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items: cartItems, couponCode, appliedCoupon, isLoading } = useAppSelector((state) => state.cart);
   const [couponInput, setCouponInput] = useState('');
+  const [excludedItemKeys, setExcludedItemKeys] = useState<string[]>([]);
+
+  const getItemKey = (item: CartItem) => {
+    const rawId = item.id || '';
+    const prodId = item.product.id || (item.product as any)._id || '';
+    const variantId = item.variantId || '';
+    const size = item.selectedSize || '';
+    const color = item.selectedColor || '';
+    return `${rawId}_${prodId}_${variantId}_${size}_${color}`;
+  };
+
+  const activeCartItems = cartItems.filter(item => !excludedItemKeys.includes(getItemKey(item)));
+  const excludedCartItems = cartItems.filter(item => excludedItemKeys.includes(getItemKey(item)));
+
+  const handleExcludeItem = (item: CartItem) => {
+    const key = getItemKey(item);
+    setExcludedItemKeys(prev => [...prev, key]);
+    toast.success(`"${item.product.name}" removed from this checkout.`);
+  };
+
+  const [updatingItemKey, setUpdatingItemKey] = useState<string | null>(null);
+
+  const handleUpdateQuantity = async (item: CartItem, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    const key = getItemKey(item);
+    setUpdatingItemKey(key);
+    try {
+      await dispatch(
+        updateCartItemAsync({
+          id: item.id || item.product.id,
+          variantId: item.variantId,
+          quantity: newQuantity,
+        })
+      ).unwrap();
+    } catch (err: any) {
+      toast.error(err || 'Failed to update quantity');
+    } finally {
+      setUpdatingItemKey(null);
+    }
+  };
+
+  const handleIncludeItem = (item: CartItem) => {
+    const key = getItemKey(item);
+    setExcludedItemKeys(prev => prev.filter(k => k !== key));
+    toast.success(`"${item.product.name}" added back to this checkout.`);
+  };
+
+  const restoreExcludedItems = async (items: CartItem[]) => {
+    if (!items || items.length === 0) return;
+    for (const item of items) {
+      const productId = item.product.id || (item.product as any)._id;
+      if (productId && productId !== 'unknown') {
+        const payload: any = { productId, quantity: item.quantity };
+        payload.variantId = item.variantId && item.variantId !== 'default' ? item.variantId : productId;
+        try {
+          await cartApi.addToCart(payload);
+        } catch (restoreErr) {
+          console.warn('Failed to restore item:', restoreErr);
+        }
+      }
+    }
+    dispatch(fetchCart());
+  };
 
   useEffect(() => {
     dispatch(fetchCart());
@@ -138,7 +201,7 @@ const Checkout: React.FC = () => {
     fetchUserAddresses();
   }, [dispatch]);
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+  const subtotal = activeCartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   
   let discountAmount = 0;
   if (appliedCoupon) {
@@ -152,10 +215,14 @@ const Checkout: React.FC = () => {
     }
   }
 
-  const shipping: number = cartItems.length > 0 ? 0 : 0; // Free shipping as per UI
+  const shipping: number = activeCartItems.length > 0 ? 0 : 0; // Free shipping as per UI
   const total = Math.max(0, subtotal - discountAmount + shipping);
 
   const validateCardForm = () => {
+    if (activeCartItems.length === 0) {
+      toast.error('Please keep at least one product in your order to checkout.');
+      return false;
+    }
     if (!selectedAddressId && !isAddingAddress) {
       toast.error('Please select a delivery address');
       return false;
@@ -330,9 +397,8 @@ const Checkout: React.FC = () => {
       return;
     }
     
-    // Snapshot the cart before checkout mutates it server-side, so a cancelled/
-    // failed payment can restore exactly what the user had.
-    const cartSnapshot = cartItems;
+    const itemsToExclude = excludedCartItems;
+    const checkoutItems = activeCartItems;
 
     setIsSubmitting(true);
     try {
@@ -344,12 +410,40 @@ const Checkout: React.FC = () => {
           return;
         }
 
+        let temporarilyRemovedItems: CartItem[] = [];
+
+        // If items were excluded from checkout, temporarily remove them
+        // from the server-side cart so backend creates the order ONLY with active items.
+        if (itemsToExclude.length > 0) {
+          for (const item of itemsToExclude) {
+            const deleteKey = (item.variantId && item.variantId !== 'default' && item.variantId !== 'unknown')
+              ? item.variantId
+              : (item.id && item.id !== 'unknown' ? item.id : (item.product.id !== 'unknown' ? item.product.id : null));
+
+            if (deleteKey) {
+              try {
+                await cartApi.removeFromCart(deleteKey);
+                temporarilyRemovedItems.push(item);
+              } catch (err) {
+                console.warn('Could not remove excluded item from server cart:', err);
+              }
+            }
+          }
+        }
+
         // 1. Create the order in the database first (as PENDING)
-        const dbOrderRes: any = await userOrdersApi.createOrder({
-          shippingAddressId: finalAddressId,
-          paymentReference: 'PENDING_RAZORPAY',
-          notes: ''
-        });
+        let dbOrderRes: any;
+        try {
+          dbOrderRes = await userOrdersApi.createOrder({
+            shippingAddressId: finalAddressId,
+            paymentReference: 'PENDING_RAZORPAY',
+            notes: ''
+          });
+        } catch (createOrderErr: any) {
+          // If order creation failed, immediately restore temporarily removed items!
+          await restoreExcludedItems(temporarilyRemovedItems);
+          throw createOrderErr;
+        }
         
         const orderData = dbOrderRes?.data?.data || dbOrderRes?.data || dbOrderRes;
         const myOrderId = orderData?._id || orderData?.id;
@@ -357,8 +451,12 @@ const Checkout: React.FC = () => {
         if (!myOrderId) {
           toast.error('Failed to create order. Please try again.');
           setIsSubmitting(false);
+          await restoreExcludedItems(temporarilyRemovedItems);
           return;
         }
+
+        // Re-add the excluded items back to the user's persistent cart immediately
+        await restoreExcludedItems(temporarilyRemovedItems);
 
         // 2. Get Razorpay Order ID from backend
         const orderRes: any = await userOrdersApi.createRazorpayOrder({ orderId: myOrderId });
@@ -367,7 +465,7 @@ const Checkout: React.FC = () => {
         if (!rzpOrderId) {
           toast.error('Failed to initialize payment gateway.');
           setIsSubmitting(false);
-          cancelPendingOrder(myOrderId, cartSnapshot);
+          cancelPendingOrder(myOrderId, checkoutItems);
           return;
         }
 
@@ -390,7 +488,7 @@ const Checkout: React.FC = () => {
 
               toast.success('Payment successful!');
               // Order is confirmed server-side now — safe to resync the cart
-              // (backend removes the purchased items).
+              // (backend removes the purchased items, excluded items remain in cart).
               dispatch(fetchCart());
               navigate('/orders');
             } catch (err: any) {
@@ -412,9 +510,8 @@ const Checkout: React.FC = () => {
             ondismiss: function() {
               setIsSubmitting(false);
               toast.error('Payment cancelled');
-              // Void the pending order server-side and restore the cart items
-              // the backend drained when the order was created.
-              cancelPendingOrder(myOrderId, cartSnapshot);
+              // Void the pending order server-side and restore the checkout items
+              cancelPendingOrder(myOrderId, checkoutItems);
             }
           }
         };
@@ -423,7 +520,7 @@ const Checkout: React.FC = () => {
         rzp1.on('payment.failed', function (response: any) {
           toast.error(response.error.description);
           setIsSubmitting(false);
-          cancelPendingOrder(myOrderId, cartSnapshot);
+          cancelPendingOrder(myOrderId, checkoutItems);
         });
         rzp1.open();
         
@@ -713,23 +810,120 @@ const Checkout: React.FC = () => {
             <div className="bg-gray-50 p-5 sm:p-6 md:p-8 lg:sticky lg:top-24">
               <h2 className="text-lg font-bold uppercase tracking-wider mb-6">Order Summary</h2>
               
-              <div className="space-y-6 mb-6">
-                {cartItems.map((item) => (
-                  <div key={item.product.id + (item.selectedSize || '')} className="flex gap-4">
-                    <div className="w-20 h-24 bg-gray-200 flex-shrink-0">
-                      <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 flex flex-col justify-between">
-                      <div>
-                        <h3 className="text-xs font-bold uppercase">{item.product.name}</h3>
-                        <p className="text-gray-500 text-xs mt-1">Qty: {item.quantity}</p>
-                        {item.selectedSize && <p className="text-gray-500 text-xs">Size: {item.selectedSize}</p>}
-                      </div>
-                      <p className="text-sm font-medium">Rs. {item.product.price.toLocaleString('en-IN')}.00</p>
-                    </div>
+              <div className="space-y-4 mb-6">
+                {activeCartItems.length === 0 ? (
+                  <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded">
+                    You have removed all items from this order. Please add back at least one product below to checkout.
                   </div>
-                ))}
+                ) : (
+                  activeCartItems.map((item) => (
+                    <div key={getItemKey(item)} className="flex gap-4 p-2 relative bg-white border border-gray-100 rounded-sm">
+                      <div className="w-20 h-24 bg-gray-200 flex-shrink-0">
+                        <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start gap-2">
+                            <h3 className="text-xs font-bold uppercase text-gray-900 leading-snug line-clamp-2">{item.product.name}</h3>
+                            <button
+                              type="button"
+                              onClick={() => handleExcludeItem(item)}
+                              className="text-gray-400 hover:text-red-500 p-1 -mr-1 -mt-1 transition-colors"
+                              title="Remove from this order (keeps it in your cart)"
+                            >
+                              <X size={15} />
+                            </button>
+                          </div>
+                          {item.selectedSize && <p className="text-gray-500 text-xs mt-1">Size: {item.selectedSize}</p>}
+                          {item.selectedColor && <p className="text-gray-500 text-xs">Color: {item.selectedColor}</p>}
+                        </div>
+
+                        {/* Quantity Controls & Price */}
+                        <div className="flex justify-between items-end mt-3 pt-2 border-t border-gray-100">
+                          {/* Quantity Stepper */}
+                          <div className="flex items-center border border-gray-200 rounded bg-white">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateQuantity(item, item.quantity - 1)}
+                              disabled={item.quantity <= 1 || updatingItemKey === getItemKey(item)}
+                              className="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                              title="Decrease quantity"
+                            >
+                              <Minus size={11} />
+                            </button>
+                            <span className="w-7 text-center text-xs font-bold text-gray-800">
+                              {updatingItemKey === getItemKey(item) ? (
+                                <span className="inline-block animate-pulse text-[10px]">...</span>
+                              ) : (
+                                item.quantity
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateQuantity(item, item.quantity + 1)}
+                              disabled={updatingItemKey === getItemKey(item)}
+                              className="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                              title="Increase quantity"
+                            >
+                              <Plus size={11} />
+                            </button>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-gray-900">
+                              Rs. {(item.product.price * item.quantity).toLocaleString('en-IN')}.00
+                            </p>
+                            {item.quantity > 1 && (
+                              <p className="text-[10px] text-gray-400">
+                                Rs. {item.product.price.toLocaleString('en-IN')}.00 each
+                              </p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleExcludeItem(item)}
+                              className="text-[11px] text-gray-400 hover:text-red-600 underline font-medium transition-colors"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
+
+              {/* Saved in Cart (Excluded from this checkout session) */}
+              {excludedCartItems.length > 0 && (
+                <div className="mb-6 p-3 bg-gray-100/80 border border-dashed border-gray-300 rounded-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600">
+                      Saved in Cart ({excludedCartItems.length})
+                    </span>
+                    <span className="text-[10px] text-gray-400 italic">Not billed in this order</span>
+                  </div>
+                  <div className="space-y-2">
+                    {excludedCartItems.map((item) => (
+                      <div key={getItemKey(item)} className="flex items-center justify-between text-xs bg-white p-2 border border-gray-200">
+                        <div className="flex items-center gap-2 truncate pr-2">
+                          <img src={item.product.imageUrl} alt={item.product.name} className="w-8 h-8 object-cover rounded-sm flex-shrink-0" />
+                          <div className="truncate">
+                            <p className="truncate font-medium text-gray-800 text-[11px]">{item.product.name}</p>
+                            <p className="text-[10px] text-gray-400">Rs. {item.product.price.toLocaleString('en-IN')}.00</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleIncludeItem(item)}
+                          className="text-primary hover:text-gray-900 text-[11px] font-bold uppercase underline whitespace-nowrap ml-2"
+                        >
+                          + Add back
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Coupon Section */}
               <div className="mb-6">
@@ -787,9 +981,10 @@ const Checkout: React.FC = () => {
               <LoadingButton 
                 type="submit"
                 isLoading={isSubmitting}
-                className="w-full bg-primary text-white py-4 mt-8 text-sm font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                disabled={activeCartItems.length === 0}
+                className="w-full bg-primary text-white py-4 mt-8 text-sm font-bold uppercase tracking-widest hover:bg-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Place Order
+                Place Order {activeCartItems.length > 0 ? `(${activeCartItems.length} ${activeCartItems.length === 1 ? 'item' : 'items'})` : ''}
               </LoadingButton>
               
               <p className="text-center text-xs text-gray-500 mt-4">
