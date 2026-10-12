@@ -89,18 +89,61 @@ export const AdminOffers = () => {
     fetchProducts();
   }, []);
 
+  const toDateTimeLocal = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 16);
+    } catch {
+      return '';
+    }
+  };
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  const getOfferProductName = (offer: Offer) => {
+    if (offer.productId && typeof offer.productId === 'object') {
+      return (offer.productId as any).name || (offer.productId as any).title || 'Product';
+    }
+    if (offer.product && typeof offer.product === 'object') {
+      return offer.product.name || offer.product.title || 'Product';
+    }
+    if (typeof offer.productId === 'string' && offer.productId) {
+      const foundProduct = products.find(p => (p._id || (p as any).id) === offer.productId);
+      return foundProduct ? foundProduct.name : offer.productId;
+    }
+    return 'All Products';
+  };
+
   const openModal = (mode: 'add' | 'edit', offer: Offer | null = null) => {
     setModalMode(mode);
     setSelectedOffer(offer);
     if (mode === 'edit' && offer) {
+      let prodId = '';
+      if (offer.productId && typeof offer.productId === 'object') {
+        prodId = (offer.productId as any)._id || (offer.productId as any).id || '';
+      } else if (typeof offer.productId === 'string') {
+        prodId = offer.productId;
+      } else if (offer.product) {
+        prodId = typeof offer.product === 'object' ? (offer.product._id || offer.product.id || '') : offer.product;
+      }
+
       setOfferForm({
         name: offer.name || '',
         description: offer.description || '',
         discountType: offer.discountType || 'percentage',
         discountValue: offer.discountValue?.toString() || '',
-        startDate: offer.startDate ? new Date(offer.startDate).toISOString().slice(0, 16) : '',
-        endDate: offer.endDate ? new Date(offer.endDate).toISOString().slice(0, 16) : '',
-        productId: typeof offer.productId === 'object' ? (offer.productId as any)._id : (offer.productId || offer.product?._id || ''),
+        startDate: toDateTimeLocal(offer.startDate),
+        endDate: toDateTimeLocal(offer.endDate),
+        productId: prodId,
         isActive: offer.isActive ?? true
       });
     } else {
@@ -145,7 +188,6 @@ export const AdminOffers = () => {
     if (!offerForm.discountValue) newErrors.discountValue = 'Discount value is required';
     if (!offerForm.startDate) newErrors.startDate = 'Start date is required';
     if (!offerForm.endDate) newErrors.endDate = 'End date is required';
-    if (!offerForm.productId) newErrors.productId = 'Product is required';
     
     if (offerForm.startDate && offerForm.endDate) {
       if (new Date(offerForm.startDate) >= new Date(offerForm.endDate)) {
@@ -171,13 +213,14 @@ export const AdminOffers = () => {
         discountValue: Number(offerForm.discountValue),
         startDate: new Date(offerForm.startDate).toISOString(),
         endDate: new Date(offerForm.endDate).toISOString(),
+        productId: offerForm.productId || null,
       };
 
       if (modalMode === 'add') {
         await adminOfferApi.createOffer(payload);
         toast.success('Offer created successfully');
       } else {
-        const idToUpdate = selectedOffer?._id;
+        const idToUpdate = selectedOffer?._id || (selectedOffer as any)?.id;
         if (idToUpdate) {
           await adminOfferApi.updateOffer(idToUpdate, payload);
           toast.success('Offer updated successfully');
@@ -196,12 +239,14 @@ export const AdminOffers = () => {
   const getStatus = (offer: Offer) => {
     if (!offer.isActive) return { label: 'Inactive', color: 'bg-gray-100 text-gray-600' };
     
-    const now = new Date();
-    const start = new Date(offer.startDate);
-    const end = new Date(offer.endDate);
+    if (offer.startDate && offer.endDate) {
+      const now = new Date();
+      const start = new Date(offer.startDate);
+      const end = new Date(offer.endDate);
 
-    if (now < start) return { label: 'Scheduled', color: 'bg-blue-100 text-blue-700' };
-    if (now > end) return { label: 'Expired', color: 'bg-red-100 text-red-700' };
+      if (!isNaN(start.getTime()) && now < start) return { label: 'Scheduled', color: 'bg-blue-100 text-blue-700' };
+      if (!isNaN(end.getTime()) && now > end) return { label: 'Expired', color: 'bg-red-100 text-red-700' };
+    }
     return { label: 'Active', color: 'bg-green-100 text-green-700' };
   };
 
@@ -256,13 +301,12 @@ export const AdminOffers = () => {
                   </tr>
                 ) : (
                   offers.map((offer) => {
+                    const offerId = offer._id || (offer as any).id || '';
                     const statusInfo = getStatus(offer);
-                    const productName = typeof offer.productId === 'object' 
-                      ? (offer.productId as any).name 
-                      : (offer.product?.name || offer.productId);
+                    const productName = getOfferProductName(offer);
                       
                     return (
-                      <tr key={offer._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <tr key={offerId} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                         <td className="py-4 px-4 font-medium text-gray-900">{offer.name}</td>
                         <td className="py-4 px-4 text-gray-600 truncate max-w-[200px]" title={productName}>
                           {productName}
@@ -271,8 +315,8 @@ export const AdminOffers = () => {
                           {offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `₹${offer.discountValue} OFF`}
                         </td>
                         <td className="py-4 px-4 text-gray-600">
-                          <div className="text-xs">{new Date(offer.startDate).toLocaleDateString()}</div>
-                          <div className="text-xs text-gray-400">to {new Date(offer.endDate).toLocaleDateString()}</div>
+                          <div className="text-xs">{formatDate(offer.startDate)}</div>
+                          <div className="text-xs text-gray-400">to {formatDate(offer.endDate)}</div>
                         </td>
                         <td className="py-4 px-4">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
@@ -282,7 +326,7 @@ export const AdminOffers = () => {
                         <td className="py-4 px-4 text-right">
                           <div className="flex justify-end gap-2">
                             <button onClick={() => openModal('edit', offer)} className="p-1.5 text-gray-400 hover:text-primary transition-colors"><Edit2 size={16} /></button>
-                            <button onClick={() => openDeleteModal(offer._id as string)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                            <button onClick={() => openDeleteModal(offerId)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
                           </div>
                         </td>
                       </tr>
@@ -361,10 +405,10 @@ export const AdminOffers = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product (Optional - leave as Storewide for all products)</label>
             <div className="relative">
-              <div className={`w-full border rounded-md focus-within:ring-1 transition-colors ${errors.productId ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500' : 'border-gray-300 focus-within:border-primary focus-within:ring-primary'}`}>
-                <div className="p-2 border-b border-gray-100 bg-gray-50 rounded-t-md">
+              <div className="w-full border border-gray-300 rounded-md focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-colors">
+                <div className="p-2 border-b border-gray-100 bg-gray-50 rounded-t-md flex items-center justify-between">
                   <input 
                     type="text"
                     placeholder="Search products..."
@@ -372,8 +416,28 @@ export const AdminOffers = () => {
                     onChange={(e) => setProductSearchTerm(e.target.value)}
                     className="w-full bg-transparent outline-none text-sm px-1"
                   />
+                  {offerForm.productId && (
+                    <button
+                      type="button"
+                      onClick={() => setOfferForm({ ...offerForm, productId: '' })}
+                      className="text-xs text-gray-500 hover:text-red-500 whitespace-nowrap ml-2"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
                 <div className="max-h-48 overflow-y-auto bg-white rounded-b-md">
+                  <div
+                    onClick={() => setOfferForm({ ...offerForm, productId: '' })}
+                    className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors ${!offerForm.productId ? 'bg-primary/5 border-l-2 border-primary' : 'border-l-2 border-transparent'}`}
+                  >
+                    <div className="w-10 h-10 rounded bg-gray-100 border border-gray-200 flex items-center justify-center">
+                      <span className="text-gray-500 text-[11px] font-semibold">ALL</span>
+                    </div>
+                    <span className={`text-sm ${!offerForm.productId ? 'font-medium text-primary' : 'text-gray-700'}`}>
+                      All Products (Storewide Offer)
+                    </span>
+                  </div>
                   {isLoadingProducts ? (
                     <div className="px-3 py-4 text-sm text-center text-gray-500">Loading products...</div>
                   ) : filteredProducts.length > 0 ? (
@@ -407,8 +471,7 @@ export const AdminOffers = () => {
                 </div>
               </div>
             </div>
-            {errors.productId && <p className="mt-1 text-xs text-red-500">{errors.productId}</p>}
-            <p className="text-xs text-gray-500 mt-1">Select a product for this offer. You can search above to filter.</p>
+            <p className="text-xs text-gray-500 mt-1">Select a specific product or choose "All Products" for a storewide offer.</p>
           </div>
 
           <div>

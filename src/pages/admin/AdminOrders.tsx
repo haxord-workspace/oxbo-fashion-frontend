@@ -390,7 +390,11 @@ export const AdminOrders = () => {
 
   const openReminderModal = (order: any) => {
     setOrderToRemind(order);
-    setReminderMessage(`Dear ${order.userId?.firstName || 'Customer'}, your payment for Order #${order.orderNumber || 'recent purchase'} is still pending. Please complete the payment to proceed with your order.`);
+    const isCancelled = order.status === 'Cancelled' || order.paymentStatus === 'Cancelled';
+    const defaultMsg = isCancelled
+      ? `Dear ${order.userId?.firstName || 'Customer'}, your Order #${order.orderNumber || 'recent purchase'} was cancelled. If you wish to re-order or need any assistance, please visit our website or contact our support team.`
+      : `Dear ${order.userId?.firstName || 'Customer'}, your payment for Order #${order.orderNumber || 'recent purchase'} is still pending. Please complete the payment to proceed with your order.`;
+    setReminderMessage(defaultMsg);
     setIsReminderModalOpen(true);
     setReminderError('');
   };
@@ -399,7 +403,7 @@ export const AdminOrders = () => {
     e.preventDefault();
     if (!orderToRemind || !reminderMessage.trim()) return;
 
-    const userId = orderToRemind.userId?._id || orderToRemind.userId?.id || orderToRemind.userId;
+    const userId = orderToRemind.userId?._id || orderToRemind.userId?.id || orderToRemind.userId || orderToRemind.customerId?._id || orderToRemind.customerId?.id || orderToRemind.customerId;
     
     if (!userId) {
       setReminderError('Customer user ID is missing. Cannot send notification.');
@@ -409,9 +413,12 @@ export const AdminOrders = () => {
     setIsSendingReminder(true);
     setReminderError('');
     try {
+      const isCancelled = orderToRemind.status === 'Cancelled' || orderToRemind.paymentStatus === 'Cancelled';
       await adminNotificationApi.sendNotification({
         userId,
-        title: `Payment Reminder for Order #${orderToRemind.orderNumber || ''}`,
+        title: isCancelled
+          ? `Order Update for Order #${orderToRemind.orderNumber || ''}`
+          : `Payment Reminder for Order #${orderToRemind.orderNumber || ''}`,
         message: reminderMessage,
         type: 'system',
         channel: 'email',
@@ -600,9 +607,7 @@ export const AdminOrders = () => {
                     <select
                       value={order.status || 'Pending'}
                       onChange={(e) => handleStatusChange(order, e.target.value)}
-                      disabled={['Pending', 'Authorized'].includes(order.paymentStatus) && order.status === 'Pending'}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 focus:ring-1 focus:ring-primary outline-none
-                      ${['Pending', 'Authorized'].includes(order.paymentStatus) && order.status === 'Pending' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 focus:ring-1 focus:ring-primary outline-none cursor-pointer
                       ${order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
                           ['Processing', 'Confirmed', 'Packed'].includes(order.status) ? 'bg-blue-100 text-blue-700' :
                             ['Shipped', 'Out for Delivery'].includes(order.status) ? 'bg-purple-100 text-purple-700' :
@@ -626,58 +631,57 @@ export const AdminOrders = () => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex justify-end gap-2">
-                      {['Authorized', 'Pending'].includes(order.paymentStatus) && order.status === 'Pending' ? (
+                      {/* Authorized payment: Accept / Reject */}
+                      {isAdmin && order.status === 'Pending' && order.paymentStatus === 'Authorized' && (
                         <>
-                          {isAdmin && (
-                            <>
-                              {order.paymentStatus === 'Pending' ? (
-                                <button
-                                  onClick={() => openReminderModal(order)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-white hover:bg-blue-600 bg-blue-50 rounded-md transition-colors whitespace-nowrap"
-                                >
-                                  Send Reminder
-                                </button>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => handleAcceptPayment(order._id || order.id, order.paymentReference || order.paymentId || '')}
-                                    disabled={isProcessingAcceptId === (order._id || order.id)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:text-white hover:bg-emerald-600 bg-emerald-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    {isProcessingAcceptId === (order._id || order.id) ? 'Accepting...' : 'Accept'}
-                                  </button>
-                                  <button
-                                    onClick={() => openRejectModal(order)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    Reject
-                                  </button>
-                                </>
-                              )}
-                            </>
-                          )}
+                          <button
+                            onClick={() => handleAcceptPayment(order._id || order.id, order.paymentReference || order.paymentId || '')}
+                            disabled={isProcessingAcceptId === (order._id || order.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:text-white hover:bg-emerald-600 bg-emerald-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isProcessingAcceptId === (order._id || order.id) ? 'Accepting...' : 'Accept'}
+                          </button>
+                          <button
+                            onClick={() => openRejectModal(order)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Reject
+                          </button>
                         </>
-                      ) : (
-                        <>
-                          {isAdmin && (
-                            <button onClick={() => openStoreModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-600 hover:text-white hover:bg-orange-600 bg-orange-50 rounded-md transition-colors">
-                              <Store size={14} />
-                              {order.store || order.storeId ? 'Reassign' : 'Assign'}
-                            </button>
-                          )}
-                          {isStoreManager && (
-                            <button onClick={() => openTrackingModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 hover:text-white hover:bg-teal-600 bg-teal-50 rounded-md transition-colors whitespace-nowrap">
-                              <Truck size={14} />
-                              Assign Courier
-                            </button>
-                          )}
-                          {isAdmin && (order.status === 'Cancelled' || order.status === 'Returned') && ['Completed', 'Paid', 'Success'].includes(order.paymentStatus || '') && (
-                            <button onClick={() => openRefundModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 rounded-md transition-colors">
-                              <RefreshCw size={14} />
-                              Refund
-                            </button>
-                          )}
-                        </>
+                      )}
+
+                      {/* Send Reminder: for Pending Payment OR Cancelled orders */}
+                      {isAdmin && ((order.status === 'Pending' && order.paymentStatus === 'Pending') || order.status === 'Cancelled' || order.paymentStatus === 'Cancelled') && (
+                        <button
+                          onClick={() => openReminderModal(order)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-white hover:bg-blue-600 bg-blue-50 rounded-md transition-colors whitespace-nowrap"
+                        >
+                          Send Reminder
+                        </button>
+                      )}
+
+                      {/* Assign/Reassign store: for active orders that are not pending authorization/payment and not cancelled */}
+                      {isAdmin && order.status !== 'Cancelled' && order.paymentStatus !== 'Cancelled' && !(order.status === 'Pending' && ['Authorized', 'Pending'].includes(order.paymentStatus)) && (
+                        <button onClick={() => openStoreModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-600 hover:text-white hover:bg-orange-600 bg-orange-50 rounded-md transition-colors">
+                          <Store size={14} />
+                          {order.store || order.storeId ? 'Reassign' : 'Assign'}
+                        </button>
+                      )}
+
+                      {/* Courier tracking */}
+                      {isStoreManager && order.status !== 'Cancelled' && order.paymentStatus !== 'Cancelled' && !(order.status === 'Pending' && ['Authorized', 'Pending'].includes(order.paymentStatus)) && (
+                        <button onClick={() => openTrackingModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 hover:text-white hover:bg-teal-600 bg-teal-50 rounded-md transition-colors whitespace-nowrap">
+                          <Truck size={14} />
+                          Assign Courier
+                        </button>
+                      )}
+
+                      {/* Refund: for Cancelled or Returned orders that were Paid */}
+                      {isAdmin && (order.status === 'Cancelled' || order.status === 'Returned') && ['Completed', 'Paid', 'Success'].includes(order.paymentStatus || '') && (
+                        <button onClick={() => openRefundModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 hover:text-white hover:bg-rose-600 bg-rose-50 rounded-md transition-colors">
+                          <RefreshCw size={14} />
+                          Refund
+                        </button>
                       )}
                       <button onClick={() => openDetailsModal(order)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 hover:text-white hover:bg-indigo-600 bg-indigo-50 rounded-md transition-colors">
                         <Eye size={14} />
@@ -1147,12 +1151,14 @@ export const AdminOrders = () => {
       <AdminModal
         isOpen={isReminderModalOpen}
         onClose={() => !isSendingReminder && setIsReminderModalOpen(false)}
-        title="Send Payment Reminder"
+        title={orderToRemind?.status === 'Cancelled' || orderToRemind?.paymentStatus === 'Cancelled' ? "Send Order Reminder" : "Send Payment Reminder"}
       >
         <form onSubmit={handleReminderSubmit} className="p-6">
           <div className="mb-4">
             <p className="text-sm text-gray-600 mb-4">
-              Send a message to the customer to remind them to complete their payment.
+              {orderToRemind?.status === 'Cancelled' || orderToRemind?.paymentStatus === 'Cancelled'
+                ? "Send a reminder or follow-up notification to the customer regarding their cancelled order."
+                : "Send a message to the customer to remind them to complete their payment."}
             </p>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Message
