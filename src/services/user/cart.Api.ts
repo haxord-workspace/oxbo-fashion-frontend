@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import api from '../api';
 
 export interface CartItem {
@@ -16,10 +17,10 @@ export const cartApi = {
   },
 
   /**
-   * Add an item to the cart
+   * Add an item to the cart with optional request config (e.g. Meta tracking headers)
    */
-  addToCart: async (data: CartItem) => {
-    const response = await api.post('/cart', data);
+  addToCart: async (data: CartItem, config?: AxiosRequestConfig) => {
+    const response = await api.post('/cart', data, config);
     return response.data;
   },
 

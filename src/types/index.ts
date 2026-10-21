@@ -7,3 +7,4 @@ export * from './brand';
 export * from './coupon';
 export * from './order';
 export * from './offer';
+export * from './abandonedCart';

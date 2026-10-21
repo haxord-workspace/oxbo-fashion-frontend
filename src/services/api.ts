@@ -1,5 +1,6 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
+import { getMetaCookies } from '../utils/metaPixel';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -108,6 +109,20 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Attach Meta browser tracking cookies if available for server-side attribution
+  try {
+    const { fbp, fbc } = getMetaCookies();
+    if (fbp && !config.headers['x-meta-fbp']) {
+      config.headers['x-meta-fbp'] = fbp;
+    }
+    if (fbc && !config.headers['x-meta-fbc']) {
+      config.headers['x-meta-fbc'] = fbc;
+    }
+  } catch {
+    // Ignore error
+  }
+
   return config;
 });
 

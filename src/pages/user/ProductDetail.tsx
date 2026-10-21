@@ -11,6 +11,7 @@ import SizeChartModal from '../../components/common/SizeChartModal';
 
 import { productsApi } from '../../services/productsApi';
 import { userReviewsApi } from '../../services/user/reviews.Api';
+import { trackViewContent } from '../../utils/metaPixel';
 import type { Product } from '../../types';
 
 const ProductDetail: React.FC = () => {
@@ -101,6 +102,24 @@ const ProductDetail: React.FC = () => {
     };
     fetchProduct();
   }, [id]);
+
+  // Track Meta Pixel ViewContent event when product details are displayed
+  useEffect(() => {
+    if (product) {
+      try {
+        const prodId = product.id || (product as any)._id || id || '';
+        trackViewContent({
+          productId: prodId,
+          productName: product.name,
+          price: Number(product.price || 1499),
+          currency: 'INR',
+          category: (product.category as any)?.name || (product.category as any),
+        });
+      } catch (err) {
+        console.warn('[Meta Tracking] ViewContent tracking failed:', err);
+      }
+    }
+  }, [product?.id, (product as any)?._id, id]);
 
   const fetchReviews = async () => {
     if (!id) return;
