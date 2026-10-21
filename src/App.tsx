@@ -24,6 +24,7 @@ import Terms from './pages/user/Terms';
 import Privacy from './pages/user/Privacy';
 import ShippingPolicy from './pages/user/ShippingPolicy';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import MetaPixelTracker from './components/common/MetaPixelTracker';
 import { Toaster } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -47,6 +48,7 @@ import {
   AdminBulkUpload,
   AdminEnquiries,
   AdminOffers,
+  AdminAbandonedCarts,
 } from './pages/admin/AdminPages';
 import CartPage from './pages/user/CartPage';
 
@@ -86,6 +88,7 @@ const AppContent: React.FC = () => {
   return (
     <Router>
       <ScrollToTop />
+      <MetaPixelTracker />
       <Routes>
         {/* Client Routes */}
         <Route path="/" element={<MainLayout />}>
@@ -126,6 +129,7 @@ const AppContent: React.FC = () => {
             <Route path="categories/:categoryId" element={<AdminCategoryDetails />} />
             <Route path="brands" element={<AdminBrands />} />
             <Route path="orders" element={<AdminOrders />} />
+            <Route path="abandoned-carts" element={<AdminAbandonedCarts />} />
             <Route path="inventory" element={<AdminInventory />} />
             <Route path="reports" element={<AdminReports />} />
             <Route path="notifications" element={<AdminNotifications />} />

@@ -24,7 +24,8 @@ import {
   Bell,
   Upload,
   MessageSquare,
-  Gift
+  Gift,
+  ShoppingBag
 } from 'lucide-react';
 
 const navItems = [
@@ -34,6 +35,7 @@ const navItems = [
   { name: 'Categories', path: '/admin/categories', icon: Tags },
   { name: 'Brands', path: '/admin/brands', icon: Award },
   { name: 'Orders', path: '/admin/orders', icon: ShoppingCart },
+  { name: 'Abandoned Carts', path: '/admin/abandoned-carts', icon: ShoppingBag },
   { name: 'Users', path: '/admin/users', icon: Users },
   { name: 'Inventory', path: '/admin/inventory', icon: Archive },
   { name: 'Banners', path: '/admin/banners', icon: ImageIcon },
