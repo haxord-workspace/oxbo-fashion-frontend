@@ -26,12 +26,17 @@ const Navbar: React.FC = () => {
         const response = await userNotificationsApi.getUnreadNotifications();
         if (isMounted) {
           let count = 0;
-          if (Array.isArray(response?.data)) {
-            count = response.data.length;
-          } else if (Array.isArray(response)) {
-            count = response.length;
-          } else {
-            count = response?.count || response?.unreadCount || 0;
+          const data = response?.data ?? response;
+          if (Array.isArray(data)) {
+            count = data.filter((n: any) => !n.isRead && !n.read && n.status !== 'read' && !n.readAt).length;
+          } else if (typeof data?.count === 'number') {
+            count = data.count;
+          } else if (typeof data?.unreadCount === 'number') {
+            count = data.unreadCount;
+          } else if (typeof response?.count === 'number') {
+            count = response.count;
+          } else if (typeof response?.unreadCount === 'number') {
+            count = response.unreadCount;
           }
           setUnreadCount(count);
         }
@@ -41,8 +46,18 @@ const Navbar: React.FC = () => {
     };
     
     fetchUnreadCount();
-    fetchUnreadCount();
-  }, [isAuthenticated, location.pathname]); // Re-fetch on route change as well
+
+    const handleNotificationsRead = () => {
+      fetchUnreadCount();
+    };
+
+    window.addEventListener('notificationsRead', handleNotificationsRead);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('notificationsRead', handleNotificationsRead);
+    };
+  }, [isAuthenticated, location.pathname]);
+
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

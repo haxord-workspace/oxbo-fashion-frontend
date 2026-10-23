@@ -29,8 +29,16 @@ export const userNotificationsApi = {
    * Mark a specific notification as read
    */
   markAsRead: async (notificationId: string) => {
-    const response = await api.patch(`/notifications/${notificationId}`);
-    return response.data;
+    try {
+      const response = await api.patch(`/notifications/${notificationId}`, { isRead: true, read: true });
+      return response.data;
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        const response = await api.patch(`/notifications/${notificationId}/read`, { isRead: true, read: true });
+        return response.data;
+      }
+      throw err;
+    }
   },
 
   /**
@@ -46,6 +54,22 @@ export const userNotificationsApi = {
    */
   deleteNotification: async (notificationId: string) => {
     const response = await api.delete(`/notifications/${notificationId}`);
+    return response.data;
+  },
+
+  /**
+   * Register or update device FCM token
+   */
+  registerFcmToken: async (fcmToken: string) => {
+    const response = await api.post('/notifications/fcm-token', { fcmToken });
+    return response.data;
+  },
+
+  /**
+   * Remove device FCM token on logout
+   */
+  removeFcmToken: async () => {
+    const response = await api.delete('/notifications/fcm-token');
     return response.data;
   }
 };

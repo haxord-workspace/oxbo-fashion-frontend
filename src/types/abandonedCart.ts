@@ -128,6 +128,9 @@ export interface AbandonedCartsResponse {
 
 export interface SendRecoveryPayload {
   channel?: NotificationChannel | 'both';
-  couponCode?: string;
+  subject?: string;
   customMessage?: string;
+  couponCode?: string;
+  discountPercentage?: number;
 }
+

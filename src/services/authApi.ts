@@ -56,6 +56,12 @@ export const authApi = {
   },
 
   logout: async (): Promise<{ message?: string }> => {
+    try {
+      await api.delete('/notifications/fcm-token');
+      localStorage.removeItem('oxbo_fcm_token');
+    } catch {
+      // Ignore errors if token deletion fails during logout
+    }
     const response = await api.post('/auth/logout');
     return { message: response.data.message };
   },

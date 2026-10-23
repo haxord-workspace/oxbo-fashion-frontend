@@ -62,5 +62,22 @@ export const cartApi = {
   removeAllCoupons: async () => {
     const response = await api.delete('/cart/remove-coupon/all');
     return response.data;
+  },
+
+  /**
+   * Recover an abandoned cart using a recovery token
+   */
+  recoverAbandonedCart: async (recoveryToken: string) => {
+    const response = await api.get(`/abandoned-carts/recover/${recoveryToken}`);
+    return response.data;
+  },
+
+  /**
+   * Unsubscribe from abandoned cart reminder notifications
+   */
+  unsubscribeFromCartReminders: async (token: string) => {
+    const response = await api.get(`/abandoned-carts/unsubscribe/${token}`);
+    return response.data;
   }
 };
+
