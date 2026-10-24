@@ -153,7 +153,7 @@ const AppContent: React.FC = () => {
           </Route>
         </Route>
       </Routes>
-      <Toaster position="top-center" />
+      <Toaster position="top-right" />
     </Router>
   );
 };

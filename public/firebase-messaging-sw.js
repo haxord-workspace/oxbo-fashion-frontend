@@ -32,17 +32,21 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const clickAction = event.notification.data?.click_action || event.notification.data?.url || '/';
+  const targetUrl =
+    event.notification.data?.link ||
+    event.notification.data?.click_action ||
+    event.notification.data?.url ||
+    '/';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
-        if (client.url.includes(clickAction) && 'focus' in client) {
+        if (client.url.includes(targetUrl) && 'focus' in client) {
           return client.focus();
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow(clickAction);
+        return clients.openWindow(targetUrl);
       }
     })
   );

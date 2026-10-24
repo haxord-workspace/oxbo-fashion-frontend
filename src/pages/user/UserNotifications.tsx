@@ -83,6 +83,15 @@ export const UserNotifications = () => {
 
   useEffect(() => {
     fetchNotifications();
+
+    const handleNewNotification = () => {
+      fetchNotifications();
+    };
+
+    window.addEventListener('newNotification', handleNewNotification);
+    return () => {
+      window.removeEventListener('newNotification', handleNewNotification);
+    };
   }, [fetchNotifications]);
 
   const handleMarkAsRead = async (id: string) => {

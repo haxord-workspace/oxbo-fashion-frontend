@@ -52,9 +52,11 @@ const Navbar: React.FC = () => {
     };
 
     window.addEventListener('notificationsRead', handleNotificationsRead);
+    window.addEventListener('newNotification', handleNotificationsRead);
     return () => {
       isMounted = false;
       window.removeEventListener('notificationsRead', handleNotificationsRead);
+      window.removeEventListener('newNotification', handleNotificationsRead);
     };
   }, [isAuthenticated, location.pathname]);
 

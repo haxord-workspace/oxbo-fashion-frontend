@@ -10,7 +10,7 @@ import { Bell } from 'lucide-react';
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || '';
 const FCM_TOKEN_STORAGE_KEY = 'oxbo_fcm_token';
 
-export function useFcmNotification() {
+export function useFcmNotification(onNewNotification?: (payload?: MessagePayload) => void) {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const [fcmToken, setFcmToken] = useState<string | null>(() => {
     return localStorage.getItem(FCM_TOKEN_STORAGE_KEY);
@@ -95,48 +95,70 @@ export function useFcmNotification() {
     return null;
   }, [isSupported, isAuthenticated, syncTokenToBackend]);
 
-  // Re-sync existing token on login if already granted
+  // Automatically sync or acquire token on login if permission is already granted
   useEffect(() => {
-    if (isAuthenticated && fcmToken) {
+    if (!isAuthenticated || !isSupported) return;
+
+    if (fcmToken) {
       syncTokenToBackend(fcmToken);
+    } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && VAPID_KEY) {
+      (async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          const token = await getToken(messaging!, {
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: registration,
+          });
+          if (token) {
+            setFcmToken(token);
+            localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
+            await syncTokenToBackend(token);
+          }
+        } catch (err) {
+          console.warn('[FCM] Auto-sync token on login warning:', err);
+        }
+      })();
     }
-  }, [isAuthenticated, fcmToken, syncTokenToBackend]);
+  }, [isAuthenticated, fcmToken, isSupported, syncTokenToBackend]);
 
-// Synthesize a clean, pleasant notification sound chime using Web Audio API
-const playNotificationSound = () => {
-  try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
-    const now = ctx.currentTime;
+  // Synthesize a clean, pleasant notification sound chime using Web Audio API
+  const playNotificationSound = async () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      if (ctx.state === 'suspended') {
+        await ctx.resume().catch(() => {});
+      }
+      const now = ctx.currentTime;
 
-    // First note (G5 - 783.99 Hz)
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(783.99, now);
-    gain1.gain.setValueAtTime(0.25, now);
-    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.start(now);
-    osc1.stop(now + 0.3);
+      // First note (G5 - 783.99 Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(783.99, now);
+      gain1.gain.setValueAtTime(0.3, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.3);
 
-    // Second note (C6 - 1046.5 Hz, bright pleasant chime)
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(1046.5, now + 0.12);
-    gain2.gain.setValueAtTime(0.25, now + 0.12);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.start(now + 0.12);
-    osc2.stop(now + 0.5);
-  } catch (err) {
-    console.warn('[FCM] Sound chime playback warning:', err);
-  }
-};
+      // Second note (C6 - 1046.5 Hz, bright pleasant chime)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1046.5, now + 0.12);
+      gain2.gain.setValueAtTime(0.3, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.5);
+    } catch (err) {
+      console.warn('[FCM] Sound chime playback warning:', err);
+    }
+  };
 
   // Listen for foreground push notifications (when user is browsing the website)
   useEffect(() => {
@@ -148,6 +170,7 @@ const playNotificationSound = () => {
 
       const title = payload.notification?.title || payload.data?.title || 'OXBO Fashion';
       const body = payload.notification?.body || payload.data?.body || '';
+      const targetUrl = payload.data?.link || payload.data?.click_action || payload.data?.url;
 
       // 1. Play audio chime sound
       playNotificationSound();
@@ -172,9 +195,8 @@ const playNotificationSound = () => {
             e.preventDefault();
             window.focus();
             desktopNotification.close();
-            const clickAction = payload.data?.click_action || payload.data?.url;
-            if (clickAction) {
-              window.location.href = clickAction;
+            if (targetUrl) {
+              window.location.href = targetUrl;
             }
           };
         } catch (e) {
@@ -188,26 +210,37 @@ const playNotificationSound = () => {
           <div
             onClick={() => {
               toast.dismiss(t.id);
-              const clickAction = payload.data?.click_action || payload.data?.url;
-              if (clickAction) {
-                window.location.href = clickAction;
+              if (targetUrl) {
+                window.location.href = targetUrl;
               }
             }}
-            className="cursor-pointer"
+            className={`cursor-pointer ${targetUrl ? 'hover:opacity-90' : ''}`}
           >
             <p className="font-bold text-sm text-gray-900">{title}</p>
             {body && <p className="text-xs text-gray-600 mt-0.5">{body}</p>}
+            {targetUrl && (
+              <span className="text-[11px] text-primary font-medium underline mt-1 inline-block">
+                View Details &rarr;
+              </span>
+            )}
           </div>
         ),
         {
           icon: <Bell className="w-5 h-5 text-amber-500 shrink-0" />,
-          duration: 7000,
+          duration: 6000,
         }
       );
+
+      // 4. Trigger badge count or list refresh
+      if (onNewNotification) {
+        onNewNotification(payload);
+      }
+      window.dispatchEvent(new CustomEvent('newNotification', { detail: payload }));
+      window.dispatchEvent(new Event('notificationsRead'));
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [onNewNotification]);
 
   return {
     fcmToken,

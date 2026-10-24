@@ -2,10 +2,24 @@ import api from '../api';
 
 export const userNotificationsApi = {
   /**
-   * Get all notifications with pagination
+   * Get all notifications with pagination and optional filters
    */
-  getAllNotifications: async (page: number = 1, limit: number = 10) => {
-    const response = await api.get(`/notifications?page=${page}&limit=${limit}`);
+  getAllNotifications: async (
+    pageOrParams: number | { page?: number; limit?: number; status?: string; type?: string } = 1,
+    limit: number = 10
+  ) => {
+    let query = '';
+    if (typeof pageOrParams === 'number') {
+      query = `?page=${pageOrParams}&limit=${limit}`;
+    } else if (pageOrParams) {
+      const searchParams = new URLSearchParams();
+      if (pageOrParams.page) searchParams.append('page', String(pageOrParams.page));
+      if (pageOrParams.limit) searchParams.append('limit', String(pageOrParams.limit));
+      if (pageOrParams.status) searchParams.append('status', pageOrParams.status);
+      if (pageOrParams.type) searchParams.append('type', pageOrParams.type);
+      query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    }
+    const response = await api.get(`/notifications${query}`);
     return response.data;
   },
 
