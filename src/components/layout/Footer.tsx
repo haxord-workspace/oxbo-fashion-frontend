@@ -58,7 +58,7 @@ const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto pt-4 border-t border-gray-800 text-xs text-gray-400 mt-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
         <p>&copy; 2026, <Link to="/" className="hover:underline uppercase text-white font-medium">oxbo</Link></p>
         <p>
-          Provided by{' '}
+          Developed by{' '}
           <a
             href="https://haxord.com/"
             target="_blank"
