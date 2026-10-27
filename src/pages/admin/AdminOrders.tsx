@@ -421,7 +421,7 @@ export const AdminOrders = () => {
           : `Payment Reminder for Order #${orderToRemind.orderNumber || ''}`,
         message: reminderMessage,
         type: 'system',
-        channel: 'email',
+        channel: 'push',
         priority: 'normal'
       });
       toast.success('Reminder sent successfully.');

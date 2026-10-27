@@ -68,6 +68,8 @@ export const AdminAbandonedCarts: React.FC = () => {
 
   // Reminder Modal Form State
   const [reminderChannel, setReminderChannel] = useState<'both' | NotificationChannel>('both');
+  const [reminderSubject, setReminderSubject] = useState('');
+  const [reminderAttachCoupon, setReminderAttachCoupon] = useState(false);
   const [reminderCoupon, setReminderCoupon] = useState('');
   const [reminderMessage, setReminderMessage] = useState('');
   const [isSendingReminder, setIsSendingReminder] = useState(false);
@@ -92,9 +94,9 @@ export const AdminAbandonedCarts: React.FC = () => {
         stageNumber: 2,
         delayMinutes: 1440,
         channels: ['email', 'push'],
-        emailSubject: 'Special 10% Off: Complete your OXBO order today!',
-        discountCouponCode: 'RECOVER10',
-        discountPercentage: 10,
+        emailSubject: 'Still thinking about it? Your OXBO cart is waiting!',
+        discountCouponCode: '',
+        discountPercentage: 0,
         isEnabled: true,
       },
       {
@@ -234,7 +236,9 @@ export const AdminAbandonedCarts: React.FC = () => {
   const handleOpenReminder = (cart: AbandonedCart) => {
     setSelectedCart(cart);
     setReminderChannel('both');
-    setReminderCoupon(cart.currentStage >= 1 ? 'RECOVER10' : '');
+    setReminderSubject('');
+    setReminderAttachCoupon(false);
+    setReminderCoupon('');
     setReminderMessage('');
     setIsReminderModalOpen(true);
   };
@@ -246,9 +250,11 @@ export const AdminAbandonedCarts: React.FC = () => {
       setIsSendingReminder(true);
       const res = await adminAbandonedCartApi.sendRecovery(selectedCart._id, {
         channel: reminderChannel,
-        couponCode: reminderCoupon.trim() || undefined,
+        subject: reminderSubject.trim() || undefined,
         customMessage: reminderMessage.trim() || undefined,
+        couponCode: reminderAttachCoupon && reminderCoupon.trim() ? reminderCoupon.trim().toUpperCase() : undefined,
       });
+
       toast.success(res.message || 'Recovery notification dispatched successfully!');
       setIsReminderModalOpen(false);
       fetchCarts();
@@ -259,6 +265,7 @@ export const AdminAbandonedCarts: React.FC = () => {
       setIsSendingReminder(false);
     }
   };
+
 
   // Open Settings Modal
   const handleOpenSettings = () => {
@@ -1108,44 +1115,83 @@ export const AdminAbandonedCarts: React.FC = () => {
               </div>
             </div>
 
-            {/* Discount Coupon Code */}
+            {/* Custom Subject Line */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Incentive Coupon Voucher (Optional)
+                Email Subject Line (Optional)
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="e.g. RECOVER10 or OXBOVIP"
-                  value={reminderCoupon}
-                  onChange={(e) => setReminderCoupon(e.target.value.toUpperCase())}
-                  className="w-full pl-3 pr-24 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
-                <button
-                  type="button"
-                  onClick={() => setReminderCoupon('RECOVER10')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-primary hover:underline px-2 py-1"
-                >
-                  + RECOVER10
-                </button>
-              </div>
+              <input
+                type="text"
+                placeholder="We saved your cart at OXBO Men's Wear!"
+                value={reminderSubject}
+                onChange={(e) => setReminderSubject(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              />
               <p className="text-[11px] text-gray-400 mt-1">
-                Coupon will be automatically embedded into the 1-click recovery URL.
+                Leave empty to use the standard reminder subject line.
               </p>
             </div>
 
-            {/* Custom Message / Notes */}
+            {/* Attach Coupon / Offer Toggle */}
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <label className="text-xs font-bold text-gray-900 flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={reminderAttachCoupon}
+                      onChange={(e) => setReminderAttachCoupon(e.target.checked)}
+                      className="rounded text-primary focus:ring-primary h-4 w-4"
+                    />
+                    Attach Manual Coupon Offer
+                  </label>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    {reminderAttachCoupon
+                      ? 'Email will feature a highlighted voucher box with your coupon code.'
+                      : 'Disabled: Customer will receive a pure reminder with cart items only (no discount).'}
+                  </p>
+                </div>
+                {reminderAttachCoupon && (
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 font-bold text-[10px] rounded-full uppercase">
+                    Offer Active
+                  </span>
+                )}
+              </div>
+
+              {reminderAttachCoupon && (
+                <div className="pt-2 border-t border-gray-200">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Coupon Code <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. OXBOVIP15"
+                    value={reminderCoupon}
+                    onChange={(e) => setReminderCoupon(e.target.value.toUpperCase())}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary uppercase"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    This coupon will be highlighted in the recovery email and auto-applied at checkout.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Custom Message / Admin Note */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Custom Message / Headline (Optional)
+                Admin Personal Note (Optional)
               </label>
               <textarea
                 rows={3}
-                placeholder="Add an extra personalized touch or leave empty to use standard drip template..."
+                placeholder='e.g. "We reserved this item in size L for you. Complete your order today!"'
                 value={reminderMessage}
                 onChange={(e) => setReminderMessage(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
               />
+              <p className="text-[11px] text-gray-400 mt-1">
+                Appears inside the email in a styled personal note quote directly above the cart table.
+              </p>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
@@ -1291,7 +1337,12 @@ export const AdminAbandonedCarts: React.FC = () => {
                           {stage.stageNumber}
                         </span>
                         <h5 className="font-semibold text-gray-900 text-sm">
-                          Stage {stage.stageNumber}: {stage.stageNumber === 1 ? 'Gentle Nudge' : stage.stageNumber === 2 ? 'Value Incentive' : 'Inventory Urgency'}
+                          Stage {stage.stageNumber}:{' '}
+                          {stage.stageNumber === 1
+                            ? 'Automated Reminder (Initial Nudge)'
+                            : stage.stageNumber === 2
+                            ? 'Automated Reminder (Follow-up)'
+                            : 'Automated Reminder (Final Notice)'}
                         </h5>
                       </div>
                       <label className="text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-gray-600">
@@ -1334,18 +1385,13 @@ export const AdminAbandonedCarts: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block font-medium text-gray-600 mb-1">Coupon Code (Optional)</label>
-                        <input
-                          type="text"
-                          value={stage.discountCouponCode || ''}
-                          onChange={(e) => {
-                            const newStages = [...settings.stages];
-                            newStages[idx].discountCouponCode = e.target.value.toUpperCase();
-                            setSettings({ ...settings, stages: newStages });
-                          }}
-                          placeholder="e.g. RECOVER10"
-                          className="w-full px-3 py-1.5 border border-gray-300 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
+                        <label className="block font-medium text-gray-600 mb-1">Incentive Offer</label>
+                        <div className="px-3 py-1.5 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 text-xs flex items-center justify-between">
+                          <span>No automated discount</span>
+                          <span className="text-[10px] bg-gray-200/70 text-gray-600 px-1.5 py-0.5 rounded font-medium">
+                            Manual Only
+                          </span>
+                        </div>
                       </div>
 
                       <div className="sm:col-span-2">
@@ -1364,6 +1410,12 @@ export const AdminAbandonedCarts: React.FC = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+              <div className="mt-3 p-3 bg-amber-50/60 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Automated Reminder Policy:</strong> Cron schedules strictly send reminders without coupons to prevent margin erosion. Dispatched offers and vouchers can only be sent manually by an admin via the &quot;Send Recovery&quot; button on individual carts.
+                </p>
               </div>
             </div>
 

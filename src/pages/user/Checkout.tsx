@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { ChevronLeft, Edit2, Trash2, X, Minus, Plus } from 'lucide-react';
 import { LoadingButton } from '../../components/common/LoadingButton';
 import toast from 'react-hot-toast';
@@ -117,9 +117,56 @@ const Checkout: React.FC = () => {
   };
 
   const dispatch = useAppDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const recoveryToken = searchParams.get('recoveryToken');
   const { items: cartItems, couponCode, appliedCoupon, isLoading } = useAppSelector((state) => state.cart);
   const [couponInput, setCouponInput] = useState('');
   const [excludedItemKeys, setExcludedItemKeys] = useState<string[]>([]);
+
+  // Auto-restore abandoned cart when customer visits via recovery email link
+  useEffect(() => {
+    if (!recoveryToken) return;
+
+    let isMounted = true;
+    const recoverCartSession = async () => {
+      try {
+        const res = await cartApi.recoverAbandonedCart(recoveryToken);
+        if (isMounted) {
+          await dispatch(fetchCart()).unwrap();
+          toast.success('Your saved cart has been restored!');
+
+          // If the recovery link includes an attached coupon, auto-fill and apply it
+          const attachedCoupon = res?.cart?.couponCode || res?.couponCode || res?.coupon;
+          if (attachedCoupon && typeof attachedCoupon === 'string') {
+            setCouponInput(attachedCoupon);
+            try {
+              const cartTotal = res?.cart?.subtotal || res?.cart?.total || 0;
+              await dispatch(applyCouponAsync({ code: attachedCoupon, cartTotal })).unwrap();
+              toast.success(`Coupon "${attachedCoupon}" applied automatically!`);
+            } catch {
+              // Pre-fill input if auto-apply had restrictions or needs manual confirmation
+              setCouponInput(attachedCoupon);
+            }
+          }
+
+          // Clear query parameter from the URL cleanly
+          searchParams.delete('recoveryToken');
+          setSearchParams(searchParams, { replace: true });
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          console.error('[Cart Recovery] Error recovering cart:', err);
+          toast.error(err?.response?.data?.message || 'Cart recovery link may be expired or already used.');
+        }
+      }
+    };
+
+    recoverCartSession();
+    return () => {
+      isMounted = false;
+    };
+  }, [recoveryToken, dispatch]);
+
 
   const getItemKey = (item: CartItem) => {
     const rawId = item.id || '';
