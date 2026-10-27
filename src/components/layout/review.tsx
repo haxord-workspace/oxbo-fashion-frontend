@@ -92,8 +92,13 @@ const Reviews: React.FC = () => {
     if (hasPrev) setCurrentPage(prev => prev - 1);
   };
 
+  // If there are no reviews from backend or an error occurs, do not render the reviews section
+  if (displayedReviews.length === 0 || error) {
+    return null;
+  }
+
   return (
-    <section className="w-full bg-white  pb-2 sm:py-16">
+    <section className="w-full bg-white pb-2 sm:py-16">
       <h2 className="text-center text-lg sm:text-xl font-oswald uppercase tracking-widest mb-6 text-primary">
         Reviews
       </h2>
@@ -108,19 +113,7 @@ const Reviews: React.FC = () => {
           </div>
         )}
 
-        {!loading && error && (
-          <div className="flex items-center justify-center text-red-500 w-full">
-            <p>Failed to load reviews. Please try again later.</p>
-          </div>
-        )}
-
-        {!loading && !error && displayedReviews.length === 0 && (
-          <div className="flex items-center justify-center text-gray-500 w-full">
-            <p>No reviews available</p>
-          </div>
-        )}
-
-        {!loading && !error && displayedReviews.length > 0 && (
+        {!loading && (
           <>
             {/* Left Arrow */}
             {hasPrev && (
@@ -221,4 +214,3 @@ const Reviews: React.FC = () => {
 };
 
 export default Reviews;
-

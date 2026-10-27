@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { ChevronLeft, Edit2, Trash2, X, Minus, Plus } from 'lucide-react';
 import { LoadingButton } from '../../components/common/LoadingButton';
 import toast from 'react-hot-toast';
@@ -7,6 +7,12 @@ import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { fetchCart, applyCouponAsync, removeCouponAsync, updateCartItemAsync } from '../../features/cart/cartSlice';
 import { userOrdersApi } from '../../services/user/orders.Api';
 import { cartApi } from '../../services/user/cart.Api';
+import {
+  newMetaEventId,
+  metaHeaders,
+  trackInitiateCheckout,
+  trackPurchase,
+} from '../../utils/metaPixel';
 
 import { userAddressesApi } from '../../services/user/addresses.Api';
 import type { UserAddress } from '../../types/address';
@@ -111,9 +117,56 @@ const Checkout: React.FC = () => {
   };
 
   const dispatch = useAppDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const recoveryToken = searchParams.get('recoveryToken');
   const { items: cartItems, couponCode, appliedCoupon, isLoading } = useAppSelector((state) => state.cart);
   const [couponInput, setCouponInput] = useState('');
   const [excludedItemKeys, setExcludedItemKeys] = useState<string[]>([]);
+
+  // Auto-restore abandoned cart when customer visits via recovery email link
+  useEffect(() => {
+    if (!recoveryToken) return;
+
+    let isMounted = true;
+    const recoverCartSession = async () => {
+      try {
+        const res = await cartApi.recoverAbandonedCart(recoveryToken);
+        if (isMounted) {
+          await dispatch(fetchCart()).unwrap();
+          toast.success('Your saved cart has been restored!');
+
+          // If the recovery link includes an attached coupon, auto-fill and apply it
+          const attachedCoupon = res?.cart?.couponCode || res?.couponCode || res?.coupon;
+          if (attachedCoupon && typeof attachedCoupon === 'string') {
+            setCouponInput(attachedCoupon);
+            try {
+              const cartTotal = res?.cart?.subtotal || res?.cart?.total || 0;
+              await dispatch(applyCouponAsync({ code: attachedCoupon, cartTotal })).unwrap();
+              toast.success(`Coupon "${attachedCoupon}" applied automatically!`);
+            } catch {
+              // Pre-fill input if auto-apply had restrictions or needs manual confirmation
+              setCouponInput(attachedCoupon);
+            }
+          }
+
+          // Clear query parameter from the URL cleanly
+          searchParams.delete('recoveryToken');
+          setSearchParams(searchParams, { replace: true });
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          console.error('[Cart Recovery] Error recovering cart:', err);
+          toast.error(err?.response?.data?.message || 'Cart recovery link may be expired or already used.');
+        }
+      }
+    };
+
+    recoverCartSession();
+    return () => {
+      isMounted = false;
+    };
+  }, [recoveryToken, dispatch]);
+
 
   const getItemKey = (item: CartItem) => {
     const rawId = item.id || '';
@@ -217,6 +270,28 @@ const Checkout: React.FC = () => {
 
   const shipping: number = activeCartItems.length > 0 ? 0 : 0; // Free shipping as per UI
   const total = Math.max(0, subtotal - discountAmount + shipping);
+
+  // Meta Pixel + CAPI InitiateCheckout tracking
+  const hasTrackedCheckoutRef = React.useRef(false);
+  useEffect(() => {
+    if (activeCartItems.length > 0 && !hasTrackedCheckoutRef.current) {
+      hasTrackedCheckoutRef.current = true;
+      try {
+        trackInitiateCheckout({
+          items: activeCartItems.map((item) => ({
+            id: item.product.id || (item.product as any)._id,
+            name: item.product.name,
+            price: item.product.price,
+            quantity: item.quantity,
+          })),
+          total,
+          currency: 'INR',
+        });
+      } catch (err) {
+        console.warn('[Meta Tracking] InitiateCheckout failed:', err);
+      }
+    }
+  }, [activeCartItems.length, total]);
 
   const validateCardForm = () => {
     if (activeCartItems.length === 0) {
@@ -431,6 +506,10 @@ const Checkout: React.FC = () => {
           }
         }
 
+        // Generate hybrid tracking event ID for Purchase / CAPI deduplication
+        const purchaseEventId = newMetaEventId();
+        const capiHeaders = metaHeaders(purchaseEventId);
+
         // 1. Create the order in the database first (as PENDING)
         let dbOrderRes: any;
         try {
@@ -438,7 +517,7 @@ const Checkout: React.FC = () => {
             shippingAddressId: finalAddressId,
             paymentReference: 'PENDING_RAZORPAY',
             notes: ''
-          });
+          }, { headers: capiHeaders });
         } catch (createOrderErr: any) {
           // If order creation failed, immediately restore temporarily removed items!
           await restoreExcludedItems(temporarilyRemovedItems);
@@ -447,6 +526,7 @@ const Checkout: React.FC = () => {
         
         const orderData = dbOrderRes?.data?.data || dbOrderRes?.data || dbOrderRes;
         const myOrderId = orderData?._id || orderData?.id;
+        const orderNumber = orderData?.orderNumber || orderData?.order_number || myOrderId;
 
         if (!myOrderId) {
           toast.error('Failed to create order. Please try again.');
@@ -457,6 +537,9 @@ const Checkout: React.FC = () => {
 
         // Re-add the excluded items back to the user's persistent cart immediately
         await restoreExcludedItems(temporarilyRemovedItems);
+
+        // Prepare headers with the actual orderNumber for payment verification CAPI deduplication
+        const paymentCapiHeaders = metaHeaders(orderNumber);
 
         // 2. Get Razorpay Order ID from backend
         const orderRes: any = await userOrdersApi.createRazorpayOrder({ orderId: myOrderId });
@@ -484,7 +567,26 @@ const Checkout: React.FC = () => {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature
-              });
+              }, { headers: paymentCapiHeaders });
+
+              // 5. Fire browser Purchase event with order.orderNumber for exact CAPI deduplication
+              try {
+                trackPurchase({
+                  orderId: myOrderId,
+                  orderNumber,
+                  items: checkoutItems.map(item => ({
+                    id: item.product.id || (item.product as any)._id,
+                    name: item.product.name,
+                    price: item.product.price,
+                    quantity: item.quantity,
+                  })),
+                  total: Number(orderData?.grandTotal || total),
+                  currency: 'INR',
+                  eventId: orderNumber,
+                });
+              } catch (trackErr) {
+                console.warn('[Meta Tracking] Purchase event track failed:', trackErr);
+              }
 
               toast.success('Payment successful!');
               // Order is confirmed server-side now — safe to resync the cart

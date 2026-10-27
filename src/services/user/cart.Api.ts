@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import api from '../api';
 
 export interface CartItem {
@@ -16,10 +17,10 @@ export const cartApi = {
   },
 
   /**
-   * Add an item to the cart
+   * Add an item to the cart with optional request config (e.g. Meta tracking headers)
    */
-  addToCart: async (data: CartItem) => {
-    const response = await api.post('/cart', data);
+  addToCart: async (data: CartItem, config?: AxiosRequestConfig) => {
+    const response = await api.post('/cart', data, config);
     return response.data;
   },
 
@@ -61,5 +62,22 @@ export const cartApi = {
   removeAllCoupons: async () => {
     const response = await api.delete('/cart/remove-coupon/all');
     return response.data;
+  },
+
+  /**
+   * Recover an abandoned cart using a recovery token
+   */
+  recoverAbandonedCart: async (recoveryToken: string) => {
+    const response = await api.get(`/abandoned-carts/recover/${recoveryToken}`);
+    return response.data;
+  },
+
+  /**
+   * Unsubscribe from abandoned cart reminder notifications
+   */
+  unsubscribeFromCartReminders: async (token: string) => {
+    const response = await api.get(`/abandoned-carts/unsubscribe/${token}`);
+    return response.data;
   }
 };
+

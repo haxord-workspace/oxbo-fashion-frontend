@@ -26,6 +26,16 @@ export interface SendAllNotificationPayload {
   priority: string;
 }
 
+export interface TestPushPayload {
+  fcmToken: string;
+  title: string;
+  body: string;
+  data?: {
+    link?: string;
+    [key: string]: any;
+  };
+}
+
 export const adminNotificationApi = {
   sendNotification: async (data: SendNotificationPayload) => {
     try {
@@ -66,5 +76,14 @@ export const adminNotificationApi = {
     } catch (error: any) {
       throw error.response?.data || error;
     }
+  },
+  testPushNotification: async (data: TestPushPayload) => {
+    try {
+      const response = await api.post('/admin/notifications/test-push', data);
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
   }
 };
+

@@ -4,6 +4,7 @@ import type { CartItem, Coupon } from '../../types';
 import type { RootState } from '../../app/store';
 import { cartApi } from '../../services/user/cart.Api';
 import { userCouponsApi } from '../../services/user/coupons.Api';
+import { trackAddToCart } from '../../utils/metaPixel';
 import toast from 'react-hot-toast';
 
 interface CartState {
@@ -69,7 +70,22 @@ export const addToCartAsync = createAsyncThunk('cart/add', async (item: CartItem
       payload.variantId = productId;
     }
     
-    await cartApi.addToCart(payload);
+    // Hybrid Meta Pixel + CAPI Tracking
+    let requestConfig;
+    try {
+      const { headers } = trackAddToCart({
+        productId,
+        productName: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+        category: (item.product.category as any)?.name || (item.product.category as any),
+      });
+      requestConfig = { headers };
+    } catch {
+      // Ignore tracking errors to avoid blocking shopping cart operations
+    }
+
+    await cartApi.addToCart(payload, requestConfig);
     return item;
   } catch (err: any) {
     return rejectWithValue(err.response?.data?.message || err.message);

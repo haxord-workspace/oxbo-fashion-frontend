@@ -53,7 +53,7 @@ export const AdminUsers = () => {
     title: '',
     message: '',
     type: 'system',
-    channel: 'email',
+    channel: 'push',
     priority: 'normal'
   });
   const [notificationErrors, setNotificationErrors] = useState<{ title?: string; message?: string }>({});
@@ -338,7 +338,7 @@ export const AdminUsers = () => {
         title: '',
         message: '',
         type: 'system',
-        channel: 'email',
+        channel: 'push',
         priority: 'normal'
       });
       setUserToNotify(null);
@@ -1105,17 +1105,31 @@ export const AdminUsers = () => {
                 {notificationErrors.message && <p className="mt-1 text-xs text-red-500">{notificationErrors.message}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                <select
-                  value={notificationForm.priority}
-                  onChange={e => setNotificationForm({ ...notificationForm, priority: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white text-sm"
-                >
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Channel</label>
+                  <select
+                    value={notificationForm.channel}
+                    onChange={e => setNotificationForm({ ...notificationForm, channel: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white text-sm"
+                  >
+                    <option value="push">Push Notification (Device Alert)</option>
+                    <option value="in_app">In-App Notification</option>
+                    <option value="email">Email</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    value={notificationForm.priority}
+                    onChange={e => setNotificationForm({ ...notificationForm, priority: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-white text-sm"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
               </div>
 
               <div className="pt-4 flex gap-3">
@@ -1123,7 +1137,7 @@ export const AdminUsers = () => {
                   type="button"
                   onClick={() => {
                     setIsNotificationModalOpen(false);
-                    setNotificationForm({ title: '', message: '', type: 'system', channel: 'email', priority: 'normal' });
+                    setNotificationForm({ title: '', message: '', type: 'system', channel: 'push', priority: 'normal' });
                     setNotificationErrors({});
                   }}
                   className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors"

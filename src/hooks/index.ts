@@ -1,2 +1,1 @@
-// Export your custom hooks here
-export {};
+export * from './useFcmNotification';

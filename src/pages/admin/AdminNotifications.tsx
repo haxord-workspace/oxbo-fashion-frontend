@@ -1,11 +1,159 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Bell, X, Send, CheckCheck } from 'lucide-react';
+import { Loader2, Bell, X, Send, CheckCheck, Smartphone, BellRing } from 'lucide-react';
 import PageWrapper from '../../components/admin/PageWrapper';
 import { AdminPagination } from '../../components/admin/AdminPagination';
 import { adminNotificationApi } from '../../services/admin/adminNotification.Api';
 import toast from 'react-hot-toast';
 import { useAppSelector } from '../../app/hooks';
 import { selectIsStoreManager } from '../../features/auth/authSlice';
+
+// ─── Test Push Notification Modal ─────────────────────────────────────────────
+
+const TestPushModal = ({ onClose }: { onClose: () => void }) => {
+  const [fcmToken, setFcmToken] = useState(() => localStorage.getItem('oxbo_fcm_token') || '');
+  const [title, setTitle] = useState('Test Push Notification');
+  const [body, setBody] = useState('Checking notification delivery to your browser!');
+  const [link, setLink] = useState('/orders');
+  const [isSending, setIsSending] = useState(false);
+
+  const handleUseCurrentToken = () => {
+    const token = localStorage.getItem('oxbo_fcm_token');
+    if (token) {
+      setFcmToken(token);
+      toast.success('Loaded current device FCM token');
+    } else {
+      toast.error('No FCM token found on this device. Please enable notifications in your browser first.');
+    }
+  };
+
+  const handleSendTestPush = async () => {
+    if (!fcmToken.trim()) return toast.error('FCM Device Token is required');
+    if (!title.trim()) return toast.error('Notification title is required');
+    if (!body.trim()) return toast.error('Notification body is required');
+
+    setIsSending(true);
+    try {
+      await adminNotificationApi.testPushNotification({
+        fcmToken: fcmToken.trim(),
+        title: title.trim(),
+        body: body.trim(),
+        data: link.trim() ? { link: link.trim() } : undefined,
+      });
+      toast.success('Test push notification sent successfully!');
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send test push notification');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
+          <div className="flex items-center gap-2">
+            <Smartphone size={18} className="text-primary" />
+            <h3 className="text-lg font-bold text-gray-900">Test Push Notification (FCM)</h3>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors">
+            <X size={22} />
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* FCM Token */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-gray-500 uppercase">
+                Target FCM Device Token <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleUseCurrentToken}
+                className="text-xs text-primary font-semibold hover:underline flex items-center gap-1"
+              >
+                <BellRing size={12} /> Use My Current Token
+              </button>
+            </div>
+            <textarea
+              rows={3}
+              value={fcmToken}
+              onChange={(e) => setFcmToken(e.target.value)}
+              placeholder="Paste device FCM registration token (cK...)"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-primary resize-none"
+            />
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+              Notification Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Test Push Notification"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+              Notification Body <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              rows={2}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="e.g. Checking notification delivery to your browser!"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary resize-none"
+            />
+          </div>
+
+          {/* Target Link */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+              Target Link / Route
+            </label>
+            <input
+              type="text"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="e.g. /orders/12345 or /products"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              Clicking the notification banner or OS prompt will navigate here.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSendTestPush}
+            disabled={isSending}
+            className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-gray-900 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isSending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+            {isSending ? 'Sending Test...' : 'Send Test Push'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── Bulk Notification Modal ──────────────────────────────────────────────────
 
@@ -14,15 +162,13 @@ const EMPTY_BULK_FORM = {
   title: '',
   message: '',
   type: 'system',
-  channel: 'in_app',
+  channel: 'push',
   priority: 'normal',
 };
 
 const BulkNotificationModal = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) => {
   const [form, setForm] = useState({ ...EMPTY_BULK_FORM });
   const [isSending, setIsSending] = useState(false);
-
-
 
   const handleSend = async () => {
     if (!form.title.trim()) return toast.error('Title is required');
@@ -88,41 +234,33 @@ const BulkNotificationModal = ({ onClose, onSuccess }: { onClose: () => void; on
             />
           </div>
 
-          {/* Priority */}
-          <div className="grid grid-cols-1 gap-3">
+          {/* Channel and Priority */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Channel</label>
+              <select
+                value={form.channel}
+                onChange={e => setForm({ ...form, channel: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary bg-white cursor-pointer"
+              >
+                <option value="push">Push Notification (Device Alert)</option>
+                <option value="in_app">In-App Notification</option>
+                <option value="email">Email</option>
+              </select>
+            </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Priority</label>
               <select
                 value={form.priority}
                 onChange={e => setForm({ ...form, priority: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary bg-white cursor-pointer"
               >
-                <option value="low">Low</option>
                 <option value="normal">Normal</option>
                 <option value="high">High</option>
+                <option value="low">Low</option>
               </select>
             </div>
           </div>
-
-          {/* User IDs
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
-              User IDs <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              rows={4}
-              value={form.userIds.join('\n')}
-              onChange={e => {
-                const lines = e.target.value.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
-                setForm({ ...form, userIds: lines.length ? lines : [''] });
-              }}
-              placeholder={`Paste user IDs here, one per line or comma-separated:\n6a532b44149168eb11420d07\n6a5096875000ef73eece56b0`}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary font-mono resize-none"
-            />
-            <p className="text-xs text-gray-400 mt-1.5">
-              Enter one MongoDB User ID per line, or paste multiple comma-separated.
-            </p>
-          </div> */}
 
         </div>
 
@@ -158,6 +296,7 @@ export const AdminNotifications = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalNotifications, setTotalNotifications] = useState(0);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showTestPushModal, setShowTestPushModal] = useState(false);
   const [filterType, setFilterType] = useState('All');
   const itemsPerPage = 10;
 
@@ -227,13 +366,23 @@ export const AdminNotifications = () => {
               Mark All as Read
             </button>
             {!isStoreManager && (
-              <button
-                onClick={() => setShowBulkModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-gray-900 transition-colors shadow-sm"
-              >
-                <Send size={15} />
-                Send Bulk Message
-              </button>
+              <>
+                <button
+                  onClick={() => setShowTestPushModal(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm"
+                  title="Send a direct FCM test push notification to verify delivery"
+                >
+                  <Smartphone size={15} />
+                  Test Push
+                </button>
+                <button
+                  onClick={() => setShowBulkModal(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-gray-900 transition-colors shadow-sm"
+                >
+                  <Send size={15} />
+                  Send Bulk Message
+                </button>
+              </>
             )}
           </div>
         }
@@ -421,6 +570,11 @@ export const AdminNotifications = () => {
           onClose={() => setShowBulkModal(false)}
           onSuccess={fetchNotifications}
         />
+      )}
+
+      {/* Direct Test Push Modal */}
+      {showTestPushModal && (
+        <TestPushModal onClose={() => setShowTestPushModal(false)} />
       )}
     </>
   );

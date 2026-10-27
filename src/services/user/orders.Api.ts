@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import api from '../api';
 
 export interface CreateOrderData {
@@ -9,10 +10,10 @@ export interface CreateOrderData {
 
 export const userOrdersApi = {
   /**
-   * Create a new order
+   * Create a new order with optional request config (e.g. Meta tracking headers)
    */
-  createOrder: async (data: CreateOrderData) => {
-    const response = await api.post('/orders', data);
+  createOrder: async (data: CreateOrderData, config?: AxiosRequestConfig) => {
+    const response = await api.post('/orders', data, config);
     return response.data;
   },
 
@@ -55,13 +56,16 @@ export const userOrdersApi = {
   /**
    * Razorpay Integration
    */
-  createRazorpayOrder: async (data: { orderId: string }) => {
-    const response = await api.post('/payments/create-order', data);
+  createRazorpayOrder: async (data: { orderId: string }, config?: AxiosRequestConfig) => {
+    const response = await api.post('/payments/create-order', data, config);
     return response.data;
   },
   
-  verifyRazorpayPayment: async (data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-    const response = await api.post('/payments/verify', data);
+  verifyRazorpayPayment: async (
+    data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string },
+    config?: AxiosRequestConfig
+  ) => {
+    const response = await api.post('/payments/verify', data, config);
     return response.data;
   }
 };

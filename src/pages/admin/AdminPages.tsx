@@ -3,6 +3,7 @@ export * from './AdminProducts';
 export * from './AdminCategories';
 export * from './AdminCategoryDetails';
 export * from './AdminOrders';
+export * from './AdminAbandonedCarts';
 export * from './AdminUsers';
 export * from './AdminInventory';
 export * from './AdminBanners';

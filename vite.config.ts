@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
+    envPrefix: ['VITE_', 'META_'],
     plugins: [
       react(),
       VitePWA({

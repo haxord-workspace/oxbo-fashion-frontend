@@ -23,9 +23,12 @@ import UserNotifications from './pages/user/UserNotifications';
 import Terms from './pages/user/Terms';
 import Privacy from './pages/user/Privacy';
 import ShippingPolicy from './pages/user/ShippingPolicy';
+import CartUnsubscribe from './pages/user/CartUnsubscribe';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import MetaPixelTracker from './components/common/MetaPixelTracker';
 import { Toaster } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
+import { useFcmNotification } from './hooks/useFcmNotification';
 
 import AdminLayout from './components/layout/AdminLayout';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -47,6 +50,7 @@ import {
   AdminBulkUpload,
   AdminEnquiries,
   AdminOffers,
+  AdminAbandonedCarts,
 } from './pages/admin/AdminPages';
 import CartPage from './pages/user/CartPage';
 
@@ -64,6 +68,9 @@ const AppContent: React.FC = () => {
   const dispatch = useAppDispatch();
   const isInitialized = useAppSelector(selectAuthInitialized);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
+
+  // Initialize Firebase Cloud Messaging push notifications listener
+  useFcmNotification();
 
   useEffect(() => {
     dispatch(initializeAuth());
@@ -86,6 +93,7 @@ const AppContent: React.FC = () => {
   return (
     <Router>
       <ScrollToTop />
+      <MetaPixelTracker />
       <Routes>
         {/* Client Routes */}
         <Route path="/" element={<MainLayout />}>
@@ -100,6 +108,7 @@ const AppContent: React.FC = () => {
           <Route path="terms" element={<Terms />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="shipping" element={<ShippingPolicy />} />
+          <Route path="cart/unsubscribe" element={<CartUnsubscribe />} />
 
           {/* Protected Client Routes */}
           <Route element={<ProtectedRoute allowedRoles={['user']} />}>
@@ -126,6 +135,7 @@ const AppContent: React.FC = () => {
             <Route path="categories/:categoryId" element={<AdminCategoryDetails />} />
             <Route path="brands" element={<AdminBrands />} />
             <Route path="orders" element={<AdminOrders />} />
+            <Route path="abandoned-carts" element={<AdminAbandonedCarts />} />
             <Route path="inventory" element={<AdminInventory />} />
             <Route path="reports" element={<AdminReports />} />
             <Route path="notifications" element={<AdminNotifications />} />
@@ -143,7 +153,7 @@ const AppContent: React.FC = () => {
           </Route>
         </Route>
       </Routes>
-      <Toaster position="top-center" />
+      <Toaster position="top-right" />
     </Router>
   );
 };

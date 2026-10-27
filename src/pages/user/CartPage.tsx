@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { removeFromCartAsync, updateCartItemAsync, applyCouponAsync, fetchCart } from '../../features/cart/cartSlice';
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
+import { trackInitiateCheckout } from '../../utils/metaPixel';
 
 export default function CartPage() {
   const dispatch = useAppDispatch();
@@ -176,6 +177,22 @@ export default function CartPage() {
 
             <Link
               to="/checkout"
+              onClick={() => {
+                try {
+                  trackInitiateCheckout({
+                    items: cart.items.map((i) => ({
+                      id: i.product.id || (i.product as any)._id,
+                      name: i.product.name,
+                      price: i.product.price,
+                      quantity: i.quantity,
+                    })),
+                    total,
+                    currency: 'INR',
+                  });
+                } catch (err) {
+                  console.warn('[Meta Tracking] InitiateCheckout click failed:', err);
+                }
+              }}
               className="block w-full bg-primary text-white py-4 text-center mt-6 rounded-md font-medium hover:bg-gray-800 transition-colors tracking-wider uppercase text-sm"
             >
               Proceed to Checkout
