@@ -27,8 +27,20 @@ export const getMessagingInstance = async (): Promise<Messaging | null> => {
 };
 
 // Initialize Firebase Cloud Messaging safely (browser environment only)
-export const messaging: Messaging | null =
-  typeof window !== 'undefined' && 'serviceWorker' in navigator
-    ? getMessaging(app)
-    : null;
+const createMessagingInstance = (): Messaging | null => {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
+  try {
+    return getMessaging(app);
+  } catch (error) {
+    // getMessaging() throws synchronously (messaging/unsupported-browser) on browsers
+    // that lack full push support (e.g. some in-app webviews, locked-down private modes).
+    // Without this catch, that error was silently swallowed by the module graph and
+    // every FCM feature downstream (permission button, foreground/background push)
+    // died silently with no console trace.
+    console.error('[FCM] Failed to initialize Firebase Messaging:', error);
+    return null;
+  }
+};
+
+export const messaging: Messaging | null = createMessagingInstance();
 
