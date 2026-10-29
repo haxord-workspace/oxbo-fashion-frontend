@@ -1,13 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { getToken, onMessage, type MessagePayload } from 'firebase/messaging';
-import { messaging } from '../config/firebase';
+import { messaging, VAPID_KEY } from '../config/firebase';
 import { userNotificationsApi } from '../services/user/notifications.Api';
 import { useAppSelector } from '../app/hooks';
 import { selectIsAuthenticated } from '../features/auth/authSlice';
 import toast from 'react-hot-toast';
 import { Bell } from 'lucide-react';
 
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || '';
 const FCM_TOKEN_STORAGE_KEY = 'oxbo_fcm_token';
 
 export function useFcmNotification(onNewNotification?: (payload?: MessagePayload) => void) {
@@ -128,13 +127,19 @@ export function useFcmNotification(onNewNotification?: (payload?: MessagePayload
     return null;
   }, [isSupported, isAuthenticated, syncTokenToBackend]);
 
-  // Automatically sync or acquire token on login if permission is already granted
+  // Automatically sync or acquire token on login if permission is already granted.
+  // Always re-asks Firebase for the current token via getToken() rather than resending
+  // whatever's cached in localStorage — Firebase rotates tokens over time, so blindly
+  // resending a stale cached token gets rejected by FCM as "not registered" and the
+  // backend clears it back to null on every login. getToken() returns the same token
+  // when it's still valid, or the new one if it rotated, so this is always correct.
   useEffect(() => {
     if (!isAuthenticated || !isSupported) return;
 
-    if (fcmToken) {
-      syncTokenToBackend(fcmToken);
-    } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && VAPID_KEY) {
+    const permissionGranted =
+      typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted';
+
+    if (permissionGranted && VAPID_KEY) {
       (async () => {
         try {
           await navigator.serviceWorker.register('/firebase-messaging-sw.js');
@@ -144,6 +149,7 @@ export function useFcmNotification(onNewNotification?: (payload?: MessagePayload
             serviceWorkerRegistration: registration,
           });
           if (token) {
+            console.log('[FCM] Stage 3 (getToken) OK — refreshed token on login:', `${token.slice(0, 20)}...`);
             setFcmToken(token);
             localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
             await syncTokenToBackend(token);
@@ -152,8 +158,13 @@ export function useFcmNotification(onNewNotification?: (payload?: MessagePayload
           console.warn('[FCM] Auto-sync token on login warning:', err);
         }
       })();
+    } else {
+      const cachedToken = localStorage.getItem(FCM_TOKEN_STORAGE_KEY);
+      if (cachedToken) {
+        syncTokenToBackend(cachedToken);
+      }
     }
-  }, [isAuthenticated, fcmToken, isSupported, syncTokenToBackend]);
+  }, [isAuthenticated, isSupported, syncTokenToBackend]);
 
   // Synthesize a clean, pleasant notification sound chime using Web Audio API
   const playNotificationSound = async () => {
