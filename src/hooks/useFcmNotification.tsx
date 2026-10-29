@@ -1,13 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { getToken, onMessage, type MessagePayload } from 'firebase/messaging';
-import { messaging } from '../config/firebase';
+import { messaging, VAPID_KEY } from '../config/firebase';
 import { userNotificationsApi } from '../services/user/notifications.Api';
 import { useAppSelector } from '../app/hooks';
 import { selectIsAuthenticated } from '../features/auth/authSlice';
 import toast from 'react-hot-toast';
 import { Bell } from 'lucide-react';
 
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || '';
 const FCM_TOKEN_STORAGE_KEY = 'oxbo_fcm_token';
 
 export function useFcmNotification(onNewNotification?: (payload?: MessagePayload) => void) {
@@ -34,13 +33,18 @@ export function useFcmNotification(onNewNotification?: (payload?: MessagePayload
 
   // Sync token to backend
   const syncTokenToBackend = useCallback(async (token: string) => {
-    if (!token || !isAuthenticated || isSyncingRef.current) return;
+    if (!token || !isAuthenticated || isSyncingRef.current) {
+      console.warn(
+        `[FCM] Stage 4 (Backend Sync) SKIPPED — token: ${!!token}, isAuthenticated: ${isAuthenticated}, alreadySyncing: ${isSyncingRef.current}`
+      );
+      return;
+    }
     try {
       isSyncingRef.current = true;
       await userNotificationsApi.registerFcmToken(token);
-      console.log('[FCM] Device token registered with backend successfully');
+      console.log('[FCM] Stage 4 (Backend Sync) OK — POST /notifications/fcm-token succeeded');
     } catch (error) {
-      console.error('[FCM] Failed to sync FCM token with backend:', error);
+      console.error('[FCM] Stage 4 (Backend Sync) FAILED — POST /notifications/fcm-token rejected:', error);
     } finally {
       isSyncingRef.current = false;
     }
@@ -48,46 +52,74 @@ export function useFcmNotification(onNewNotification?: (payload?: MessagePayload
 
   // Request notification permission and get FCM token
   const requestPermission = useCallback(async () => {
+    console.log('%c[FCM] ====== Enable Notifications clicked ======', 'color:#2563eb;font-weight:bold');
+
     if (!isSupported) {
-      console.warn('[FCM] Push notifications are not supported in this browser.');
+      console.error('[FCM] Stage 0 (Browser Support) FAILED — this browser/context does not support Notification + ServiceWorker + FCM.');
+      toast.error('Push notifications are not supported in this browser.');
       return null;
     }
 
     if (!VAPID_KEY) {
-      console.warn(
-        '[FCM] Missing VITE_FIREBASE_VAPID_KEY in .env. Please configure your Web Push VAPID key.'
-      );
+      console.error('[FCM] Stage 3 pre-check FAILED — VITE_FIREBASE_VAPID_KEY is missing from .env.');
       toast.error('Firebase VAPID Key is missing in .env');
       return null;
     }
 
     try {
       setIsRegistering(true);
+
+      // Stage 1: User Gesture & Permission Check
       const perm = await Notification.requestPermission();
       setPermission(perm);
+      console.log(`[FCM] Stage 1 (Permission) result: "${perm}"`);
 
       if (perm === 'granted') {
-        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        const token = await getToken(messaging!, {
-          vapidKey: VAPID_KEY,
-          serviceWorkerRegistration: registration,
-        });
+        // Stage 2: firebase-messaging-sw.js loaded
+        let registration: ServiceWorkerRegistration;
+        try {
+          await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          registration = await navigator.serviceWorker.ready;
+          console.log('[FCM] Stage 2 (Service Worker) OK — firebase-messaging-sw.js is registered and active. Scope:', registration.scope);
+        } catch (swError) {
+          console.error('[FCM] Stage 2 (Service Worker) FAILED — could not register/activate firebase-messaging-sw.js (check it returns 200 at /firebase-messaging-sw.js, and that the page is served over HTTPS or localhost):', swError);
+          throw swError;
+        }
+
+        // Stage 3: Google Handshake — getToken(messaging, { vapidKey })
+        let token: string | null = null;
+        try {
+          token = await getToken(messaging!, {
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: registration,
+          });
+          console.log('[FCM] Stage 3 (getToken) OK — token acquired:', token ? `${token.slice(0, 20)}...` : token);
+        } catch (tokenError) {
+          console.error('[FCM] Stage 3 (getToken) FAILED — VAPID key may be invalid/mismatched with the oxbo-ecom Firebase project, or push service registration was blocked:', tokenError);
+          throw tokenError;
+        }
 
         if (token) {
           setFcmToken(token);
           localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
 
+          // Stage 4: Backend Sync
           if (isAuthenticated) {
             await syncTokenToBackend(token);
+          } else {
+            console.warn('[FCM] Stage 4 (Backend Sync) SKIPPED — user is not authenticated yet; token is cached locally and will sync automatically after login.');
           }
           toast.success('Push notifications enabled!');
           return token;
+        } else {
+          console.error('[FCM] Stage 3 (getToken) returned an empty token with no thrown error.');
         }
       } else if (perm === 'denied') {
+        console.error('[FCM] Stage 1 (Permission) FAILED — blocked by browser policy or user denial.');
         toast.error('Notification permission was blocked in your browser settings.');
       }
     } catch (error: any) {
-      console.error('[FCM] Error requesting notification permission:', error);
+      console.error('[FCM] requestPermission aborted:', error);
       toast.error(error?.message || 'Failed to enable push notifications');
     } finally {
       setIsRegistering(false);
@@ -95,21 +127,29 @@ export function useFcmNotification(onNewNotification?: (payload?: MessagePayload
     return null;
   }, [isSupported, isAuthenticated, syncTokenToBackend]);
 
-  // Automatically sync or acquire token on login if permission is already granted
+  // Automatically sync or acquire token on login if permission is already granted.
+  // Always re-asks Firebase for the current token via getToken() rather than resending
+  // whatever's cached in localStorage — Firebase rotates tokens over time, so blindly
+  // resending a stale cached token gets rejected by FCM as "not registered" and the
+  // backend clears it back to null on every login. getToken() returns the same token
+  // when it's still valid, or the new one if it rotated, so this is always correct.
   useEffect(() => {
     if (!isAuthenticated || !isSupported) return;
 
-    if (fcmToken) {
-      syncTokenToBackend(fcmToken);
-    } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && VAPID_KEY) {
+    const permissionGranted =
+      typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted';
+
+    if (permissionGranted && VAPID_KEY) {
       (async () => {
         try {
-          const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          const registration = await navigator.serviceWorker.ready;
           const token = await getToken(messaging!, {
             vapidKey: VAPID_KEY,
             serviceWorkerRegistration: registration,
           });
           if (token) {
+            console.log('[FCM] Stage 3 (getToken) OK — refreshed token on login:', `${token.slice(0, 20)}...`);
             setFcmToken(token);
             localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
             await syncTokenToBackend(token);
@@ -118,8 +158,13 @@ export function useFcmNotification(onNewNotification?: (payload?: MessagePayload
           console.warn('[FCM] Auto-sync token on login warning:', err);
         }
       })();
+    } else {
+      const cachedToken = localStorage.getItem(FCM_TOKEN_STORAGE_KEY);
+      if (cachedToken) {
+        syncTokenToBackend(cachedToken);
+      }
     }
-  }, [isAuthenticated, fcmToken, isSupported, syncTokenToBackend]);
+  }, [isAuthenticated, isSupported, syncTokenToBackend]);
 
   // Synthesize a clean, pleasant notification sound chime using Web Audio API
   const playNotificationSound = async () => {
@@ -162,7 +207,11 @@ export function useFcmNotification(onNewNotification?: (payload?: MessagePayload
 
   // Listen for foreground push notifications (when user is browsing the website)
   useEffect(() => {
-    if (!messaging) return;
+    if (!messaging) {
+      console.error('[FCM] Stage 5 (onMessage listener) NOT ATTACHED — `messaging` is null, so no push will ever be displayed in the foreground. See the "[FCM] Failed to initialize Firebase Messaging" log for the root cause.');
+      return;
+    }
+    console.log('[FCM] Stage 5 (onMessage listener) attached — waiting for foreground pushes.');
 
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log('[FCM] Foreground push notification received:', payload);
@@ -175,12 +224,11 @@ export function useFcmNotification(onNewNotification?: (payload?: MessagePayload
       // 1. Play audio chime sound
       playNotificationSound();
 
-      // 2. If the user is in another tab or minimized, trigger a native OS desktop notification reminder
+      // 2. Trigger a native OS desktop notification popup regardless of tab focus
       if (
         typeof window !== 'undefined' &&
         'Notification' in window &&
-        Notification.permission === 'granted' &&
-        document.hidden
+        Notification.permission === 'granted'
       ) {
         try {
           const desktopNotification = new Notification(title, {

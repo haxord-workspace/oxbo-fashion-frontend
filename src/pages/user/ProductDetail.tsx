@@ -424,9 +424,35 @@ const ProductDetail: React.FC = () => {
   const handleShare = async () => {
     const url = window.location.href;
     const title = product?.name || 'Check out this product';
+    const price = Number(activeVariant?.salePrice || activeVariant?.price || product?.price || 0);
+    const text = price > 0 ? `${title} — Rs. ${price.toLocaleString('en-IN')}.00` : title;
+
     if (navigator.share) {
+      // Try to attach the product image as a shareable file (supported by some
+      // platforms via the Web Share API Level 2 `files` option). Not every browser
+      // supports file sharing, and the image host may not allow cross-origin fetch,
+      // so this is best-effort and always falls back to a plain title/text/url share.
+      const imageUrl = displayImages[0];
+      if (navigator.canShare && imageUrl && !imageUrl.startsWith('/placeholder')) {
+        try {
+          const response = await fetch(imageUrl);
+          const blob = await response.blob();
+          const extension = blob.type.split('/')[1] || 'jpg';
+          const file = new File([blob], `${(title || 'product').replace(/[^\w-]+/g, '-')}.${extension}`, {
+            type: blob.type || 'image/jpeg',
+          });
+
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ title, text, url, files: [file] });
+            return;
+          }
+        } catch (err) {
+          console.warn('[Share] Could not attach product image, sharing link only:', err);
+        }
+      }
+
       try {
-        await navigator.share({ title, url });
+        await navigator.share({ title, text, url });
       } catch {
         // user cancelled — ignore
       }

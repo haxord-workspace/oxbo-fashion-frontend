@@ -12,6 +12,9 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
+        strategies: 'injectManifest',
+        srcDir: 'src',
+        filename: 'firebase-messaging-sw.js',
         includeAssets: ['images/Oxbo1.png'],
         manifest: {
           name: 'Oxbo Fashion',
