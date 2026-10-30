@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { login, setAuthLoading, setAuthError, selectAuthInitialized } from '../../features/auth/authSlice';
 import { authApi } from '../../services/authApi';
+import { setAdvancedMatching } from '../../utils/metaPixel';
 import toast from 'react-hot-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
@@ -80,8 +81,9 @@ const Login: React.FC = () => {
       
       // Ensure the role is set for the frontend Redux state
       response.user.role = 'user';
-      
+
       dispatch(login(response));
+      setAdvancedMatching(response.user);
       toast.success(response.message || 'Welcome back!');
       navigate(from, { replace: true });
     } catch (err: any) {
@@ -118,8 +120,9 @@ const Login: React.FC = () => {
       }
       
       response.user.role = 'user';
-      
+
       dispatch(login(response));
+      setAdvancedMatching(response.user);
       toast.success(response.message || 'Welcome back!');
       navigate(from, { replace: true });
     } catch (err: any) {

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
-import { getMetaCookies } from '../utils/metaPixel';
+import { getMetaContext } from '../utils/metaPixel';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -110,14 +110,30 @@ api.interceptors.request.use(async (config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Attach Meta browser tracking cookies if available for server-side attribution
+  // Attach Meta browser tracking context (fbp/fbc/event_source_url) for
+  // server-side attribution — as headers (existing mechanism) and mirrored
+  // into the JSON body as `metaContext` (what the backend's CAPI guide also
+  // expects), since which one the backend actually reads is unconfirmed and
+  // sending both is harmless.
   try {
-    const { fbp, fbc } = getMetaCookies();
+    const { fbp, fbc, eventSourceUrl } = getMetaContext();
     if (fbp && !config.headers['x-meta-fbp']) {
       config.headers['x-meta-fbp'] = fbp;
     }
     if (fbc && !config.headers['x-meta-fbc']) {
       config.headers['x-meta-fbc'] = fbc;
+    }
+    if (eventSourceUrl && !config.headers['x-meta-event-source-url']) {
+      config.headers['x-meta-event-source-url'] = eventSourceUrl;
+    }
+
+    if (
+      config.data &&
+      typeof config.data === 'object' &&
+      !(config.data instanceof FormData) &&
+      !config.data.metaContext
+    ) {
+      config.data.metaContext = { fbp, fbc, eventSourceUrl };
     }
   } catch {
     // Ignore error
