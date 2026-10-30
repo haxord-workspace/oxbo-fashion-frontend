@@ -15,6 +15,8 @@ let isInitialized = false;
 let isTrackingEnabled = true;
 let initPromise: Promise<boolean> | null = null;
 
+const FBC_STORAGE_KEY = 'oxbo_fbc';
+
 /**
  * Returns current active Pixel ID.
  */
@@ -47,6 +49,11 @@ export function newMetaEventId(): string {
  * If _fbc is not found but 'fbclid' is present in the current URL query params,
  * this function parses it, formats it according to the Meta specification
  * (fb.1.<creationTime>.<fbclid>), persists it in the _fbc cookie, and returns it.
+ *
+ * Also mirrors _fbc into localStorage. Safari's Intelligent Tracking Prevention
+ * caps non-interacted first-party cookies at 7 days, which was silently dropping
+ * the ad-click attribution well before its intended 90-day window — the
+ * localStorage copy survives that and is used as a fallback if the cookie is gone.
  */
 export function getMetaCookies(): { fbp?: string; fbc?: string } {
   if (typeof window === 'undefined') {
@@ -71,9 +78,44 @@ export function getMetaCookies(): { fbp?: string; fbc?: string } {
     }
   }
 
+  // Cookie missing entirely (e.g. wiped by Safari ITP) — fall back to the
+  // localStorage backup instead of losing attribution.
+  if (!fbc) {
+    try {
+      fbc = localStorage.getItem(FBC_STORAGE_KEY) || undefined;
+    } catch {
+      // Ignore storage access errors
+    }
+  } else {
+    try {
+      localStorage.setItem(FBC_STORAGE_KEY, fbc);
+    } catch {
+      // Ignore storage access errors
+    }
+  }
+
   return {
     ...(fbp ? { fbp } : {}),
     ...(fbc ? { fbc } : {}),
+  };
+}
+
+/**
+ * Returns the current page URL for Meta's event_source_url parameter, which
+ * tells Meta/CAPI exactly which page a conversion happened on.
+ */
+export function getEventSourceUrl(): string | undefined {
+  return typeof window !== 'undefined' ? window.location.href : undefined;
+}
+
+/**
+ * Bundles the browser tracking context (fbp, fbc, event_source_url) in the
+ * shape the backend's CAPI endpoints expect under `metaContext`.
+ */
+export function getMetaContext(): { fbp?: string; fbc?: string; eventSourceUrl?: string } {
+  return {
+    ...getMetaCookies(),
+    eventSourceUrl: getEventSourceUrl(),
   };
 }
 
@@ -83,7 +125,7 @@ export function getMetaCookies(): { fbp?: string; fbc?: string } {
  */
 export function metaHeaders(eventId?: string): Record<string, string> {
   const resolvedEventId = eventId || newMetaEventId();
-  const { fbp, fbc } = getMetaCookies();
+  const { fbp, fbc, eventSourceUrl } = getMetaContext();
 
   const headers: Record<string, string> = {
     'x-meta-event-id': resolvedEventId,
@@ -94,6 +136,9 @@ export function metaHeaders(eventId?: string): Record<string, string> {
   }
   if (fbc) {
     headers['x-meta-fbc'] = fbc;
+  }
+  if (eventSourceUrl) {
+    headers['x-meta-event-source-url'] = eventSourceUrl;
   }
 
   return headers;
@@ -443,4 +488,62 @@ export function trackPurchase(params: {
     eventId: resolvedEventId,
     headers: metaHeaders(resolvedEventId),
   };
+}
+
+/**
+ * Re-seeds the Meta Pixel with Advanced Matching data so subsequent browser
+ * events can be matched to a real Facebook/Instagram account. Call this once
+ * right after a successful login/registration (email/name/phone), and again
+ * at checkout once a shipping address is known (city/state/postal code) —
+ * those three only exist on a UserAddress, never on the login-time user.
+ *
+ * Does NOT re-fire PageView — only updates the matching parameters Meta's own
+ * pixel script hashes internally before it reports in.
+ */
+export function setAdvancedMatching(user: {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  id?: string;
+  _id?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+}): void {
+  if (typeof window === 'undefined' || !isTrackingEnabled || !activePixelId) {
+    return;
+  }
+
+  const normalizedPhone = user.phone
+    ? `91${user.phone.replace(/\D/g, '').replace(/^91/, '').replace(/^0+/, '')}`
+    : undefined;
+
+  const advancedMatching: Record<string, string | undefined> = {
+    em: user.email ? user.email.trim().toLowerCase() : undefined,
+    fn: user.firstName ? user.firstName.trim().toLowerCase() : undefined,
+    ln: user.lastName ? user.lastName.trim().toLowerCase() : undefined,
+    ph: normalizedPhone,
+    external_id: user._id || user.id,
+    country: 'in',
+    ct: user.city ? user.city.trim().toLowerCase() : undefined,
+    st: user.state ? user.state.trim().toLowerCase() : undefined,
+    zp: user.postalCode || undefined,
+  };
+
+  // Drop undefined keys — fbq should only receive fields we actually have.
+  Object.keys(advancedMatching).forEach((key) => {
+    if (advancedMatching[key] === undefined) {
+      delete advancedMatching[key];
+    }
+  });
+
+  injectMetaSnippet();
+
+  try {
+    window.fbq?.('init', activePixelId, advancedMatching);
+    isInitialized = true;
+  } catch (err) {
+    console.warn('[Meta Pixel] Failed to update Advanced Matching:', err);
+  }
 }

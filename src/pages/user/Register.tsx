@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { register as registerAction, setAuthLoading, setAuthError, selectAuthInitialized } from '../../features/auth/authSlice';
 import { authApi } from '../../services/authApi';
+import { setAdvancedMatching } from '../../utils/metaPixel';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -105,6 +106,7 @@ const Register: React.FC = () => {
       const response = await authApi.register(data);
 
       dispatch(registerAction(response));
+      setAdvancedMatching(response.user);
       toast.success(response.message || 'Account created successfully!');
       navigate('/');
     } catch (err: any) {
