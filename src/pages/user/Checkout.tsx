@@ -12,6 +12,7 @@ import {
   metaHeaders,
   trackInitiateCheckout,
   trackPurchase,
+  setAdvancedMatching,
 } from '../../utils/metaPixel';
 
 import { userAddressesApi } from '../../services/user/addresses.Api';
@@ -120,6 +121,7 @@ const Checkout: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const recoveryToken = searchParams.get('recoveryToken');
   const { items: cartItems, couponCode, appliedCoupon, isLoading } = useAppSelector((state) => state.cart);
+  const authUser = useAppSelector((state) => state.auth.user);
   const [couponInput, setCouponInput] = useState('');
   const [excludedItemKeys, setExcludedItemKeys] = useState<string[]>([]);
 
@@ -242,6 +244,22 @@ const Checkout: React.FC = () => {
         if (list.length > 0) {
           const defaultAddress = list.find((a: UserAddress) => a.isDefault) || list[0];
           setSelectedAddressId(defaultAddress._id || null);
+
+          // Re-seed Advanced Matching with city/state/postal code now that a
+          // shipping address is known — these never exist on the login-time
+          // user, only on a UserAddress. Merge with the auth user so em/fn/ln
+          // already set at login aren't dropped by this re-init.
+          try {
+            setAdvancedMatching({
+              ...(authUser || {}),
+              phone: defaultAddress.phone || authUser?.phone,
+              city: defaultAddress.city,
+              state: defaultAddress.state,
+              postalCode: defaultAddress.postalCode,
+            });
+          } catch (err) {
+            console.warn('[Meta Tracking] Advanced Matching update failed:', err);
+          }
         } else {
           setIsAddingAddress(true);
         }
