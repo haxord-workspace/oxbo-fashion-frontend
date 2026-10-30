@@ -283,6 +283,9 @@ const cartSlice = createSlice({
           item.quantity = action.payload.quantity;
         }
       })
+      .addCase(updateCartItemAsync.rejected, (_state, action) => {
+        toast.error((action.payload as string) || 'Failed to update quantity');
+      })
 
       // Remove from Cart
       .addCase(removeFromCartAsync.fulfilled, (state, action) => {

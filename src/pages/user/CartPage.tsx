@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import { removeFromCartAsync, updateCartItemAsync, applyCouponAsync, fetchCart } from '../../features/cart/cartSlice';
 import { selectIsAuthenticated } from '../../features/auth/authSlice';
 import { trackInitiateCheckout } from '../../utils/metaPixel';
+import type { CartItem as CartItemType } from '../../types';
 
 export default function CartPage() {
   const dispatch = useAppDispatch();
@@ -12,6 +13,20 @@ export default function CartPage() {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
   const [couponInput, setCouponInput] = useState(cart.couponCode || '');
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+
+  const handleQuantityChange = async (item: CartItemType, newQuantity: number) => {
+    setUpdatingItemId(item.product.id);
+    try {
+      await dispatch(
+        updateCartItemAsync({ id: item.product.id, variantId: item.variantId, quantity: newQuantity })
+      ).unwrap();
+    } catch {
+      // Error toast is already shown by the rejected reducer case
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -84,32 +99,23 @@ export default function CartPage() {
                 </div>
                 <div className="flex items-center gap-2 border border-gray-300 rounded-md">
                   <button
-                    onClick={() =>
-                      dispatch(
-                        updateCartItemAsync({
-                          id: item.product.id,
-                          variantId: item.variantId,
-                          quantity: Math.max(1, item.quantity - 1),
-                        })
-                      )
-                    }
+                    onClick={() => handleQuantityChange(item, Math.max(1, item.quantity - 1))}
                     className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors rounded-l-md"
-                    disabled={item.quantity <= 1}
+                    disabled={item.quantity <= 1 || updatingItemId === item.product.id}
                   >
                     -
                   </button>
-                  <span className="w-8 text-center font-medium">{item.quantity}</span>
+                  <span className="w-8 text-center font-medium">
+                    {updatingItemId === item.product.id ? (
+                      <Loader2 className="h-4 w-4 mx-auto animate-spin" />
+                    ) : (
+                      item.quantity
+                    )}
+                  </span>
                   <button
-                    onClick={() =>
-                      dispatch(
-                        updateCartItemAsync({
-                          id: item.product.id,
-                          variantId: item.variantId,
-                          quantity: item.quantity + 1,
-                        })
-                      )
-                    }
-                    className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors rounded-r-md"
+                    onClick={() => handleQuantityChange(item, item.quantity + 1)}
+                    className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors rounded-r-md"
+                    disabled={updatingItemId === item.product.id}
                   >
                     +
                   </button>

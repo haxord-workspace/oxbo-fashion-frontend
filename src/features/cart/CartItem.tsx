@@ -1,5 +1,5 @@
-import React from 'react';
-import { Minus, Plus, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Minus, Plus, Trash2, Loader2 } from 'lucide-react';
 import { useAppDispatch } from '../../app/hooks';
 import { removeFromCartAsync, updateCartItemAsync } from './cartSlice';
 import { toggleCart } from '../ui/uiSlice';
@@ -13,14 +13,28 @@ interface CartItemProps {
 const CartItem: React.FC<CartItemProps> = ({ item }) => {
   const dispatch = useAppDispatch();
   const { product, quantity } = item;
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleIncrement = () => {
-    dispatch(updateCartItemAsync({ id: product.id, variantId: item.variantId, quantity: quantity + 1 }));
+  const handleIncrement = async () => {
+    setIsUpdating(true);
+    try {
+      await dispatch(updateCartItemAsync({ id: product.id, variantId: item.variantId, quantity: quantity + 1 })).unwrap();
+    } catch {
+      // Error toast is already shown by the rejected reducer case
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  const handleDecrement = () => {
-    if (quantity > 1) {
-      dispatch(updateCartItemAsync({ id: product.id, variantId: item.variantId, quantity: quantity - 1 }));
+  const handleDecrement = async () => {
+    if (quantity <= 1) return;
+    setIsUpdating(true);
+    try {
+      await dispatch(updateCartItemAsync({ id: product.id, variantId: item.variantId, quantity: quantity - 1 })).unwrap();
+    } catch {
+      // Error toast is already shown by the rejected reducer case
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -72,15 +86,18 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
               type="button"
               onClick={handleDecrement}
               className="p-1.5 text-gray-600 hover:text-primary hover:bg-gray-100 transition-colors rounded-l-md disabled:opacity-50"
-              disabled={quantity <= 1}
+              disabled={quantity <= 1 || isUpdating}
             >
               <Minus className="h-4 w-4" />
             </button>
-            <span className="w-8 text-center font-medium text-gray-900">{quantity}</span>
+            <span className="w-8 text-center font-medium text-gray-900">
+              {isUpdating ? <Loader2 className="h-4 w-4 mx-auto animate-spin" /> : quantity}
+            </span>
             <button
               type="button"
               onClick={handleIncrement}
-              className="p-1.5 text-gray-600 hover:text-primary hover:bg-gray-100 transition-colors rounded-r-md"
+              className="p-1.5 text-gray-600 hover:text-primary hover:bg-gray-100 transition-colors rounded-r-md disabled:opacity-50"
+              disabled={isUpdating}
             >
               <Plus className="h-4 w-4" />
             </button>
